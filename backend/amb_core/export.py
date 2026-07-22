@@ -163,12 +163,18 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .wrow.win .wfill{background:linear-gradient(90deg,var(--accent-dim),var(--accent))}
 .wrow.lead .wtrack{box-shadow:0 0 0 1px var(--accent-dim)}
 .wsc{font-family:var(--mono);font-size:11px;color:var(--ink2);text-align:right}
-#play{position:fixed;bottom:26px;right:24px;z-index:35;width:46px;height:46px;border-radius:50%;border:1px solid var(--accent-dim);background:rgba(13,15,19,.85);color:var(--accent2);display:none;place-items:center;cursor:pointer;transition:.2s}
-#play::after{content:'\25B6';font-size:13px;margin-left:2px}
+#play{position:fixed;bottom:24px;right:24px;z-index:35;display:none;align-items:center;gap:9px;padding:10px 16px;border:1px solid var(--accent-dim);background:rgba(13,15,19,.92);color:var(--accent2);cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;border-radius:5px;transition:.2s}
+#play::before{content:'\25B6';font-size:10px}
 #play:hover{background:var(--accent-dim);color:#fff;box-shadow:0 0 18px -5px var(--accent)}
-body.settled #play{display:grid}
-#playlbl{position:fixed;bottom:39px;right:80px;z-index:35;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:none}
-body.settled #playlbl{display:block}
+body.settled #play{display:inline-flex}
+/* screening visuals */
+.gateline{position:absolute;top:0;bottom:-18px;width:0;border-left:1px dashed rgba(192,115,106,.55);opacity:0;transition:opacity .5s;z-index:2}
+.gateline.on{opacity:1}
+.gateline span{position:absolute;top:2px;left:7px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:var(--loss);text-transform:uppercase;white-space:nowrap}
+.danger{position:absolute;top:0;bottom:0;right:0;opacity:0;transition:opacity .6s;z-index:1;background:linear-gradient(90deg,transparent,rgba(192,115,106,.07))}
+.danger.on{opacity:1}
+#counter{position:absolute;top:-2px;right:2px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);opacity:0;transition:opacity .5s;z-index:3}
+#counter.on{opacity:1}#counter b{color:var(--ink)}
 @media(max-width:900px){.mid{grid-template-columns:1fr}.side{display:none}.hdr .vtext{font-size:14px}}
 """
 
@@ -199,6 +205,7 @@ function buildField(){
   });
   var g=$('#gates');A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
 }
+function updateCounter(){var live=A.funds.filter(function(d){return !nodes[d.id].classList.contains('ejected')}).length;var c=$('#counter');if(c)c.innerHTML='Candidates · <b>'+String(live).padStart(2,'0')+'</b>'}
 function place(n){n.classList.add('shown');n.style.left=n.__d.x+'%';n.style.bottom=n.__d.y+'%'}
 function zoom(){A.funds.forEach(function(d){var n=nodes[d.id];if(d.excluded){n.style.opacity='0';n.style.transform='translate(-50%,50%) scale(.4)'}else{n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}})}
 function chapter(numv,ttl,sub){var c=$('#chapter');c.innerHTML="<div class='c'><div class='n'>"+numv+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')}
@@ -259,10 +266,13 @@ async function story(){
   for(var i=0;i<A.funds.length;i++){if(aborted)return;place(nodes[A.funds[i].id]);await wait(120)}
   await wait(1000);
   chapter('02 · Screening','Apply the mandate','liquidity + volatility gates');
-  $('#gates').classList.add('on');await wait(500);
+  $('#gates').classList.add('on');
+  if(A.gateX!=null){var gl=$('#gateline');gl.style.left=A.gateX+'%';$('span',gl).textContent='max vol · '+A.volcap;var dz=$('#danger');dz.style.left=A.gateX+'%';gl.classList.add('on');dz.classList.add('on')}
+  $('#counter').classList.add('on');updateCounter();
+  await wait(650);
   var gates=$$('.gate');var excl=A.funds.filter(function(d){return d.excluded&&d.reason});
-  for(var j=0;j<excl.length;j++){if(aborted)return;gates.forEach(function(g){g.classList.toggle('act',(''+excl[j].reason).toUpperCase().indexOf(g.dataset.k)>=0)});nodes[excl[j].id].classList.add('rejected');await wait(580)}
-  gates.forEach(function(g){g.classList.remove('act')});$('#gates').classList.remove('on');await wait(650);
+  for(var j=0;j<excl.length;j++){if(aborted)return;var ex=excl[j];gates.forEach(function(g){g.classList.toggle('act',(''+ex.reason).toUpperCase().indexOf(g.dataset.k)>=0)});var en=nodes[ex.id];en.classList.add('rejected');await wait(500);if((''+ex.reason).indexOf('VOLATILITY')>=0){en.style.left='108%'}else{en.style.bottom='-8%'}en.style.opacity='0';en.classList.add('ejected');updateCounter();await wait(340)}
+  gates.forEach(function(g){g.classList.remove('act')});$('#gates').classList.remove('on');$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');await wait(600);
   chapter('03 · Scoring','Weigh the survivors','each criterion applied by weight');
   zoom();await wait(500);
   survivors().forEach(function(d){nodes[d.id].classList.add('ranked')});
@@ -278,7 +288,7 @@ async function story(){
 function settle(){document.body.classList.add('settled');$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');typeVerdict();}
 
 function reset(){aborted=true;document.body.classList.remove('settled');
-  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='translate(-50%,50%) scale(0)'});
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
@@ -353,6 +363,10 @@ def render_html(memo, ctx=None):
             else: gates.append({"label":c.field.upper()[:9],"detail":f"{c.op} {c.value}"})
     if not gates: gates=[{"label":"MANDATE","detail":"screen"}]
 
+    volcap=None
+    if mandate:
+        volcap=next((c.value for c in mandate.constraints if c.field=="ann_vol" and c.op=="<="),None)
+    gateX=None
     plist=[(fid,m) for fid,m in mbf.items() if m.get("ann_vol") is not None and m.get("ann_return") is not None]
     fd=[]
     if plist:
@@ -388,11 +402,14 @@ def render_html(memo, ctx=None):
         for d in surv: d["xz"]=round(14+(d["vol"]-zvmin)/zvr*72,1);d["yz"]=round(14+(d["ret"]-zrmin)/zrr*72,1)
     for d in fd: d.setdefault("xz",d["x"]);d.setdefault("yz",d["y"])
 
+    if plist and volcap is not None:
+        gx=12+(volcap-vmin)/vr*76
+        if 0<gx<100: gateX=round(gx,1)
     top=sl[0] if sl else None
     vplain=f"{top.name} leads on risk-adjusted return." if top else "No fund met the mandate."
     vhtml=(f"<b>{e(top.name)}</b> leads on risk-adjusted return." if top else "No fund met the mandate.")
     DATA={"funds":fd,"gates":gates,"verdict":vplain,"verdictHtml":vhtml,"model":memo.generated_by,
-          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"weights":{k:round(float(v),3) for k,v in weights.items()}}
+          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"gateX":gateX,"volcap":(f"{volcap*100:.0f}%" if volcap is not None else None),"weights":{k:round(float(v),3) for k,v in weights.items()}}
 
     chips="".join(f'<div class="chip{" r1" if s.rank==1 else ""}" data-fid="{e(s.fund_id)}"><span class="n">{s.rank:02d}</span><span class="nm">{e(s.name)}</span><span class="rt">{_pct(s.metrics.get("ann_return"))}</span></div>' for s in sl)
 
@@ -402,7 +419,7 @@ def render_html(memo, ctx=None):
             f'<span class="vbadge"><i></i>{a.get("verified_count",0)}/{a.get("claim_count",0)} verified</span></div></div>')
 
     stage=('<div class="stage"><div id="field"><div class="sweetz"><span>sweet spot · high return / low risk</span></div>'
-           '<div class="gates" id="gates"></div><div class="ax y">Return →</div><div class="ax x">Risk · volatility →</div></div>'
+           '<div class="gates" id="gates"></div><div class="gateline" id="gateline"><span></span></div><div class="danger" id="danger"></div><div id="counter"></div><div class="ax y">Return →</div><div class="ax x">Risk · volatility →</div></div>'
            '<div id="chapter"></div></div>')
 
     side=('<div class="side">'
@@ -419,7 +436,7 @@ def render_html(memo, ctx=None):
             f'<style>{_CSS}</style></head><body>'
             '<div class="atmo"><div class="grid"></div></div><div id="tip"></div>'
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
-            '<div id="drawer"></div><div id="skip">skip intro</div><div id="playlbl">Replay decision</div><div id="play"></div>'
+            '<div id="drawer"></div><div id="skip">skip intro</div><div id="play">Replay decision</div>'
             f'<script>window.AMB={json.dumps(DATA)};</script><script>{_JS}</script></body></html>')
 
 def write_html(memo, path, ctx=None):
