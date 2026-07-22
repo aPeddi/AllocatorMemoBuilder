@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────
+# AllocatorMemoBuilder — Python dependencies (backend + CLI)
+# Local-first. Install with: ./amb setup   (creates .venv and installs)
+# ─────────────────────────────────────────────────────────────
+
+# API gateway
+fastapi
+uvicorn[standard]
+
+# Validation / config (structured outputs live here)
+pydantic>=2
+pydantic-settings
+python-dotenv
+pyyaml
+
+# Data + metrics engine (deterministic, unit-tested — the source of truth)
+pandas
+numpy
+sqlalchemy>=2
+
+# Agentic orchestration
+langgraph
+langchain-core
+
+# External adapters (benchmarks, LLM routing via OpenRouter)
+httpx
+
+# Memo rendering / export
+jinja2
+openpyxl            # .xlsx export
+# weasyprint        # HTML->PDF export — optional, needs system libs; enable when wiring PDF
+
+# Dev tooling / quality gates
+pytest
+pytest-cov
+ruff
+mypy
