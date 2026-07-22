@@ -107,24 +107,41 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .gates.on{opacity:1}
 .gate{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:4px 8px;border-radius:3px;background:var(--panel)}
 .gate.act{color:var(--accent2);border-color:var(--accent-dim)}
-/* nodes */
-.node{position:absolute;transform:translate(-50%,50%) scale(0);z-index:3;transition:left .95s cubic-bezier(.3,.85,.3,1),bottom .95s cubic-bezier(.3,.85,.3,1),transform .5s cubic-bezier(.3,1.2,.4,1),opacity .5s}
+/* nodes — larger, information-bearing tokens */
+.node{position:absolute;transform:translate(-50%,50%) scale(0);z-index:3;transition:left 1.15s cubic-bezier(.3,.85,.3,1),bottom 1.15s cubic-bezier(.3,.85,.3,1),transform .6s cubic-bezier(.3,1.2,.4,1),opacity .6s,filter .6s}
 .node.shown{transform:translate(-50%,50%) scale(1)}
-.node .dot{width:11px;height:11px;border-radius:50%;background:var(--g3);border:1px solid var(--border2);display:grid;place-items:center;transition:.5s;position:relative}
-.node.on .dot{width:15px;height:15px;background:var(--panel2);border:1.5px solid var(--ink2)}
-.node.on.win .dot{border-color:var(--accent);background:radial-gradient(circle at 38% 34%,var(--winface1),var(--winface2));color:var(--accent2);box-shadow:0 0 0 1px var(--accent-soft),0 0 18px -4px var(--accent-glow)}
-.node.on{cursor:pointer}.node.on:hover .dot{border-color:var(--accent2)}
-.node .rk{opacity:0;transition:.4s}.node.ranked .rk{opacity:1}
-.node.excl{opacity:.4}.node.excl .dot{background:transparent;border:1px dashed var(--dim2);width:11px;height:11px}
-/* lock on winner only */
-.lock{position:absolute;inset:-11px;opacity:0;transform:scale(1.4);transition:opacity .35s,transform .4s cubic-bezier(.3,1.3,.4,1);pointer-events:none}
+.node .dot{width:17px;height:17px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--ink2);display:grid;place-items:center;transition:width .5s cubic-bezier(.3,1.2,.4,1),height .5s cubic-bezier(.3,1.2,.4,1),border-color .5s,box-shadow .5s,background .5s;position:relative}
+.node.cand{cursor:pointer}.node.cand:hover .dot{border-color:var(--accent2)}
+.node.win .dot,.node.locked .dot{border-color:var(--accent);background:radial-gradient(circle at 38% 34%,var(--winface1),var(--winface2));box-shadow:0 0 0 1px var(--accent-soft),0 0 24px -3px var(--accent-glow)}
+/* focus — bring the active item forward */
+.node.focus{z-index:10}
+.node.focus .dot{width:30px;height:30px;border-color:var(--accent2);box-shadow:0 0 0 7px var(--accent-soft),0 0 30px -4px var(--accent-glow)}
+.node.dimmed{opacity:.28;filter:saturate(.6)}
+.node.cutout{opacity:.22;filter:grayscale(.7)}
+body.screening .node.cand{opacity:.22;transition:opacity .55s}
+body.screening .node.cand.focus{opacity:1}
+body.screening .node.cand.gone{opacity:0}
+.node.gone{opacity:0!important}
+/* card label under the dot */
+.node .card{position:absolute;left:50%;top:calc(100% + 9px);transform:translate(-50%,4px);text-align:center;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .5s,transform .5s cubic-bezier(.3,1.1,.4,1)}
+.node.labeled .card{opacity:1;transform:translate(-50%,0)}
+.node .card .nm{font-weight:600;font-size:12.5px;color:var(--ink);letter-spacing:-.01em;line-height:1.15}
+.node.win .card .nm,.node.leader .card .nm{color:var(--accent2)}
+.node .card .sub{font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-top:2px}
+.node .card .stat{font-family:var(--mono);font-size:9px;color:var(--ink2);margin-top:3px;max-height:0;opacity:0;overflow:hidden;transition:opacity .45s,max-height .45s}
+.node.showstat .card .stat{opacity:1;max-height:16px}
+.node .card .stat b{color:var(--ink)}
+/* lock crosshair on winner */
+.lock{position:absolute;inset:-15px;opacity:0;transform:scale(1.4);transition:opacity .4s,transform .45s cubic-bezier(.3,1.3,.4,1);pointer-events:none}
 .node.locked .lock{opacity:1;transform:scale(1)}
-.lock i{position:absolute;width:7px;height:7px;border:1px solid var(--accent2)}
+.lock i{position:absolute;width:9px;height:9px;border:1.5px solid var(--accent2)}
 .lock .a{top:0;left:0;border-right:0;border-bottom:0}.lock .b{top:0;right:0;border-left:0;border-bottom:0}.lock .c{bottom:0;left:0;border-right:0;border-top:0}.lock .d{bottom:0;right:0;border-left:0;border-top:0}
-/* reject reason */
-.reason{position:absolute;left:50%;top:-8px;transform:translate(-50%,-100%);white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none;font-family:var(--mono);font-size:8.5px;color:var(--loss);border:1px solid var(--loss-bd);background:var(--glass2);padding:3px 7px;border-radius:3px}
-.node.rejected .reason{opacity:1}
-.node.rejected .dot{border-color:var(--loss-line)}
+/* exclusion stamp — big and readable */
+.node .stamp{position:absolute;left:50%;bottom:calc(100% + 13px);transform:translate(-50%,10px) scale(.92);opacity:0;transition:opacity .5s,transform .55s cubic-bezier(.3,1.25,.4,1);pointer-events:none;z-index:15;text-align:center}
+.node.reject .stamp{opacity:1;transform:translate(-50%,0) scale(1)}
+.node .stamp .st{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:3px;padding:4px 9px;display:inline-block;box-shadow:0 8px 20px var(--shadow)}
+.node .stamp .sr{display:block;margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--loss);letter-spacing:.02em}
+.node.reject .dot{border-color:var(--loss);background:transparent;box-shadow:0 0 0 4px var(--loss-soft)}
 
 /* chapter caption (bottom-left, refined) */
 #chapter{position:absolute;left:34px;bottom:22px;pointer-events:none;z-index:12}
@@ -185,10 +202,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 #skip{position:fixed;bottom:64px;right:22px;z-index:30;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:6px 11px;cursor:pointer;background:var(--glass);border-radius:3px}
 #skip:hover{color:var(--accent2)}body.settled #skip{display:none}
 
-.node .nlabel{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--ink2);white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none;letter-spacing:.01em}
-.node.ranked .nlabel{opacity:1}.node.win .nlabel{color:var(--accent2);font-weight:600}
-.node.nlead .dot{box-shadow:0 0 0 3px var(--accent-soft)}
-.node.excl .nlabel{display:none}
+.node.leader .dot{box-shadow:0 0 0 2px var(--accent),0 0 22px -2px var(--accent-glow)}
 #weighticker{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px;min-height:12px}
 #weighticker b{color:var(--accent2)}
 #weighlegend{display:flex;flex-wrap:wrap;gap:6px 11px;margin-bottom:10px;opacity:0;transition:opacity .5s}
@@ -196,7 +210,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 #weighlegend span{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2)}
 #weighlegend i{width:9px;height:6px;border-radius:1px;display:inline-block}
 #weighlegend .neg i{background:var(--loss)}
-#scorebars{position:relative;height:170px}
+#scorebars{position:relative;height:190px}
 .wrow{position:absolute;left:0;right:0;height:30px;display:grid;grid-template-columns:64px 1fr 46px;gap:8px;align-items:center;transition:top .55s cubic-bezier(.3,.85,.3,1);opacity:0}
 .wrow.in{opacity:1}
 .wrow .wn{font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -269,7 +283,10 @@ function el(t,c){var e=document.createElement(t);if(c)e.className=c;return e}
 function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function pct(x){return x==null?'—':(x*100).toFixed(1)+'%'} function num(x){return x==null?'—':x.toFixed(2)}
 function first(n){return n.split(' ')[0]}
-function survivors(){return A.funds.filter(function(d){return !d.excluded}).sort(function(a,b){return a.rank-b.rank})}
+function contenders(){return A.funds.filter(function(d){return d.eligible}).sort(function(a,b){return a.srank-b.srank})} // cleared the mandate (scored)
+function shortlisted(){return A.funds.filter(function(d){return d.rank}).sort(function(a,b){return a.rank-b.rank})} // made the top-N
+function rejects(){return A.funds.filter(function(d){return d.reason})} // failed the mandate
+function survivors(){return contenders()} // scoring scene operates on the eligible set
 function byId(id){return A.funds.filter(function(d){return d.id==id})[0]}
 function weightFactors(){return Object.keys(A.weights).sort(function(a,b){return A.weights[b]-A.weights[a]})}
 function hx(n){n=Math.max(0,Math.min(255,Math.round(n)));return ('0'+n.toString(16)).slice(-2)}
@@ -277,35 +294,41 @@ function mix(a,b,t){function p(c){return [parseInt(c.slice(1,3),16),parseInt(c.s
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888888'}
 function segColor(i,win){var FN=weightFactors().length;var t=FN>1?(FN-1-i)/(FN-1):1;return win?mix(cssv('--segw-a'),cssv('--segw-b'),t):mix(cssv('--seg-a'),cssv('--seg-b'),t)}
 function trajGrays(){return [cssv('--traj1'),cssv('--traj2'),cssv('--traj3'),cssv('--traj4')]}
-var nodes={}, rows={}, segState={}, aborted=false, trajBuilt=false, ROWH=32, ZERO=30, UNIT=1;
-function computeScale(){var sl=survivors();var fs=weightFactors();var mp=0,mn=0;
+var nodes={}, rows={}, segState={}, aborted=false, trajBuilt=false, ROWH=30, ZERO=30, UNIT=1;
+function computeScale(){var sl=shortlisted();var fs=weightFactors();var mp=0,mn=0; // scale to the shortlist; an outscored cut fund may overflow (clipped)
   sl.forEach(function(d){var p=0,n=0;fs.forEach(function(k){var c=(d.comp[k]||0);if(c>=0)p+=c;else n+=-c});mp=Math.max(mp,p);mn=Math.max(mn,n)});
   UNIT=Math.min((96-ZERO)/(mp||1),(ZERO-4)/(mn||1));}
 function buildLegend(){var h=$('#weighlegend');if(!h)return;var fs=weightFactors();
   h.innerHTML=fs.map(function(k,i){return "<span><i style='background:"+segColor(i,false)+"'></i>"+k.replace(/_/g,' ')+"</span>"}).join('')+"<span class='neg'><i></i>detracts</span>";
   h.classList.add('in');}
 
+function stratShort(s){return (s||'').replace(/\b(Strategy|Fund|Global|Structured)\b/g,'').replace(/\s+/g,' ').trim()||s}
 function buildField(){
   var f=$('#field');
-  A.funds.forEach(function(d){
-    var n=el('div','node '+(d.excluded?'excl':'on'+(d.rank==1?' win':'')));
-    n.dataset.fid=d.id;n.__d=d;
+  A.funds.forEach(function(d,i){
+    var n=el('div','node cand');
+    n.dataset.fid=d.id;n.__d=d;n.__i=i;
     n.dataset.tip="<div class='tn'>"+d.name+"</div><div class='ts'>"+d.strategy+"</div>return <b>"+pct(d.ret)+"</b> · vol <b>"+pct(d.vol)+"</b> · sharpe <b>"+num(d.sharpe)+"</b>";
-    var dot=el('div','dot');
     var halo=el('div','halo');
     var lock=el('div','lock');['a','b','c','d'].forEach(function(k){lock.appendChild(el('i',k))});
-    var rs=el('div','reason');rs.textContent=d.reason||'';
+    var stamp=el('div','stamp');var st=el('div','st');st.textContent='excluded';var sr=el('div','sr');stamp.appendChild(st);stamp.appendChild(sr);
     var crown=el('div','crown');crown.appendChild(document.createTextNode('leader'));
     var rtag=el('div','rtag');
-    var lab=el('div','nlabel');lab.textContent=first(d.name);
-    n.appendChild(halo);n.appendChild(lock);n.appendChild(rs);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(lab);
+    var dot=el('div','dot');
+    var card=el('div','card');
+    card.innerHTML="<div class='nm'>"+first(d.name)+"</div><div class='sub'>"+stratShort(d.strategy)+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
+    n.appendChild(halo);n.appendChild(lock);n.appendChild(stamp);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(card);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
   var g=$('#gates');A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
 }
-function updateCounter(){var live=A.funds.filter(function(d){return !nodes[d.id].classList.contains('ejected')}).length;var c=$('#counter');if(c)c.innerHTML='Candidates · <b>'+String(live).padStart(2,'0')+'</b>'}
-function place(n){n.classList.add('shown');n.style.left=n.__d.x+'%';n.style.bottom=n.__d.y+'%'}
-function zoom(){A.funds.forEach(function(d){var n=nodes[d.id];if(d.excluded){n.style.opacity='0';n.style.transform='translate(-50%,50%) scale(.4)'}else{n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}})}
+function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id];return !n.classList.contains('gone')&&!n.classList.contains('cutout')}).length;var c=$('#counter');if(c)c.innerHTML=(lbl||'Candidates')+' · <b>'+String(live).padStart(2,'0')+'</b>'}
+function universePos(i){var cols=3;var r=Math.floor(i/cols),c=i%cols;
+  var L=[26,50,74][c],B=[77,50,23][r];
+  var jx=(((i*37)%7)-3)*1.5,jy=(((i*29)%7)-3)*1.3;
+  return {x:L+jx,y:B+jy};}
+function frontier(){buildGuides();$('#guides').classList.add('on');
+  A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible){n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}});}
 function chapter(numv,ttl,sub){var c=$('#chapter');c.innerHTML="<div class='c'><div class='n'>"+numv+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')}
 
 function buildWeigh(){
@@ -391,7 +414,7 @@ function drawBenchLine(){ if(!A.benchLine)return;var f=$('#field');if(!f)return;
 function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
   var svg=$('#traj');var host=$('#trajwrap');var W=380,H=svg.clientHeight||190,pad=6;
   $$('.tt',host).forEach(function(t){t.remove()});
-  var funds=survivors().filter(function(d){return d.wealth&&d.wealth.length});if(!funds.length)return;
+  var funds=shortlisted().filter(function(d){return d.wealth&&d.wealth.length});if(!funds.length)return;
   var GR=trajGrays(),WINC=cssv('--accent2');
   var lo=1e9,hi=-1e9,n=funds[0].wealth.length;funds.forEach(function(d){d.wealth.forEach(function(w){lo=Math.min(lo,w);hi=Math.max(hi,w)})});
   var X=function(i){return pad+i/(n-1)*(W-2*pad)},Y=function(w){return H-pad-(w-lo)/((hi-lo)||1)*(H-2*pad)};
@@ -416,36 +439,59 @@ function applyTheme(light){document.documentElement.dataset.theme=light?'light':
 var vTimer;
 function typeVerdict(){var e=$('#vtext');var t=A.verdict;var i=0;clearInterval(vTimer);vTimer=setInterval(function(){e.textContent=t.slice(0,i++);if(i>t.length){clearInterval(vTimer);e.innerHTML=A.verdictHtml}},20)}
 
+var NUM=['','one','two','three','four','five','six','seven','eight','nine','ten'];
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
 async function story(){
-  chapter('01 · Universe','The candidate set',A.funds.length+' funds considered');await wait(650);
-  for(var i=0;i<A.funds.length;i++){if(aborted)return;place(nodes[A.funds[i].id]);await wait(120)}
-  await wait(1000);
-  chapter('02 · Screening','Apply the mandate','liquidity + volatility gates');
-  $('#gates').classList.add('on');
-  if(A.gateX!=null){var gl=$('#gateline');gl.style.left=A.gateX+'%';$('span',gl).textContent='max vol · '+A.volcap;var dz=$('#danger');dz.style.left=A.gateX+'%';gl.classList.add('on');dz.classList.add('on')}
+  var total=A.funds.length;
+  // ── ACT 1 · Universe — show every candidate, big and legible ──
+  chapter('01 · Universe',cap(NUM[total]||total)+' candidates','the full fund universe enters the screen');
+  A.funds.forEach(function(d,i){var n=nodes[d.id];var p=universePos(i);n.style.left=p.x+'%';n.style.bottom=p.y+'%'});
+  for(var i=0;i<total;i++){if(aborted)return;nodes[A.funds[i].id].classList.add('shown');await wait(170)}
+  await wait(350);
+  for(var i2=0;i2<total;i2++){if(aborted)return;nodes[A.funds[i2].id].classList.add('labeled');await wait(120)}
+  await wait(2000);
+  // ── ACT 2 · Screening — cut the mandate failures one at a time, slowly ──
+  chapter('02 · Screening','Apply the mandate','liquidity + volatility limits');
+  $('#gates').classList.add('on');document.body.classList.add('screening');
   $('#counter').classList.add('on');updateCounter();
-  await wait(650);
-  var gates=$$('.gate');var excl=A.funds.filter(function(d){return d.excluded&&d.reason});
-  for(var j=0;j<excl.length;j++){if(aborted)return;var ex=excl[j];gates.forEach(function(g){g.classList.toggle('act',(''+ex.reason).toUpperCase().indexOf(g.dataset.k)>=0)});var en=nodes[ex.id];en.classList.add('rejected');await wait(500);if((''+ex.reason).indexOf('VOLATILITY')>=0){en.style.left='108%'}else{en.style.bottom='-8%'}en.style.opacity='0';en.classList.add('ejected');updateCounter();await wait(340)}
-  gates.forEach(function(g){g.classList.remove('act')});$('#gates').classList.remove('on');$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');await wait(600);
-  chapter('03 · Scoring','Weigh the survivors','each criterion applied by weight');
-  zoom();buildGuides();$('#guides').classList.add('on');document.body.classList.add('scoring');await wait(600);
-  survivors().forEach(function(d){nodes[d.id].classList.add('ranked')});
-  $('#scorepane').classList.add('in');buildWeigh();await wait(550);
+  await wait(1100);
+  var gates=$$('.gate');var rj=rejects();
+  for(var j=0;j<rj.length;j++){if(aborted)return;var ex=rj[j];var en=nodes[ex.id];
+    gates.forEach(function(g){g.classList.toggle('act',(''+ex.reason).toUpperCase().indexOf(g.dataset.k)>=0)});
+    $('.sr',en).textContent=ex.reason;             // fill the readable reason
+    en.classList.add('focus');await wait(750);      // bring it forward
+    en.classList.add('reject');await wait(1900);     // stamp it — hold long enough to read
+    en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(820);
+  }
+  gates.forEach(function(g){g.classList.remove('act')});
+  document.body.classList.remove('screening');$('#gates').classList.remove('on');
+  A.funds.forEach(function(d){if(d.reason)nodes[d.id].classList.add('gone')});
+  await wait(700);
+  // ── ACT 3 · Scoring — survivors take the frontier; weigh them in focus ──
+  chapter('03 · Scoring',cap(NUM[A.nEligible]||A.nEligible)+' clear the mandate','scored on risk-adjusted return');
+  frontier();document.body.classList.add('scoring');updateCounter();await wait(1300);
+  $('#scorepane').classList.add('in');buildWeigh();await wait(700);
   await runWeigh();
-  $('.sweetz').classList.add('on');await wait(700);
-  var win=survivors()[0];if(aborted)return;
+  await cutLowest();
+  $('.sweetz').classList.add('on');await wait(650);
+  // ── ACT 4 · Recommendation — one fund resolves ──
+  var win=shortlisted()[0];if(aborted||!win)return;
   chapter('04 · Recommendation',first(win.name),win.name);
-  setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';
-  nodes[win.id].classList.add('locked');
+  focusWinner(win);
   $('#trajpane').classList.add('in');buildTraj();
-  await wait(1600);settle();
+  await wait(2100);settle();
 }
-function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');clearHalos();clearRtags();setLeaderNode(null);var fc=$('#factorcue');if(fc)fc.classList.remove('on');$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');typeVerdict();}
+async function cutLowest(){var c=A.funds.filter(function(d){return d.cut})[0];if(!c||aborted)return;
+  var n=nodes[c.id];clearHalos();setLeaderNode(shortlisted()[0]?shortlisted()[0].id:null);
+  n.classList.add('focus');showRtag(c.id,"outscored · <b>below the top "+A.nShort+"</b>",true);await wait(1700);
+  n.classList.remove('focus');n.classList.add('cutout','dimmed');clearRtags();updateCounter('Shortlist');await wait(700);}
+function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
+  setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
+function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');clearHalos();clearRtags();var fc=$('#factorcue');if(fc)fc.classList.remove('on');A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();}
 
-function reset(){aborted=true;document.body.classList.remove('settled');document.body.classList.remove('scoring');
+function reset(){aborted=true;document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');
   clearHalos();clearRtags();setLeaderNode(null);var fc=$('#factorcue');if(fc)fc.classList.remove('on');
-  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader'});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
@@ -459,9 +505,13 @@ function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];
 function wire(){
   var tip=$('#tip');
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
-  document.addEventListener('click',function(e){var n=e.target.closest('.node.on');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
+  document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(d.excluded){n.style.opacity='0'}else{n.classList.add('ranked');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.rank==1)n.classList.add('locked')}});buildGuides();$('#guides').classList.add('on');$('#scorepane').classList.add('in');buildWeigh();renderFinal();var sl=survivors();$('#weighticker').innerHTML='Final · weighted risk-adjusted score';var win=sl[0];var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');settle()});
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;clearRtags();clearHalos();document.body.classList.remove('screening');
+    A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown','labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
+    frontier();document.body.classList.add('scoring');$('#scorepane').classList.add('in');buildWeigh();renderFinal();
+    var win=shortlisted()[0];nodes[win.id].classList.add('focus','win','locked');var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';nodes[win.id].classList.add('leader');
+    $('#weighticker').innerHTML='Final · weighted risk-adjusted score';var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');updateCounter('Shortlist');settle()});
   window.addEventListener('resize',function(){if($('#guides')&&$('#guides').classList.contains('on'))drawBenchLine()});
   var tb=$('#themebtn');if(tb){var tog=function(){applyTheme(document.documentElement.dataset.theme!=='light')};tb.addEventListener('click',tog);tb.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}});}
 }
@@ -551,25 +601,28 @@ def render_html(memo, ctx=None):
             if ser:
                 for v in ser.values:c*=(1+v);wealth.append(round(c,4))
             rk=ranks.get(fid)
-            comps=components(fid) if rk else []
-            reason=None
+            reason=None; reason_kind=None
             if rk is None and mandate and f:
                 excl_strats=next((cn.value for cn in mandate.constraints if cn.field=="strategy" and cn.op=="not_in"),[]) or []
                 volcap=next((cn.value for cn in mandate.constraints if cn.field=="ann_vol" and cn.op=="<="),None)
                 if f.strategy in excl_strats:
-                    reason=f"LIQUIDITY · {f.strategy}"
+                    reason=f"LIQUIDITY · {f.strategy}"; reason_kind="LIQUIDITY"
                 elif volcap is not None and m.get("ann_vol") is not None and m["ann_vol"]>volcap:
-                    reason=f"VOLATILITY · {m['ann_vol']*100:.0f}% > {volcap*100:.0f}%"
+                    reason=f"VOLATILITY · {m['ann_vol']*100:.0f}% > {volcap*100:.0f}%"; reason_kind="VOLATILITY"
                 # else: eligible but outscored -> no rejection reason
+            eligible=(reason is None)                 # passed the mandate (ranked OR outscored)
+            cut=(rk is None and eligible)             # eligible but below the top-N shortlist
+            comps=components(fid) if eligible else []
             fd.append({"id":fid,"name":(f.name if f else fid),"strategy":(f.strategy if f else ""),
-                "rank":rk,"excluded":rk is None,
+                "rank":rk,"excluded":rk is None,"eligible":eligible,"cut":cut,"rkind":reason_kind,
+                "srank":(rk if rk else (90 if cut else 99)),
                 "x":round(12+(m["ann_vol"]-vmin)/vr*76,1),"y":round(12+(m["ann_return"]-rmin)/rr*76,1),
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"maxdd":m.get("max_drawdown"),
                 "wealth":wealth,"reason":reason,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
-    # zoom positions (survivors + benchmark normalized to a shared range so the
+    # zoom positions (all mandate-eligible funds + benchmark, shared range so the
     # frontier reads against the index and the corners carry meaning)
-    surv=[d for d in fd if not d["excluded"]]
+    surv=[d for d in fd if d["eligible"]]
     benchLine=None
     if surv:
         zv=[d["vol"] for d in surv];zr=[d["ret"] for d in surv]
@@ -595,7 +648,8 @@ def render_html(memo, ctx=None):
     vhtml=(f"<b>{e(top.name)}</b> leads on risk-adjusted return." if top else "No fund met the mandate.")
     DATA={"funds":fd,"gates":gates,"verdict":vplain,"verdictHtml":vhtml,"model":memo.generated_by,
           "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"gateX":gateX,"volcap":(f"{volcap*100:.0f}%" if volcap is not None else None),"weights":{k:round(float(v),3) for k,v in weights.items()},
-          "bench":({k:(round(v,4) if isinstance(v,float) else v) for k,v in bench.items()} if bench else None),"benchLine":benchLine}
+          "bench":({k:(round(v,4) if isinstance(v,float) else v) for k,v in bench.items()} if bench else None),"benchLine":benchLine,
+          "nTotal":len(fd),"nEligible":sum(1 for d in fd if d["eligible"]),"nShort":len(sl),"nReject":sum(1 for d in fd if d.get("reason"))}
 
     chips="".join(f'<div class="chip{" r1" if s.rank==1 else ""}" data-fid="{e(s.fund_id)}"><span class="n">{s.rank:02d}</span><span class="nm">{e(s.name)}</span><span class="rt">{_pct(s.metrics.get("ann_return"))}</span></div>' for s in sl)
 
