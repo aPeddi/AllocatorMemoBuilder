@@ -153,16 +153,26 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .node.excl .nlabel{display:none}
 #weighticker{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px;min-height:12px}
 #weighticker b{color:var(--accent2)}
+#weighlegend{display:flex;flex-wrap:wrap;gap:6px 11px;margin-bottom:10px;opacity:0;transition:opacity .5s}
+#weighlegend.in{opacity:1}
+#weighlegend span{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2)}
+#weighlegend i{width:9px;height:6px;border-radius:1px;display:inline-block}
+#weighlegend .neg i{background:var(--loss)}
 #scorebars{position:relative;height:170px}
-.wrow{position:absolute;left:0;right:0;height:30px;display:grid;grid-template-columns:70px 1fr 44px;gap:9px;align-items:center;transition:top .55s cubic-bezier(.3,.85,.3,1);opacity:0}
+.wrow{position:absolute;left:0;right:0;height:30px;display:grid;grid-template-columns:64px 1fr 46px;gap:8px;align-items:center;transition:top .55s cubic-bezier(.3,.85,.3,1);opacity:0}
 .wrow.in{opacity:1}
 .wrow .wn{font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wrow.win .wn{color:var(--accent2)}
 .wtrack{position:relative;height:20px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
-.wfill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--g4),var(--g2));transition:width .5s cubic-bezier(.3,.85,.3,1)}
-.wrow.win .wfill{background:linear-gradient(90deg,var(--accent-dim),var(--accent))}
+.wzero{position:absolute;top:0;bottom:0;width:1px;background:var(--border2);z-index:1}
+.wseg{position:absolute;top:1px;bottom:1px;opacity:0;border-right:1px solid rgba(13,15,19,.55);transition:opacity .4s cubic-bezier(.3,.85,.3,1)}
+.wseg.in{opacity:1}
+.wseg.neg{border-right:0;border-left:1px solid rgba(13,15,19,.55)}
+.wseg.pulse{box-shadow:0 0 0 1px var(--accent2)}
 .wrow.lead .wtrack{box-shadow:0 0 0 1px var(--accent-dim)}
+.wrow.flip .wtrack{box-shadow:0 0 0 1px var(--accent2),0 0 14px -3px var(--accent)}
 .wsc{font-family:var(--mono);font-size:11px;color:var(--ink2);text-align:right}
+.wrow.win .wsc{color:var(--accent2)}
 #play{position:fixed;bottom:24px;right:24px;z-index:35;display:none;align-items:center;gap:9px;padding:10px 16px;border:1px solid var(--accent-dim);background:rgba(13,15,19,.92);color:var(--accent2);cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;border-radius:5px;transition:.2s}
 #play::before{content:'\25B6';font-size:10px}
 #play:hover{background:var(--accent-dim);color:#fff;box-shadow:0 0 18px -5px var(--accent)}
@@ -175,6 +185,14 @@ body.settled #play{display:inline-flex}
 .danger.on{opacity:1}
 #counter{position:absolute;top:-2px;right:2px;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);opacity:0;transition:opacity .5s;z-index:3}
 #counter.on{opacity:1}#counter b{color:var(--ink)}
+/* field guides: benchmark anchor + risk-adjusted reference line */
+#guides{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .9s}
+#guides.on{opacity:1}
+#benchray{position:absolute;height:0;border-top:1px dashed rgba(94,140,168,.5);transform-origin:0 0;left:0;top:0;width:0}
+#benchmk{position:absolute;transform:translate(-50%,50%);z-index:2}
+#benchmk .dm{width:9px;height:9px;background:var(--panel2);border:1px solid var(--accent);transform:rotate(45deg);box-shadow:0 0 0 3px rgba(94,140,168,.12)}
+#benchmk .bl{position:absolute;left:50%;top:calc(100% + 7px);transform:translateX(-50%);white-space:nowrap;font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+#beatlbl{position:absolute;left:1.5%;top:3%;font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent-dim);max-width:118px;line-height:1.55}
 @media(max-width:900px){.mid{grid-template-columns:1fr}.side{display:none}.hdr .vtext{font-size:14px}}
 """
 
@@ -188,7 +206,18 @@ function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function pct(x){return x==null?'—':(x*100).toFixed(1)+'%'} function num(x){return x==null?'—':x.toFixed(2)}
 function first(n){return n.split(' ')[0]}
 function survivors(){return A.funds.filter(function(d){return !d.excluded}).sort(function(a,b){return a.rank-b.rank})}
-var nodes={}, rows={}, aborted=false, trajBuilt=false, GRAYS=['#C2CAD4','#98A1AE','#6E7889','#525C6B'], ROWH=32;
+function byId(id){return A.funds.filter(function(d){return d.id==id})[0]}
+function weightFactors(){return Object.keys(A.weights).sort(function(a,b){return A.weights[b]-A.weights[a]})}
+function hx(n){n=Math.max(0,Math.min(255,Math.round(n)));return ('0'+n.toString(16)).slice(-2)}
+function mix(a,b,t){function p(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}var P=p(a),Q=p(b);return '#'+hx(P[0]+(Q[0]-P[0])*t)+hx(P[1]+(Q[1]-P[1])*t)+hx(P[2]+(Q[2]-P[2])*t)}
+function segColor(i,win){var FN=weightFactors().length;var t=FN>1?(FN-1-i)/(FN-1):1;return win?mix('#33505F','#9DC4DA',t):mix('#39414D','#9BA5B2',t)}
+var nodes={}, rows={}, segState={}, aborted=false, trajBuilt=false, GRAYS=['#C2CAD4','#98A1AE','#6E7889','#525C6B'], ROWH=32, ZERO=30, UNIT=1;
+function computeScale(){var sl=survivors();var fs=weightFactors();var mp=0,mn=0;
+  sl.forEach(function(d){var p=0,n=0;fs.forEach(function(k){var c=(d.comp[k]||0);if(c>=0)p+=c;else n+=-c});mp=Math.max(mp,p);mn=Math.max(mn,n)});
+  UNIT=Math.min((96-ZERO)/(mp||1),(ZERO-4)/(mn||1));}
+function buildLegend(){var h=$('#weighlegend');if(!h)return;var fs=weightFactors();
+  h.innerHTML=fs.map(function(k,i){return "<span><i style='background:"+segColor(i,false)+"'></i>"+k.replace(/_/g,' ')+"</span>"}).join('')+"<span class='neg'><i></i>detracts</span>";
+  h.classList.add('in');}
 
 function buildField(){
   var f=$('#field');
@@ -211,34 +240,63 @@ function zoom(){A.funds.forEach(function(d){var n=nodes[d.id];if(d.excluded){n.s
 function chapter(numv,ttl,sub){var c=$('#chapter');c.innerHTML="<div class='c'><div class='n'>"+numv+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')}
 
 function buildWeigh(){
-  var host=$('#scorebars');host.innerHTML='';rows={};
+  var host=$('#scorebars');host.innerHTML='';rows={};segState={};computeScale();buildLegend();
   var sl=survivors();
-  sl.forEach(function(d,i){d.__cum=0;
+  sl.forEach(function(d,i){
     var row=el('div','wrow'+(d.rank==1?' win':''));row.style.top=(i*ROWH)+'px';
-    row.innerHTML="<div class='wn'>"+first(d.name)+"</div><div class='wtrack'><div class='wfill'></div></div><div class='wsc'>0.00</div>";
-    host.appendChild(row);rows[d.id]=row;setTimeout(function(){row.classList.add('in')},70*i);
+    row.innerHTML="<div class='wn'>"+first(d.name)+"</div><div class='wtrack'><div class='wzero' style='left:"+ZERO+"%'></div></div><div class='wsc'>0.00</div>";
+    host.appendChild(row);rows[d.id]=row;segState[d.id]={pos:ZERO,neg:ZERO,cum:0};
+    setTimeout(function(){row.classList.add('in')},70*i);
   });
 }
+function addSeg(d,k,idx,animate){
+  var st=segState[d.id];var c=(d.comp[k]||0);var r=rows[d.id];var tr=$('.wtrack',r);
+  var seg=el('div','wseg'+(c<0?' neg':''));var w=Math.abs(c)*UNIT;
+  if(c>=0){seg.style.left=st.pos+'%';seg.style.width=w+'%';seg.style.background=segColor(idx,d.rank==1);st.pos+=w;}
+  else{st.neg-=w;seg.style.left=st.neg+'%';seg.style.width=w+'%';}
+  st.cum+=c;seg.dataset.k=k;tr.appendChild(seg);
+  if(animate){if(d.rank==1)seg.classList.add('pulse');requestAnimationFrame(function(){seg.classList.add('in')});}
+  else seg.classList.add('in');
+  $('.wsc',r).textContent=(st.cum>=0?'+':'')+st.cum.toFixed(2);
+  return seg;
+}
 async function runWeigh(){
-  var sl=survivors();var factors=Object.keys(A.weights).sort(function(a,b){return A.weights[b]-A.weights[a]});
-  var finals=sl.map(function(d){return d.score});var gmax=Math.max.apply(null,finals),gmin=Math.min.apply(null,finals);
-  function wp(v){return 6+Math.max(0,Math.min(1,(v-gmin)/((gmax-gmin)||1)))*90}
+  var sl=survivors();var factors=weightFactors();var prevLead=null;
   for(var fi=0;fi<factors.length;fi++){ if(aborted)return;
-    var k=factors[fi];
-    $('#weighticker').innerHTML="Weighing · <b>"+k.replace(/_/g,' ')+"</b> · "+Math.round(A.weights[k]*100)+"%";
-    sl.forEach(function(d){d.__cum+=(d.comp[k]||0)});
-    sl.forEach(function(d){var r=rows[d.id];$('.wfill',r).style.width=wp(d.__cum)+'%';$('.wsc',r).textContent=(d.__cum>=0?'+':'')+d.__cum.toFixed(2)});
-    var order=sl.slice().sort(function(a,b){return b.__cum-a.__cum});
+    var k=factors[fi],idx=fi;
+    sl.forEach(function(d){addSeg(d,k,idx,true)});
+    var order=sl.slice().sort(function(a,b){return segState[b.id].cum-segState[a.id].cum});
     order.forEach(function(d,rk){rows[d.id].style.top=(rk*ROWH)+'px'});
     var leadId=order[0].id;
     A.funds.forEach(function(d){nodes[d.id].classList.remove('nlead')});nodes[leadId].classList.add('nlead');
     Object.keys(rows).forEach(function(id){rows[id].classList.toggle('lead',id==leadId)});
-    await wait(650);
+    var flipped=(prevLead!==null&&leadId!==prevLead);
+    if(flipped){$('#weighticker').innerHTML="<b>"+k.replace(/_/g,' ')+"</b> tips <b>"+first(byId(leadId).name)+"</b> ahead";rows[leadId].classList.add('flip');}
+    else{$('#weighticker').innerHTML="Weighing · <b>"+k.replace(/_/g,' ')+"</b> · "+Math.round(A.weights[k]*100)+"%";}
+    await wait(flipped?1250:660);
+    if(flipped)rows[leadId].classList.remove('flip');
+    prevLead=leadId;
   }
+  await wait(520);
   A.funds.forEach(function(d){nodes[d.id].classList.remove('nlead')});
+  $$('.wseg.pulse').forEach(function(s){s.classList.remove('pulse')});
   var win=survivors()[0];if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
     $('#weighticker').innerHTML="Final · weighted risk-adjusted score";
     $('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
+}
+function renderFinal(){var sl=survivors();var factors=weightFactors();
+  sl.forEach(function(d){factors.forEach(function(k,idx){addSeg(d,k,idx,false)});rows[d.id].classList.add('in')});
+  sl.slice().sort(function(a,b){return segState[b.id].cum-segState[a.id].cum}).forEach(function(d,rk){rows[d.id].style.top=(rk*ROWH)+'px'});
+}
+function buildGuides(){ if(!A.bench)return;
+  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).textContent=A.bench.name}
+  var bl=$('#beatlbl');if(bl)bl.innerHTML='above line ·<br>beats index<br>risk-adjusted';
+  drawBenchLine();
+}
+function drawBenchLine(){ if(!A.benchLine)return;var f=$('#field');if(!f)return;var W=f.clientWidth,H=f.clientHeight,L=A.benchLine;
+  var X1=L.x1/100*W,Y1=(1-L.y1/100)*H,X2=L.x2/100*W,Y2=(1-L.y2/100)*H;
+  var dx=X2-X1,dy=Y2-Y1,len=Math.sqrt(dx*dx+dy*dy),ang=Math.atan2(dy,dx);
+  var r=$('#benchray');if(!r)return;r.style.left=X1+'px';r.style.top=Y1+'px';r.style.width=len+'px';r.style.transform='rotate('+ang+'rad)';
 }
 
 function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
@@ -274,7 +332,7 @@ async function story(){
   for(var j=0;j<excl.length;j++){if(aborted)return;var ex=excl[j];gates.forEach(function(g){g.classList.toggle('act',(''+ex.reason).toUpperCase().indexOf(g.dataset.k)>=0)});var en=nodes[ex.id];en.classList.add('rejected');await wait(500);if((''+ex.reason).indexOf('VOLATILITY')>=0){en.style.left='108%'}else{en.style.bottom='-8%'}en.style.opacity='0';en.classList.add('ejected');updateCounter();await wait(340)}
   gates.forEach(function(g){g.classList.remove('act')});$('#gates').classList.remove('on');$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');await wait(600);
   chapter('03 · Scoring','Weigh the survivors','each criterion applied by weight');
-  zoom();await wait(500);
+  zoom();buildGuides();$('#guides').classList.add('on');await wait(600);
   survivors().forEach(function(d){nodes[d.id].classList.add('ranked')});
   $('#scorepane').classList.add('in');buildWeigh();await wait(550);
   await runWeigh();
@@ -288,7 +346,7 @@ async function story(){
 function settle(){document.body.classList.add('settled');$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');typeVerdict();}
 
 function reset(){aborted=true;document.body.classList.remove('settled');
-  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
@@ -304,7 +362,8 @@ function wire(){
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
   document.addEventListener('click',function(e){var n=e.target.closest('.node.on');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(d.excluded){n.style.opacity='0'}else{n.classList.add('ranked');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.rank==1)n.classList.add('locked')}});$('#scorepane').classList.add('in');buildWeigh();var sl=survivors();var finals=sl.map(function(x){return x.score});var gmax=Math.max.apply(null,finals),gmin=Math.min.apply(null,finals);sl.slice().sort(function(a,b){return b.score-a.score}).forEach(function(d,rk){var r=rows[d.id];r.classList.add('in');r.style.top=(rk*ROWH)+'px';$('.wfill',r).style.width=(6+Math.max(0,Math.min(1,(d.score-gmin)/((gmax-gmin)||1)))*90)+'%';$('.wsc',r).textContent=(d.score>=0?'+':'')+d.score.toFixed(2)});$('#weighticker').innerHTML='Final · weighted risk-adjusted score';var win=sl[0];var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');settle()});
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(d.excluded){n.style.opacity='0'}else{n.classList.add('ranked');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.rank==1)n.classList.add('locked')}});buildGuides();$('#guides').classList.add('on');$('#scorepane').classList.add('in');buildWeigh();renderFinal();var sl=survivors();$('#weighticker').innerHTML='Final · weighted risk-adjusted score';var win=sl[0];var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');settle()});
+  window.addEventListener('resize',function(){if($('#guides')&&$('#guides').classList.contains('on'))drawBenchLine()});
 }
 window.addEventListener('DOMContentLoaded',function(){buildField();wire();story()});
 })();
@@ -354,6 +413,20 @@ def render_html(memo, ctx=None):
             out.append({"k":k,"c":round(w*((v-mu)/sd)*DIRECTION.get(k,0),3)})
         return out
 
+    # benchmark point (same conventions as the metrics engine: CAGR + sample-std annualized vol)
+    bench=None
+    bmk=getattr(ctx,"benchmark",None) if ctx else None
+    if bmk and getattr(bmk,"points",None):
+        bvals=bmk.values; nb=len(bvals); bppy=bmk.periods_per_year or 12
+        if nb>=2:
+            growth=1.0
+            for v in bvals: growth*=(1.0+v)
+            bret=(growth**(bppy/nb)-1.0) if growth>0 else growth-1.0
+            bmean=sum(bvals)/nb
+            bvar=sum((v-bmean)**2 for v in bvals)/(nb-1)
+            bvol=(bvar**0.5)*(bppy**0.5)
+            bench={"name":bmk.name,"vol":bvol,"ret":bret}
+
     # gates
     gates=[]
     if mandate:
@@ -394,12 +467,24 @@ def render_html(memo, ctx=None):
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"maxdd":m.get("max_drawdown"),
                 "wealth":wealth,"reason":reason,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
-    # zoom positions (survivors normalized to own range)
+    # zoom positions (survivors + benchmark normalized to a shared range so the
+    # frontier reads against the index and the corners carry meaning)
     surv=[d for d in fd if not d["excluded"]]
+    benchLine=None
     if surv:
         zv=[d["vol"] for d in surv];zr=[d["ret"] for d in surv]
+        if bench: zv=zv+[bench["vol"]];zr=zr+[bench["ret"]]
         zvmin,zvmax=min(zv),max(zv);zrmin,zrmax=min(zr),max(zr);zvr=(zvmax-zvmin) or 1;zrr=(zrmax-zrmin) or 1
         for d in surv: d["xz"]=round(14+(d["vol"]-zvmin)/zvr*72,1);d["yz"]=round(14+(d["ret"]-zrmin)/zrr*72,1)
+        if bench:
+            bench["xz"]=round(14+(bench["vol"]-zvmin)/zvr*72,1)
+            bench["yz"]=round(14+(bench["ret"]-zrmin)/zrr*72,1)
+            if bench["vol"]>0:
+                s=bench["ret"]/bench["vol"]  # index return-per-unit-risk
+                def _mapxy(vol):
+                    return (round(14+(vol-zvmin)/zvr*72,1), round(14+(s*vol-zrmin)/zrr*72,1))
+                x1,y1=_mapxy(zvmin);x2,y2=_mapxy(zvmax)
+                benchLine={"x1":x1,"y1":y1,"x2":x2,"y2":y2}
     for d in fd: d.setdefault("xz",d["x"]);d.setdefault("yz",d["y"])
 
     if plist and volcap is not None:
@@ -409,7 +494,8 @@ def render_html(memo, ctx=None):
     vplain=f"{top.name} leads on risk-adjusted return." if top else "No fund met the mandate."
     vhtml=(f"<b>{e(top.name)}</b> leads on risk-adjusted return." if top else "No fund met the mandate.")
     DATA={"funds":fd,"gates":gates,"verdict":vplain,"verdictHtml":vhtml,"model":memo.generated_by,
-          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"gateX":gateX,"volcap":(f"{volcap*100:.0f}%" if volcap is not None else None),"weights":{k:round(float(v),3) for k,v in weights.items()}}
+          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"gateX":gateX,"volcap":(f"{volcap*100:.0f}%" if volcap is not None else None),"weights":{k:round(float(v),3) for k,v in weights.items()},
+          "bench":({k:(round(v,4) if isinstance(v,float) else v) for k,v in bench.items()} if bench else None),"benchLine":benchLine}
 
     chips="".join(f'<div class="chip{" r1" if s.rank==1 else ""}" data-fid="{e(s.fund_id)}"><span class="n">{s.rank:02d}</span><span class="nm">{e(s.name)}</span><span class="rt">{_pct(s.metrics.get("ann_return"))}</span></div>' for s in sl)
 
@@ -419,12 +505,13 @@ def render_html(memo, ctx=None):
             f'<span class="vbadge"><i></i>{a.get("verified_count",0)}/{a.get("claim_count",0)} verified</span></div></div>')
 
     stage=('<div class="stage"><div id="field"><div class="sweetz"><span>sweet spot · high return / low risk</span></div>'
+           '<div id="guides"><div id="benchray"></div><div id="benchmk"><div class="dm"></div><div class="bl"></div></div><div id="beatlbl"></div></div>'
            '<div class="gates" id="gates"></div><div class="gateline" id="gateline"><span></span></div><div class="danger" id="danger"></div><div id="counter"></div><div class="ax y">Return →</div><div class="ax x">Risk · volatility →</div></div>'
            '<div id="chapter"></div></div>')
 
     side=('<div class="side">'
           '<div class="pane" id="trajpane"><div class="head"><div class="t">36-Month Trajectory</div><div class="s">growth of $1</div></div><div id="trajwrap"><svg id="traj"></svg></div></div>'
-          '<div class="pane" id="scorepane"><div class="head"><div class="t">The weighing</div><div class="s">how the ranking forms</div></div><div id="weighticker"></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
+          '<div class="pane" id="scorepane"><div class="head"><div class="t">The weighing</div><div class="s">how the ranking forms</div></div><div id="weighticker"></div><div id="weighlegend"></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
           '</div>')
 
     rail=f'<div class="rail"><div class="rl">Shortlist</div><div class="chips">{chips}</div></div>'
