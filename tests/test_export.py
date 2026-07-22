@@ -14,7 +14,7 @@ def test_html_has_map_and_verified(sample_run):
     h = render_html(memo, ctx)
     assert memo.shortlist[0].name in h
     assert "verified" in h
-    assert 'class="node' in h  # risk/return map rendered
+    assert 'id="field"' in h and "window.AMB" in h  # interactive field + data payload
 
 
 def test_xlsx_has_expected_sheets(sample_run, tmp_path):
