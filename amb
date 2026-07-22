@@ -1,316 +1,71 @@
 #!/usr/bin/env bash
 #
-# amb — AllocatorMemoBuilder control CLI.
+# amb — one command: build the Investment Committee memo and open it in your browser.
 #
-# Turns a messy fund-universe CSV + mandate into an auditable IC memo.
-# This is the local test harness: one entrypoint for setup, the
-# data -> metrics -> memo pipeline, tests, servers, and git workflow.
-#
-# Usage:
-#   ./amb                 interactive menu
-#   ./amb setup           create .venv, install deps, seed .env
-#   ./amb doctor          check the local environment is ready
-#   ./amb demo            run the full pipeline on bundled sample data
-#   ./amb memo <csv>      build an IC memo from a fund CSV
-#   ./amb test            run the test suite
-#   ./amb feature <name>  start a feature/<name> branch off develop
-#   ./amb -h              help
+#   ./amb           build the memo and open it (installs deps on first run)
+#   ./amb test      run the test suite
+#   ./amb setup     (re)install dependencies only
+#   ./amb -h        help
 #
 set -uo pipefail
 cd "$(dirname "$0")"
 
-VENV=".venv"
-PY="$VENV/bin/python"
-PIP="$VENV/bin/pip"
+VENV=".venv"; PY="$VENV/bin/python"; PIP="$VENV/bin/pip"
 
-# ─────────────────────────────────────────── colors (TTY-aware)
 if [ -t 1 ]; then
-  BOLD='\033[1m'; DIM='\033[2m'
-  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-  CYAN='\033[0;36m'; MAGENTA='\033[0;35m'; NC='\033[0m'
-else
-  BOLD=''; DIM=''; RED=''; GREEN=''; YELLOW=''; CYAN=''; MAGENTA=''; NC=''
-fi
+  B='\033[1m'; D='\033[2m'; G='\033[0;32m'; C='\033[0;36m'; Y='\033[1;33m'; R='\033[0;31m'; N='\033[0m'
+else B=''; D=''; G=''; C=''; Y=''; R=''; N=''; fi
+ok(){ echo -e "${G}✓${N} $*"; }; info(){ echo -e "${C}ℹ${N} $*"; }
+warn(){ echo -e "${Y}!${N} $*"; }; err(){ echo -e "${R}✗${N} $*"; }; step(){ echo -e "${B}▸ $*${N}"; }
 
-ok()   { echo -e "${GREEN}✓${NC} $*"; }
-info() { echo -e "${CYAN}ℹ${NC} $*"; }
-warn() { echo -e "${YELLOW}!${NC} $*"; }
-err()  { echo -e "${RED}✗${NC} $*"; }
-step() { echo -e "${MAGENTA}▸${NC} ${BOLD}$*${NC}"; }
-hr()   { echo -e "${DIM}────────────────────────────────────────────────────────${NC}"; }
+[ -f .env ] && { set -a; . ./.env 2>/dev/null || true; set +a; }
 
-# ─────────────────────────────────────────── .env autoload
-if [ -f .env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source .env 2>/dev/null || true
-  set +a
-fi
+# already set up? (venv present + core libs import)
+ready(){ [ -x "$PY" ] && "$PY" -c "import amb_core, pandas, pydantic" >/dev/null 2>&1; }
 
-# ─────────────────────────────────────────── environment probes
-have_venv()     { [ -x "$PY" ]; }
-have_env()      { [ -f .env ]; }
-have_backend()  { [ -d backend ]; }
-have_frontend() { [ -d frontend ]; }
-current_branch(){ git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "—"; }
-
-py() {   # run python from the venv, or nudge toward setup
-  if have_venv; then "$PY" "$@"; else
-    err "No virtualenv yet. Run: ${BOLD}./amb setup${NC}"; return 1
-  fi
-}
-
-# a command that depends on backend code not written yet (rails-only stage)
-not_yet() {
-  local what="$1"; local design="${2:-docs/SPEC.md}"
-  warn "'${what}' isn't wired up yet."
-  echo -e "  ${DIM}The rails are here; this runs once the backend lands.${NC}"
-  echo -e "  ${DIM}Design: ${design}${NC}"
-}
-
-# ─────────────────────────────────────────── banner
-banner() {
-  clear 2>/dev/null || true
-  local br v e b
-  br="$(current_branch)"
-  echo ""
-  echo -e "  ${BOLD}${CYAN}AllocatorMemoBuilder${NC}  ${DIM}· messy CSV → auditable IC memo${NC}"
-  echo -e "  ${DIM}${br}  ·  $(TZ='America/New_York' date '+%a %d %b %Y · %H:%M %Z')${NC}"
-  echo ""
-  have_venv    && v="${GREEN}venv${NC}"    || v="${DIM}venv${NC}"
-  have_env     && e="${GREEN}.env${NC}"    || e="${DIM}.env${NC}"
-  have_backend && b="${GREEN}backend${NC}" || b="${DIM}backend${NC}"
-  echo -e "  ${DIM}ready:${NC} ${v} ${DIM}·${NC} ${e} ${DIM}·${NC} ${b}"
-  hr
-}
-
-# ─────────────────────────────────────────── setup / doctor
-cmd_setup() {
-  step "Local setup"
-  command -v python3 >/dev/null 2>&1 || { err "python3 not found — install Python 3.12+"; return 1; }
-  if ! have_venv; then
-    info "Creating virtualenv (.venv)…"
-    python3 -m venv "$VENV" || { err "venv creation failed"; return 1; }
-    ok "virtualenv created"
-  else
-    ok "virtualenv already present"
-  fi
-  info "Upgrading pip…"; "$PY" -m pip install --upgrade pip --quiet 2>/dev/null || true
-  if [ -f requirements.txt ]; then
-    info "Installing dependencies…"
-    if "$PIP" install -r requirements.txt --quiet; then ok "dependencies installed"
-    else err "pip install failed — see output above"; return 1; fi
-  else
-    warn "no requirements.txt yet — skipping deps"
-  fi
-  if [ -f backend/pyproject.toml ]; then
-    info "Installing amb_core (editable)…"
-    "$PIP" install -e ./backend --quiet && ok "amb_core installed" || warn "editable install failed"
-  fi
-  if [ ! -f .env ] && [ -f .env.example ]; then
-    cp .env.example .env && ok "created .env from template — add your OPENROUTER_API_KEY"
-  else
-    ok ".env already present"
-  fi
+setup(){
+  step "Setting up (first run only)…"
+  command -v python3 >/dev/null 2>&1 || { err "Python 3 not found — please install it first."; return 1; }
+  [ -x "$PY" ] || python3 -m venv "$VENV" || { err "could not create virtualenv"; return 1; }
+  "$PY" -m pip install --upgrade pip -q >/dev/null 2>&1 || true
+  "$PIP" install -q -r requirements.txt >/dev/null 2>&1 || { err "dependency install failed"; return 1; }
+  "$PIP" install -q -e ./backend >/dev/null 2>&1 || true
+  [ -f .env ] || { [ -f .env.example ] && cp .env.example .env; }
   mkdir -p data/local exports
-  hr; ok "Setup complete. Next: ${BOLD}./amb doctor${NC}"
+  ok "Ready."
 }
 
-cmd_doctor() {
-  step "Environment check"
-  local fail=0
-  if command -v python3 >/dev/null 2>&1; then ok "python3 — $(python3 --version 2>&1)"; else err "python3 missing"; fail=1; fi
-  if command -v node >/dev/null 2>&1; then ok "node — $(node --version 2>&1)"; else info "node not found (only needed for the frontend)"; fi
-  if have_venv; then ok "virtualenv (.venv) present"; else warn "no .venv — run ./amb setup"; fail=1; fi
-  if have_env; then ok ".env present"; else warn "no .env — run ./amb setup"; fi
-  if have_venv; then
-    if "$PY" -c "import pandas, numpy, pydantic" 2>/dev/null; then ok "core libs importable"; else warn "core libs missing — run ./amb setup"; fi
-  fi
-  if [ -n "${OPENROUTER_API_KEY:-}" ]; then ok "OPENROUTER_API_KEY set"; else info "OPENROUTER_API_KEY not set (needed for memo generation)"; fi
-  if have_backend; then ok "backend package present"; else info "backend not scaffolded yet (rails-only stage)"; fi
-  hr
-  if [ "$fail" -eq 0 ]; then ok "Looks good."; else warn "Some items need attention (see above)."; fi
+open_it(){  # open a file in the default browser, cross-platform
+  local f="$1"
+  if   command -v open     >/dev/null 2>&1; then open "$f"
+  elif command -v xdg-open >/dev/null 2>&1; then (xdg-open "$f" >/dev/null 2>&1 &)
+  elif command -v wslview  >/dev/null 2>&1; then wslview "$f"
+  else info "Open this in your browser: ${B}$f${N}"; fi
 }
 
-# ─────────────────────────────────────────── pipeline (stubbed until backend lands)
-cmd_ingest() {
-  step "Ingest & normalize"
-  local csv="${1:-}"
-  [ -n "$csv" ] || info "Usage: ./amb ingest <fund_universe.csv>"
-  have_backend || { not_yet "ingest" "docs/decisions/0002-deterministic-retrieval-over-rag.md"; return 0; }
-  py -m amb_core.ingest "$@"
-}
-cmd_metrics() {
-  step "Metrics engine"
-  have_backend || { not_yet "metrics" "docs/decisions/0004-metrics-engine-source-of-truth.md"; return 0; }
-  py -m amb_core.metrics "$@"
-}
-cmd_memo() {
-  step "Generate IC memo"
-  have_backend || { not_yet "memo" "docs/decisions/0003-structured-claims-memo.md"; return 0; }
-  py -m amb_core.memo "$@"
-}
-cmd_demo() {
-  step "End-to-end demo (bundled sample data)"
-  have_backend || { not_yet "demo"; return 0; }
-  py -m amb_core.demo "$@"
-}
-
-# ─────────────────────────────────────────── quality
-cmd_test() {
-  step "Test suite"
-  if have_venv && "$PY" -c "import pytest" 2>/dev/null; then
-    if [ -d tests ] && ls tests/*.py >/dev/null 2>&1; then
-      "$PY" -m pytest -q "$@"
-    else
-      info "No tests yet — they arrive with the metrics engine (unit-first)."
-    fi
+launch(){
+  ready || setup || return 1
+  step "Building the memo…"
+  "$PY" -m amb_core.demo "$@" || { err "build failed"; return 1; }
+  if [ -f exports/memo.html ]; then
+    ok "Opening exports/memo.html"
+    open_it exports/memo.html
   else
-    warn "pytest not installed — run ./amb setup"
+    warn "no memo.html was produced"
   fi
 }
-cmd_lint() {
-  step "Lint & types"
-  have_venv || { warn "run ./amb setup first"; return 0; }
-  "$PY" -m ruff check . 2>/dev/null || info "ruff skipped (install or no code yet)"
-  have_backend && { "$PY" -m mypy backend 2>/dev/null || info "mypy skipped"; }
-}
 
-# ─────────────────────────────────────────── export
-cmd_export() {
-  step "Export memo — Markdown · JSON · HTML · XLSX"
-  have_backend || { not_yet "export"; return 0; }
-  py -m amb_core.memo "$@"
-}
-
-# ─────────────────────────────────────────── git workflow helpers
-#   mirrors BRANCHING.md:  feature/* → develop → release/* → main
-_slug() { echo "$1" | tr '[:upper:] ' '[:lower:]-' | sed -E 's/[^a-z0-9-]+/-/g; s/-+/-/g; s/^-|-$//g'; }
-git_start() {   # $1 kind, $2 name, $3 base
-  local kind="$1" name="$2" base="$3" slug
-  [ -n "$name" ] || { err "Usage: ./amb $kind <name>"; return 1; }
-  slug="$(_slug "$name")"
-  git fetch origin --quiet 2>/dev/null || true
-  git checkout "$base" 2>/dev/null || { err "base branch '$base' not found"; return 1; }
-  git pull --ff-only origin "$base" --quiet 2>/dev/null || true
-  git checkout -b "$kind/$slug" && ok "on ${BOLD}$kind/$slug${NC} (from $base)"
-}
-cmd_feature() { git_start feature "${1:-}" develop; }
-cmd_hotfix()  { git_start hotfix  "${1:-}" main; }
-cmd_release() {
-  local ver="${1:-}"
-  [ -n "$ver" ] || { err "Usage: ./amb release <vX.Y>"; return 1; }
-  git checkout develop 2>/dev/null && { git pull --ff-only origin develop --quiet 2>/dev/null || true; }
-  git checkout -b "release/$ver" && ok "cut ${BOLD}release/$ver${NC} from develop"
-  info "Stabilize, then merge → main and tag:  git tag $ver"
-}
-cmd_gitstatus() {
-  step "Repo status"
-  echo -e "  branch: ${BOLD}$(current_branch)${NC}"
-  git status --short --branch
-  hr
-  info "Flow: feature/* → develop → release/* → main   (see BRANCHING.md)"
-}
-
-# ─────────────────────────────────────────── help
-cmd_help() {
-  banner
-  cat <<HELP
-  ${BOLD}Usage${NC}
-    ./amb                 open the interactive menu
-    ./amb <command> [args]
-
-  ${BOLD}Setup${NC}
-    setup                 create .venv, install deps, seed .env
-    doctor                check the local environment is ready
-
-  ${BOLD}Pipeline${NC}
-    ingest <csv>          normalize a fund-universe CSV
-    metrics               compute allocator-grade metrics
-    memo <csv>            build the auditable IC memo
-    demo                  run the whole pipeline on bundled sample data
-
-  ${BOLD}Quality${NC}
-    test                  run the pytest suite
-    lint                  ruff + mypy
-
-  ${BOLD}Export${NC}
-    export                write the memo as md · json · html · xlsx
-
-  ${BOLD}Git workflow${NC}  (see BRANCHING.md)
-    feature <name>        new feature/<name> off develop
-    release <vX.Y>        cut release/<vX.Y> off develop
-    hotfix <name>         new hotfix/<name> off main
-    st                    status + current flow position
-
-  ${BOLD}Other${NC}
-    help, -h              show this help
-HELP
-  echo ""
-}
-
-# ─────────────────────────────────────────── interactive menu
-menu() {
-  local choice c _
-  while true; do
-    banner
-    echo -e "  ${BOLD}What do you want to do?${NC}"
+case "${1:-}" in
+  ""|launch|open|start) launch "${@:2}" ;;
+  setup)                setup ;;
+  test)                 ready || setup; "$PY" -m pytest -q "${@:2}" ;;
+  -h|--help|help)
     echo ""
-    echo -e "   ${CYAN}1${NC})  Setup         ${DIM}.venv + deps + .env${NC}"
-    echo -e "   ${CYAN}2${NC})  Doctor        ${DIM}check the environment${NC}"
-    echo -e "   ${CYAN}3${NC})  Demo          ${DIM}full pipeline on sample data${NC}"
-    echo -e "   ${CYAN}4${NC})  Build memo    ${DIM}from a fund CSV${NC}"
-    echo -e "   ${CYAN}5${NC})  Metrics       ${DIM}compute metrics only${NC}"
-    echo -e "   ${CYAN}6${NC})  Test          ${DIM}run the suite${NC}"
-    echo -e "   ${CYAN}7${NC})  Export        ${DIM}md · json · html · xlsx${NC}"
-    echo -e "   ${CYAN}8${NC})  Git status    ${DIM}branch + flow${NC}"
-    echo -e "   ${CYAN}h${NC})  Help          ${DIM}all commands${NC}"
-    echo -e "   ${CYAN}q${NC})  Quit"
+    echo -e "  ${B}amb${N} — build the IC memo and open it in your browser"
     echo ""
-    printf "  ${BOLD}›${NC} "
-    read -r choice || { echo; echo "  bye."; exit 0; }
-    echo ""
-    case "$choice" in
-      1) cmd_setup ;;
-      2) cmd_doctor ;;
-      3) cmd_demo ;;
-      4) printf "  path to CSV: "; read -r c || c=""; cmd_memo "$c" ;;
-      5) cmd_metrics ;;
-      6) cmd_test ;;
-      7) cmd_export ;;
-      8) cmd_gitstatus ;;
-      h|H) cmd_help ;;
-      q|Q) echo "  bye."; exit 0 ;;
-      "") : ;;
-      *) warn "unknown option: $choice" ;;
-    esac
-    echo ""
-    printf "  ${DIM}press enter to continue…${NC} "
-    read -r _ || exit 0
-  done
-}
-
-# ─────────────────────────────────────────── dispatch
-main() {
-  local cmd="${1:-}"
-  shift 2>/dev/null || true
-  case "$cmd" in
-    ""|menu)        menu ;;
-    setup)          cmd_setup "$@" ;;
-    doctor)         cmd_doctor "$@" ;;
-    ingest)         cmd_ingest "$@" ;;
-    metrics)        cmd_metrics "$@" ;;
-    memo)           cmd_memo "$@" ;;
-    demo)           cmd_demo "$@" ;;
-    test)           cmd_test "$@" ;;
-    lint)           cmd_lint "$@" ;;
-    export)         cmd_export "$@" ;;
-    feature)        cmd_feature "$@" ;;
-    release)        cmd_release "$@" ;;
-    hotfix)         cmd_hotfix "$@" ;;
-    st|status)      cmd_gitstatus "$@" ;;
-    help|-h|--help) cmd_help ;;
-    *) err "unknown command: $cmd"; echo; cmd_help; exit 1 ;;
-  esac
-}
-main "$@"
+    echo -e "    ${C}./amb${N}         build the memo and open it  ${D}(installs deps on first run)${N}"
+    echo -e "    ${C}./amb test${N}    run the test suite"
+    echo -e "    ${C}./amb setup${N}   (re)install dependencies only"
+    echo "" ;;
+  *) err "unknown option: $1"; echo -e "  try ${C}./amb${N} or ${C}./amb -h${N}" ;;
+esac
