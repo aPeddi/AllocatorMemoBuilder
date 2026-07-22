@@ -20,6 +20,7 @@ class AnalysisContext:
         shortlist: list[ShortlistEntry],
         mandate: Mandate,
         quarantined: Optional[list[dict]] = None,
+        series_by_fund: Optional[dict] = None,
     ):
         self.funds = {f.fund_id: f for f in funds}
         self.benchmark = benchmark
@@ -28,6 +29,7 @@ class AnalysisContext:
         self.shortlist = shortlist
         self.mandate = mandate
         self.quarantined = quarantined or []
+        self.series_by_fund = series_by_fund or {}
 
     def get_fund(self, fund_id: str) -> Optional[Fund]:
         return self.funds.get(fund_id)
