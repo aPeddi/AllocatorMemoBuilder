@@ -74,7 +74,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .node{position:absolute;transform:translate(-50%,50%) scale(0);z-index:3;transition:left .95s cubic-bezier(.3,.85,.3,1),bottom .95s cubic-bezier(.3,.85,.3,1),transform .5s cubic-bezier(.3,1.2,.4,1),opacity .5s}
 .node.shown{transform:translate(-50%,50%) scale(1)}
 .node .dot{width:11px;height:11px;border-radius:50%;background:var(--g3);border:1px solid var(--border2);display:grid;place-items:center;transition:.5s;position:relative}
-.node.on .dot{width:30px;height:30px;background:var(--panel2);border:1.5px solid var(--ink2);color:var(--ink);font-family:var(--mono);font-weight:600;font-size:11px}
+.node.on .dot{width:15px;height:15px;background:var(--panel2);border:1.5px solid var(--ink2)}
 .node.on.win .dot{border-color:var(--accent);background:radial-gradient(circle at 38% 34%,#2a3f4d,#1a2a34);color:var(--accent2);box-shadow:0 0 0 1px rgba(94,140,168,.3),0 0 18px -4px rgba(94,140,168,.6)}
 .node.on{cursor:pointer}.node.on:hover .dot{border-color:var(--accent2)}
 .node .rk{opacity:0;transition:.4s}.node.ranked .rk{opacity:1}
@@ -146,6 +146,29 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 #tip .tn{color:#fff;font-weight:600;font-size:12px;font-family:var(--sans)}#tip .ts{color:var(--dim);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em}#tip b{color:var(--accent2)}
 #skip{position:fixed;bottom:64px;right:22px;z-index:30;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:6px 11px;cursor:pointer;background:rgba(13,15,19,.7);border-radius:3px}
 #skip:hover{color:var(--accent2)}body.settled #skip{display:none}
+
+.node .nlabel{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--ink2);white-space:nowrap;opacity:0;transition:opacity .4s;pointer-events:none;letter-spacing:.01em}
+.node.ranked .nlabel{opacity:1}.node.win .nlabel{color:var(--accent2);font-weight:600}
+.node.nlead .dot{box-shadow:0 0 0 3px rgba(94,140,168,.2)}
+.node.excl .nlabel{display:none}
+#weighticker{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px;min-height:12px}
+#weighticker b{color:var(--accent2)}
+#scorebars{position:relative;height:170px}
+.wrow{position:absolute;left:0;right:0;height:30px;display:grid;grid-template-columns:70px 1fr 44px;gap:9px;align-items:center;transition:top .55s cubic-bezier(.3,.85,.3,1);opacity:0}
+.wrow.in{opacity:1}
+.wrow .wn{font-size:12px;font-weight:600;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrow.win .wn{color:var(--accent2)}
+.wtrack{position:relative;height:20px;background:var(--panel2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.wfill{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,var(--g4),var(--g2));transition:width .5s cubic-bezier(.3,.85,.3,1)}
+.wrow.win .wfill{background:linear-gradient(90deg,var(--accent-dim),var(--accent))}
+.wrow.lead .wtrack{box-shadow:0 0 0 1px var(--accent-dim)}
+.wsc{font-family:var(--mono);font-size:11px;color:var(--ink2);text-align:right}
+#play{position:fixed;bottom:26px;right:24px;z-index:35;width:46px;height:46px;border-radius:50%;border:1px solid var(--accent-dim);background:rgba(13,15,19,.85);color:var(--accent2);display:none;place-items:center;cursor:pointer;transition:.2s}
+#play::after{content:'\25B6';font-size:13px;margin-left:2px}
+#play:hover{background:var(--accent-dim);color:#fff;box-shadow:0 0 18px -5px var(--accent)}
+body.settled #play{display:grid}
+#playlbl{position:fixed;bottom:39px;right:80px;z-index:35;font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:none}
+body.settled #playlbl{display:block}
 @media(max-width:900px){.mid{grid-template-columns:1fr}.side{display:none}.hdr .vtext{font-size:14px}}
 """
 
@@ -153,10 +176,13 @@ _JS = r"""
 (function(){
 var A=window.AMB;
 function $(s,r){return (r||document).querySelector(s)}
+function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}
 function el(t,c){var e=document.createElement(t);if(c)e.className=c;return e}
 function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function pct(x){return x==null?'—':(x*100).toFixed(1)+'%'} function num(x){return x==null?'—':x.toFixed(2)}
-var nodes={}, aborted=false, GRAYS=['#C2CAD4','#98A1AE','#6E7889','#525C6B'];
+function first(n){return n.split(' ')[0]}
+function survivors(){return A.funds.filter(function(d){return !d.excluded}).sort(function(a,b){return a.rank-b.rank})}
+var nodes={}, rows={}, aborted=false, trajBuilt=false, GRAYS=['#C2CAD4','#98A1AE','#6E7889','#525C6B'], ROWH=32;
 
 function buildField(){
   var f=$('#field');
@@ -164,55 +190,64 @@ function buildField(){
     var n=el('div','node '+(d.excluded?'excl':'on'+(d.rank==1?' win':'')));
     n.dataset.fid=d.id;n.__d=d;
     n.dataset.tip="<div class='tn'>"+d.name+"</div><div class='ts'>"+d.strategy+"</div>return <b>"+pct(d.ret)+"</b> · vol <b>"+pct(d.vol)+"</b> · sharpe <b>"+num(d.sharpe)+"</b>";
-    var dot=el('div','dot');var rk=el('span','rk');rk.textContent=d.rank?String(d.rank):'';dot.appendChild(rk);
+    var dot=el('div','dot');
     var lock=el('div','lock');['a','b','c','d'].forEach(function(k){lock.appendChild(el('i',k))});
     var rs=el('div','reason');rs.textContent=d.reason||'';
-    n.appendChild(lock);n.appendChild(rs);n.appendChild(dot);
+    var lab=el('div','nlabel');lab.textContent=first(d.name);
+    n.appendChild(lock);n.appendChild(rs);n.appendChild(dot);n.appendChild(lab);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
-  // gates
-  var g=$('#gates'); A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
+  var g=$('#gates');A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
 }
 function place(n){n.classList.add('shown');n.style.left=n.__d.x+'%';n.style.bottom=n.__d.y+'%'}
 function zoom(){A.funds.forEach(function(d){var n=nodes[d.id];if(d.excluded){n.style.opacity='0';n.style.transform='translate(-50%,50%) scale(.4)'}else{n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}})}
+function chapter(numv,ttl,sub){var c=$('#chapter');c.innerHTML="<div class='c'><div class='n'>"+numv+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')}
 
-function chapter(num,ttl,sub){var c=$('#chapter');c.innerHTML="<div class='c'><div class='n'>"+num+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')}
-
-/* score panel */
-function buildScore(){
-  var host=$('#scorebars');host.innerHTML='';
-  var sl=A.funds.filter(function(d){return !d.excluded}).sort(function(a,b){return a.rank-b.rank});
-  var max=Math.max.apply(null,sl.map(function(d){return d.score}));var min=Math.min.apply(null,sl.map(function(d){return d.score}));
-  sl.forEach(function(d){
-    var w=(d.score-min)/((max-min)||1); w=0.2+0.8*w;
-    var row=el('div','sbar'+(d.rank==1?' win':''));
-    row.innerHTML="<div class='r'>"+String(d.rank).padStart(2,'0')+"</div><div class='track'><div class='nm'>"+d.name+"</div><div class='fill' style='width:0'></div></div><div class='sc'>"+d.score.toFixed(2)+"</div>";
-    row.__w=w; host.appendChild(row); d.__row=row;
+function buildWeigh(){
+  var host=$('#scorebars');host.innerHTML='';rows={};
+  var sl=survivors();
+  sl.forEach(function(d,i){d.__cum=0;
+    var row=el('div','wrow'+(d.rank==1?' win':''));row.style.top=(i*ROWH)+'px';
+    row.innerHTML="<div class='wn'>"+first(d.name)+"</div><div class='wtrack'><div class='wfill'></div></div><div class='wsc'>0.00</div>";
+    host.appendChild(row);rows[d.id]=row;setTimeout(function(){row.classList.add('in')},70*i);
   });
-  // note: winner's top drivers
-  var win=sl[0]; if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace('_',' ')});
-    $('#whynote').innerHTML="<b>"+win.name+"</b> leads on "+comps.join(', ')+" — highest risk-adjusted score in the eligible set.";}
 }
-async function runScore(){
-  var sl=A.funds.filter(function(d){return !d.excluded}).sort(function(a,b){return a.rank-b.rank});
-  for(var i=0;i<sl.length;i++){ if(aborted)break; var row=sl[i].__row; row.classList.add('in'); $('.fill',row).style.width=(row.__w*100)+'%'; await wait(260); }
+async function runWeigh(){
+  var sl=survivors();var factors=Object.keys(A.weights).sort(function(a,b){return A.weights[b]-A.weights[a]});
+  var finals=sl.map(function(d){return d.score});var gmax=Math.max.apply(null,finals),gmin=Math.min.apply(null,finals);
+  function wp(v){return 6+Math.max(0,Math.min(1,(v-gmin)/((gmax-gmin)||1)))*90}
+  for(var fi=0;fi<factors.length;fi++){ if(aborted)return;
+    var k=factors[fi];
+    $('#weighticker').innerHTML="Weighing · <b>"+k.replace(/_/g,' ')+"</b> · "+Math.round(A.weights[k]*100)+"%";
+    sl.forEach(function(d){d.__cum+=(d.comp[k]||0)});
+    sl.forEach(function(d){var r=rows[d.id];$('.wfill',r).style.width=wp(d.__cum)+'%';$('.wsc',r).textContent=(d.__cum>=0?'+':'')+d.__cum.toFixed(2)});
+    var order=sl.slice().sort(function(a,b){return b.__cum-a.__cum});
+    order.forEach(function(d,rk){rows[d.id].style.top=(rk*ROWH)+'px'});
+    var leadId=order[0].id;
+    A.funds.forEach(function(d){nodes[d.id].classList.remove('nlead')});nodes[leadId].classList.add('nlead');
+    Object.keys(rows).forEach(function(id){rows[id].classList.toggle('lead',id==leadId)});
+    await wait(650);
+  }
+  A.funds.forEach(function(d){nodes[d.id].classList.remove('nlead')});
+  var win=survivors()[0];if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
+    $('#weighticker').innerHTML="Final · weighted risk-adjusted score";
+    $('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
 }
 
-/* trajectory */
-function buildTraj(){
-  var svg=$('#traj');var host=$('#trajwrap');var W=380,H=svg.clientHeight||200,pad=6;
-  var funds=A.funds.filter(function(d){return !d.excluded&&d.wealth&&d.wealth.length}).sort(function(a,b){return a.rank-b.rank});
+function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
+  var svg=$('#traj');var host=$('#trajwrap');var W=380,H=svg.clientHeight||190,pad=6;
+  var funds=survivors().filter(function(d){return d.wealth&&d.wealth.length});if(!funds.length)return;
   var lo=1e9,hi=-1e9,n=funds[0].wealth.length;funds.forEach(function(d){d.wealth.forEach(function(w){lo=Math.min(lo,w);hi=Math.max(hi,w)})});
   var X=function(i){return pad+i/(n-1)*(W-2*pad)},Y=function(w){return H-pad-(w-lo)/((hi-lo)||1)*(H-2*pad)};
   svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('preserveAspectRatio','none');svg.innerHTML='';
   var ns='http://www.w3.org/2000/svg';
   var base=document.createElementNS(ns,'line');base.setAttribute('x1',pad);base.setAttribute('x2',W-pad);base.setAttribute('y1',Y(1));base.setAttribute('y2',Y(1));base.setAttribute('stroke','#2E3745');base.setAttribute('stroke-dasharray','2 4');svg.appendChild(base);
-  var used=[];funds.slice().sort(function(a,b){return Y(a.wealth[n-1])-Y(b.wealth[n-1])}).forEach(function(d){var tp=Y(d.wealth[n-1])/H*100;while(used.some(function(u){return Math.abs(u-tp)<6})){tp+=6}used.push(tp);d.__tp=tp});
+  var used=[];funds.slice().sort(function(a,b){return Y(a.wealth[n-1])-Y(b.wealth[n-1])}).forEach(function(d){var tp=Y(d.wealth[n-1])/H*100;while(used.some(function(u){return Math.abs(u-tp)<7})){tp+=7}used.push(tp);d.__tp=tp});
   funds.forEach(function(d,idx){var win=d.rank==1;var col=win?'#84AEC8':GRAYS[Math.min(idx,3)];
     var pts=d.wealth.map(function(w,i){return X(i)+','+Y(w)}).join(' ');
     var pl=document.createElementNS(ns,'polyline');pl.setAttribute('points',pts);pl.setAttribute('fill','none');pl.setAttribute('stroke',col);pl.setAttribute('stroke-width',win?'2':'1.3');pl.setAttribute('vector-effect','non-scaling-stroke');pl.style.strokeDasharray='1600';pl.style.strokeDashoffset='1600';svg.appendChild(pl);
     setTimeout(function(){pl.style.transition='stroke-dashoffset 1.2s ease';pl.style.strokeDashoffset='0'},80+idx*70);
-    var t=el('div','tt');t.style.color=col;t.style.right='2px';t.style.top=d.__tp+'%';t.innerHTML=d.name.split(' ')[0]+" <b style='color:#fff'>+"+((d.wealth[n-1]-1)*100).toFixed(0)+"%</b>";host.appendChild(t);
+    var t=el('div','tt');t.style.color=col;t.style.right='2px';t.style.top=d.__tp+'%';t.innerHTML=first(d.name)+" <b style='color:#fff'>+"+((d.wealth[n-1]-1)*100).toFixed(0)+"%</b>";host.appendChild(t);
   });
 }
 
@@ -220,36 +255,37 @@ var vTimer;
 function typeVerdict(){var e=$('#vtext');var t=A.verdict;var i=0;clearInterval(vTimer);vTimer=setInterval(function(){e.textContent=t.slice(0,i++);if(i>t.length){clearInterval(vTimer);e.innerHTML=A.verdictHtml}},20)}
 
 async function story(){
-  // ① universe
-  chapter('01 · Universe','The candidate set',A.funds.length+' funds considered');
-  await wait(600);
+  chapter('01 · Universe','The candidate set',A.funds.length+' funds considered');await wait(650);
   for(var i=0;i<A.funds.length;i++){if(aborted)return;place(nodes[A.funds[i].id]);await wait(120)}
-  await wait(1100);
-  // ② screening
+  await wait(1000);
   chapter('02 · Screening','Apply the mandate','liquidity + volatility gates');
-  $('#gates').classList.add('on'); await wait(500);
-  var gates=[].slice.call(document.querySelectorAll('.gate'));
-  var excl=A.funds.filter(function(d){return d.excluded && d.reason});
-  for(var j=0;j<excl.length;j++){if(aborted)return; gates.forEach(function(g){g.classList.toggle('act',(''+excl[j].reason).toUpperCase().indexOf(g.dataset.k)>=0)}); nodes[excl[j].id].classList.add('rejected'); await wait(560);}
-  gates.forEach(function(g){g.classList.remove('act')});
-  await wait(700);
-  // ③ scoring — zoom + build score bars
-  chapter('03 · Scoring','Rank the survivors','weighted risk-adjusted score');
-  zoom(); await wait(400); $('#scorepane').classList.add('in'); buildScore(); await wait(500);
-  await runScore();
-  A.funds.filter(function(d){return !d.excluded}).forEach(function(d){nodes[d.id].classList.add('ranked')});
-  $('.sweetz').classList.add('on');
-  await wait(900);
-  // ④ the call
-  chapter('04 · Recommendation',A.funds.filter(function(d){return d.rank==1})[0].name,'selected');
-  nodes[A.funds.filter(function(d){return d.rank==1})[0].id].classList.add('locked');
-  $('#trajpane').classList.add('in'); buildTraj();
-  await wait(1400);
-  settle();
+  $('#gates').classList.add('on');await wait(500);
+  var gates=$$('.gate');var excl=A.funds.filter(function(d){return d.excluded&&d.reason});
+  for(var j=0;j<excl.length;j++){if(aborted)return;gates.forEach(function(g){g.classList.toggle('act',(''+excl[j].reason).toUpperCase().indexOf(g.dataset.k)>=0)});nodes[excl[j].id].classList.add('rejected');await wait(580)}
+  gates.forEach(function(g){g.classList.remove('act')});$('#gates').classList.remove('on');await wait(650);
+  chapter('03 · Scoring','Weigh the survivors','each criterion applied by weight');
+  zoom();await wait(500);
+  survivors().forEach(function(d){nodes[d.id].classList.add('ranked')});
+  $('#scorepane').classList.add('in');buildWeigh();await wait(550);
+  await runWeigh();
+  $('.sweetz').classList.add('on');await wait(700);
+  var win=survivors()[0];if(aborted)return;
+  chapter('04 · Recommendation',first(win.name),win.name);
+  nodes[win.id].classList.add('locked');
+  $('#trajpane').classList.add('in');buildTraj();
+  await wait(1500);settle();
 }
 function settle(){document.body.classList.add('settled');$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');typeVerdict();}
 
-/* drawer */
+function reset(){aborted=true;document.body.classList.remove('settled');
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node '+(d.excluded?'excl':'on'+(d.rank==1?' win':''));n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='translate(-50%,50%) scale(0)'});
+  $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
+  $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
+  $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
+  $$('.tt').forEach(function(t){t.remove()});$('#traj').innerHTML='';trajBuilt=false;$('#chapter').innerHTML='';
+}
+function replay(){reset();setTimeout(function(){aborted=false;story()},80)}
+
 function openDrawer(h){var d=$('#drawer');d.innerHTML="<div class='x' id='dx'>✕ close</div>"+h;d.classList.add('open');$('#dx').addEventListener('click',function(){d.classList.remove('open')})}
 function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+d.name+"</div><div class='d-strat'>"+d.strategy+"</div>"+d.detail)}
 
@@ -257,7 +293,8 @@ function wire(){
   var tip=$('#tip');
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
   document.addEventListener('click',function(e){var n=e.target.closest('.node.on');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(d.excluded){n.style.opacity='0'}else{n.classList.add('ranked');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.rank==1)n.classList.add('locked')}});['#scorepane','#trajpane'].forEach(function(s){$(s).classList.add('in')});buildScore();A.funds.filter(function(d){return !d.excluded}).forEach(function(d){d.__row.classList.add('in');$('.fill',d.__row).style.width=(d.__row.__w*100)+'%'});buildTraj();$('.sweetz').classList.add('on');settle()});
+  var pl=$('#play');if(pl)pl.addEventListener('click',replay);
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(d.excluded){n.style.opacity='0'}else{n.classList.add('ranked');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.rank==1)n.classList.add('locked')}});$('#scorepane').classList.add('in');buildWeigh();var sl=survivors();var finals=sl.map(function(x){return x.score});var gmax=Math.max.apply(null,finals),gmin=Math.min.apply(null,finals);sl.slice().sort(function(a,b){return b.score-a.score}).forEach(function(d,rk){var r=rows[d.id];r.classList.add('in');r.style.top=(rk*ROWH)+'px';$('.wfill',r).style.width=(6+Math.max(0,Math.min(1,(d.score-gmin)/((gmax-gmin)||1)))*90)+'%';$('.wsc',r).textContent=(d.score>=0?'+':'')+d.score.toFixed(2)});$('#weighticker').innerHTML='Final · weighted risk-adjusted score';var win=sl[0];var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');settle()});
 }
 window.addEventListener('DOMContentLoaded',function(){buildField();wire();story()});
 })();
@@ -341,7 +378,7 @@ def render_html(memo, ctx=None):
                 "rank":rk,"excluded":rk is None,
                 "x":round(12+(m["ann_vol"]-vmin)/vr*76,1),"y":round(12+(m["ann_return"]-rmin)/rr*76,1),
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"maxdd":m.get("max_drawdown"),
-                "wealth":wealth,"reason":reason,"components":comps,"score":round(sum(x["c"] for x in comps),3),
+                "wealth":wealth,"reason":reason,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
     # zoom positions (survivors normalized to own range)
     surv=[d for d in fd if not d["excluded"]]
@@ -355,7 +392,7 @@ def render_html(memo, ctx=None):
     vplain=f"{top.name} leads on risk-adjusted return." if top else "No fund met the mandate."
     vhtml=(f"<b>{e(top.name)}</b> leads on risk-adjusted return." if top else "No fund met the mandate.")
     DATA={"funds":fd,"gates":gates,"verdict":vplain,"verdictHtml":vhtml,"model":memo.generated_by,
-          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate}
+          "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"weights":{k:round(float(v),3) for k,v in weights.items()}}
 
     chips="".join(f'<div class="chip{" r1" if s.rank==1 else ""}" data-fid="{e(s.fund_id)}"><span class="n">{s.rank:02d}</span><span class="nm">{e(s.name)}</span><span class="rt">{_pct(s.metrics.get("ann_return"))}</span></div>' for s in sl)
 
@@ -370,7 +407,7 @@ def render_html(memo, ctx=None):
 
     side=('<div class="side">'
           '<div class="pane" id="trajpane"><div class="head"><div class="t">36-Month Trajectory</div><div class="s">growth of $1</div></div><div id="trajwrap"><svg id="traj"></svg></div></div>'
-          '<div class="pane" id="scorepane"><div class="head"><div class="t">Why this ranking</div><div class="s">weighted score</div></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
+          '<div class="pane" id="scorepane"><div class="head"><div class="t">The weighing</div><div class="s">how the ranking forms</div></div><div id="weighticker"></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
           '</div>')
 
     rail=f'<div class="rail"><div class="rl">Shortlist</div><div class="chips">{chips}</div></div>'
@@ -382,7 +419,7 @@ def render_html(memo, ctx=None):
             f'<style>{_CSS}</style></head><body>'
             '<div class="atmo"><div class="grid"></div></div><div id="tip"></div>'
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
-            '<div id="drawer"></div><div id="skip">skip intro</div>'
+            '<div id="drawer"></div><div id="skip">skip intro</div><div id="playlbl">Replay decision</div><div id="play"></div>'
             f'<script>window.AMB={json.dumps(DATA)};</script><script>{_JS}</script></body></html>')
 
 def write_html(memo, path, ctx=None):
