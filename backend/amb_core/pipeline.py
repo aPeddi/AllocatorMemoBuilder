@@ -50,6 +50,6 @@ def run(
 
     usable = [f for f in funds if f.fund_id in metrics_by_fund]
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)
-    ctx = AnalysisContext(funds, benchmark, metrics_by_fund, metric_results, shortlist, mandate, quarantined)
+    ctx = AnalysisContext(funds, benchmark, metrics_by_fund, metric_results, shortlist, mandate, quarantined, series)
     memo = generate(ctx, claims_provider or template_claims_provider)
     return memo, ctx
