@@ -1,6 +1,7 @@
 # ─────────────────────────────────────────────────────────────
 # AllocatorMemoBuilder — dependencies.  Install with: ./amb setup
-# (./amb setup also installs backend/ as the editable amb_core package)
+# (also installs backend/ as the editable amb_core package)
+# Local-first: no web server (ADR-0009). The surface is the CLI + file exports.
 # ─────────────────────────────────────────────────────────────
 
 # Validation / config (structured outputs live here)
@@ -16,13 +17,8 @@ numpy
 # LLM — Anthropic direct (ADR-0008)
 anthropic
 
-# Memo rendering / export
-jinja2
-openpyxl            # .xlsx export (Phase 2)
-
-# API surface (Phase 2 — present so `./amb serve` is ready)
-fastapi
-uvicorn[standard]
+# Exports
+openpyxl            # .xlsx workbook
 
 # Dev tooling / quality gates
 pytest

@@ -176,16 +176,11 @@ cmd_lint() {
   have_backend && { "$PY" -m mypy backend 2>/dev/null || info "mypy skipped"; }
 }
 
-# ─────────────────────────────────────────── run
-cmd_serve() {
-  step "API server (FastAPI)"
-  have_backend || { not_yet "serve"; return 0; }
-  py -m uvicorn backend.api.main:app --reload --port "${AMB_PORT:-8000}"
-}
-cmd_ui() {
-  step "Frontend (Next.js HUD)"
-  have_frontend || { not_yet "ui"; return 0; }
-  ( cd frontend && npm run dev )
+# ─────────────────────────────────────────── export
+cmd_export() {
+  step "Export memo — Markdown · JSON · HTML · XLSX"
+  have_backend || { not_yet "export"; return 0; }
+  py -m amb_core.memo "$@"
 }
 
 # ─────────────────────────────────────────── git workflow helpers
@@ -239,9 +234,8 @@ cmd_help() {
     test                  run the pytest suite
     lint                  ruff + mypy
 
-  ${BOLD}Run${NC}
-    serve                 start the FastAPI API
-    ui                    start the Next.js HUD
+  ${BOLD}Export${NC}
+    export                write the memo as md · json · html · xlsx
 
   ${BOLD}Git workflow${NC}  (see BRANCHING.md)
     feature <name>        new feature/<name> off develop
@@ -268,9 +262,8 @@ menu() {
     echo -e "   ${CYAN}4${NC})  Build memo    ${DIM}from a fund CSV${NC}"
     echo -e "   ${CYAN}5${NC})  Metrics       ${DIM}compute metrics only${NC}"
     echo -e "   ${CYAN}6${NC})  Test          ${DIM}run the suite${NC}"
-    echo -e "   ${CYAN}7${NC})  Serve API     ${DIM}FastAPI${NC}"
-    echo -e "   ${CYAN}8${NC})  Frontend      ${DIM}Next.js HUD${NC}"
-    echo -e "   ${CYAN}9${NC})  Git status    ${DIM}branch + flow${NC}"
+    echo -e "   ${CYAN}7${NC})  Export        ${DIM}md · json · html · xlsx${NC}"
+    echo -e "   ${CYAN}8${NC})  Git status    ${DIM}branch + flow${NC}"
     echo -e "   ${CYAN}h${NC})  Help          ${DIM}all commands${NC}"
     echo -e "   ${CYAN}q${NC})  Quit"
     echo ""
@@ -284,9 +277,8 @@ menu() {
       4) printf "  path to CSV: "; read -r c || c=""; cmd_memo "$c" ;;
       5) cmd_metrics ;;
       6) cmd_test ;;
-      7) cmd_serve ;;
-      8) cmd_ui ;;
-      9) cmd_gitstatus ;;
+      7) cmd_export ;;
+      8) cmd_gitstatus ;;
       h|H) cmd_help ;;
       q|Q) echo "  bye."; exit 0 ;;
       "") : ;;
@@ -312,8 +304,7 @@ main() {
     demo)           cmd_demo "$@" ;;
     test)           cmd_test "$@" ;;
     lint)           cmd_lint "$@" ;;
-    serve)          cmd_serve "$@" ;;
-    ui)             cmd_ui "$@" ;;
+    export)         cmd_export "$@" ;;
     feature)        cmd_feature "$@" ;;
     release)        cmd_release "$@" ;;
     hotfix)         cmd_hotfix "$@" ;;

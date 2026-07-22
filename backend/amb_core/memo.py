@@ -170,7 +170,7 @@ def _cli(argv=None) -> int:
     from pathlib import Path
 
     from .config import get_settings
-    from .export import write_json, write_markdown
+    from .export import export_all
     from .pipeline import load_mandate, run
 
     args = list(sys.argv[1:] if argv is None else argv)
@@ -186,11 +186,12 @@ def _cli(argv=None) -> int:
             provider = anthropic_claims_provider
         except Exception:  # noqa: BLE001
             provider = None
-    memo, _ = run(funds_csv, returns_csv, mandate, provider)
-    md = write_markdown(memo, "exports/memo.md")
-    write_json(memo, "exports/memo.json")
+    memo, ctx = run(funds_csv, returns_csv, mandate, provider)
+    paths = export_all(memo, ctx, "exports")
     a = memo.audit
-    print(f"✓ memo by {memo.generated_by}: {a['verified_count']}/{a['claim_count']} claims verified → {md}")
+    print(f"✓ memo by {memo.generated_by}: {a['verified_count']}/{a['claim_count']} claims verified")
+    for kind, pth in paths.items():
+        print(f"  {kind} → {pth}")
     return 0
 
 

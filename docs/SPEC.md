@@ -27,9 +27,10 @@ metrics engine (unit-tested) → mandate-aware scoring → ranked shortlist →
 structured, sourced IC memo → audit trail (claim ↔ source) → Markdown/JSON
 export. Driven and demoed entirely through `./amb`.
 
-**Phase 2 — the surface (Should).** FastAPI gateway over the same core; Next.js
-"HUD" front-end (Equi dark/teal aesthetic) for upload → review → export; PDF/XLSX
-export.
+**Phase 2 — the deliverables (Should).** Rich local exports over the same core: a
+styled, Equi-branded HTML memo (print-to-PDF ready) and a formatted XLSX workbook
+(shortlist · all-fund metrics · audit trail). No web server — the CLI is the
+surface (ADR-0009).
 
 **Phase 3 — the flourish (Could).** What-if mandate simulations; smart model
 routing + caching; text RAG over fund notes; feedback capture.
@@ -55,19 +56,15 @@ Layered, with one hard rule that shapes everything: **the LLM orchestrates and
 narrates; it never computes a number and never touches storage directly.**
 
 ```
-Frontend (Next.js HUD)                         ── Phase 2
-    │  HTTP
-API Gateway (FastAPI) — validation, rate-limit, audit-log wrapping
+CLI (./amb)  +  file exports (md · json · html · xlsx)   ── product surface
     │
-Agent Orchestrator (LangGraph state machine)
-    │      validate → metrics → shortlist → draft → risk-review
-Tool Layer (typed, allow-listed)  ── the ONLY way the agent reaches data
+Orchestrator (pipeline): validate → metrics → shortlist → draft → risk-review
     │
-Core (amb_core): ingest · metrics · scoring · retrieval · memo · audit
+Retrieval layer (typed) — the ONLY way the memo reaches numbers
     │
-Storage (SQLAlchemy → SQLite local; Postgres optional)
+Core (amb_core): ingest · metrics · scoring · retrieval · memo · export
     │
-External Adapters (benchmarks: FRED / market data — snapshotted by default)
+Storage (SQLite local, optional)   ·   External adapters (benchmarks, snapshotted)
 ```
 
 `amb_core` is a plain Python package usable with zero web/agent layers — that is
@@ -138,7 +135,7 @@ Memo(sections[], claims[], shortlist[], audit_map, version)
   drafting/risk).
 - **Storage:** SQLite by default (`data/local/amb.sqlite`); Postgres optional via
   `AMB_DATABASE_URL`. (ADR-0007.)
-- **API/UI (Phase 2):** FastAPI; Next.js 15 + Tailwind + shadcn/ui + Recharts.
+- **Exports (Phase 2):** self-contained HTML (Equi-styled, print-to-PDF) + XLSX (openpyxl).
 - **Tooling:** pytest, ruff, mypy — all wired through `./amb`.
 
 ## 8. Security & guardrails (right-sized)
@@ -165,11 +162,7 @@ AllocatorMemoBuilder/
 ├── requirements.txt
 ├── .env.example
 ├── backend/
-│   ├── amb_core/           # ingest · metrics · scoring · retrieval · memo · audit
-│   ├── api/                # FastAPI gateway
-│   ├── agents/             # LangGraph flows
-│   └── tools/              # typed, allow-listed tool defs
-├── frontend/               # Next.js HUD (Phase 2)
+│   └── amb_core/           # ingest · metrics · scoring · retrieval · memo · export
 ├── data/
 │   ├── samples/            # bundled demo CSVs (committed)
 │   └── local/              # runtime DB / scratch (git-ignored)
@@ -201,8 +194,9 @@ recording (HUD first, then architecture). Decisions are captured as ADRs so the
 5. **SQLite local-first**, Postgres optional (brainstorm had it reversed).
    (ADR-0007)
 6. **Phased scope** — one excellent vertical slice over fifteen partial features.
-7. **CLI-first delivery.** `./amb` is the primary harness; the HUD is the
-   demo layer, built last. (ADR-0001)
+7. **CLI-first delivery.** `./amb` is the primary harness. (ADR-0001)
+8. **No web server / HUD.** Product surface is the CLI + file exports
+   (Markdown/JSON/HTML/XLSX); FastAPI + Next.js were dropped. (ADR-0009)
 
 ## 13. Open questions
 

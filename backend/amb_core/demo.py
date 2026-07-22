@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from .config import get_settings
-from .export import write_json, write_markdown
+from .export import export_all
 from .pipeline import load_mandate, run
 
 SAMPLES = Path("data/samples")
@@ -59,11 +59,10 @@ def main(argv=None) -> int:
             f"{_fmt_num(m.get('sharpe'))} {_fmt_num(m.get('sortino'))} {_fmt_num(m.get('calmar'))} "
             f"{_fmt_pct(m.get('max_drawdown'))}"
         )
-    md = write_markdown(memo, "exports/memo.md")
-    js = write_json(memo, "exports/memo.json")
     a = memo.audit
     print(f"\n✓ claims verified: {a['verified_count']}/{a['claim_count']}")
-    print(f"✓ wrote {md} and {js}")
+    for kind, pth in export_all(memo, ctx, "exports").items():
+        print(f"✓ {kind:<4} → {pth}")
     return 0
 
 
