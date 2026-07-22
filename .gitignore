@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# AllocatorMemoBuilder — ignore rules
+# ─────────────────────────────────────────────────────────────
+
+# Brainstorm / scratch — kept on disk, never committed
+Inspo.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+
+# Node / frontend
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Env & secrets  (keep the example, ignore real ones)
+.env
+.env.*
+!.env.example
+
+# Local data / databases / generated artifacts
+*.sqlite
+*.sqlite3
+*.db
+data/local/
+.cache/
+artifacts/
+exports/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
