@@ -103,6 +103,10 @@ cmd_setup() {
   else
     warn "no requirements.txt yet — skipping deps"
   fi
+  if [ -f backend/pyproject.toml ]; then
+    info "Installing amb_core (editable)…"
+    "$PIP" install -e ./backend --quiet && ok "amb_core installed" || warn "editable install failed"
+  fi
   if [ ! -f .env ] && [ -f .env.example ]; then
     cp .env.example .env && ok "created .env from template — add your OPENROUTER_API_KEY"
   else

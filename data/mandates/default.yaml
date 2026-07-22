@@ -1,0 +1,19 @@
+# Default mandate for the demo — a liquid, risk-adjusted core allocation.
+name: "Equi Core — liquid, risk-adjusted"
+benchmark_id: SP500
+risk_free_annual: 0.02
+top_n: 5
+
+# Hard filters. Excludes illiquid sleeves and anything too volatile.
+constraints:
+  - {field: strategy, op: not_in, value: ["Venture", "Real Assets"]}
+  - {field: ann_vol, op: "<=", value: 0.35}
+
+# Scoring weights (metric -> weight). Signed automatically by scoring.DIRECTION.
+weights:
+  sharpe: 0.30
+  sortino: 0.20
+  calmar: 0.15
+  ann_return: 0.15
+  max_drawdown: 0.10
+  ann_vol: 0.10

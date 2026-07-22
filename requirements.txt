@@ -1,11 +1,7 @@
 # ─────────────────────────────────────────────────────────────
-# AllocatorMemoBuilder — Python dependencies (backend + CLI)
-# Local-first. Install with: ./amb setup   (creates .venv and installs)
+# AllocatorMemoBuilder — dependencies.  Install with: ./amb setup
+# (./amb setup also installs backend/ as the editable amb_core package)
 # ─────────────────────────────────────────────────────────────
-
-# API gateway
-fastapi
-uvicorn[standard]
 
 # Validation / config (structured outputs live here)
 pydantic>=2
@@ -13,22 +9,20 @@ pydantic-settings
 python-dotenv
 pyyaml
 
-# Data + metrics engine (deterministic, unit-tested — the source of truth)
+# Data + metrics engine (deterministic source of truth)
 pandas
 numpy
-sqlalchemy>=2
 
-# Agentic orchestration
-langgraph
-langchain-core
-
-# External adapters (benchmarks, LLM routing via OpenRouter)
-httpx
+# LLM — Anthropic direct (ADR-0008)
+anthropic
 
 # Memo rendering / export
 jinja2
-openpyxl            # .xlsx export
-# weasyprint        # HTML->PDF export — optional, needs system libs; enable when wiring PDF
+openpyxl            # .xlsx export (Phase 2)
+
+# API surface (Phase 2 — present so `./amb serve` is ready)
+fastapi
+uvicorn[standard]
 
 # Dev tooling / quality gates
 pytest
