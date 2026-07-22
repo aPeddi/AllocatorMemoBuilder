@@ -7,7 +7,7 @@ thinking without a walkthrough.
 Each record uses a lightweight [MADR](https://adr.github.io/madr/)-style format:
 **Context → Decision → Consequences → Alternatives considered.** Records are
 immutable once **Accepted**; to change a decision, add a new ADR that
-**Supersedes** the old one rather than editing history.
+**Supersedes** (or refines) the old one rather than editing history.
 
 | ADR | Decision | Status |
 |-----|----------|--------|
@@ -18,6 +18,7 @@ immutable once **Accepted**; to change a decision, add a new ADR that
 | [0005](0005-benchmark-snapshotting.md) | Benchmarks snapshotted as-of a date; live pull is opt-in | Accepted |
 | [0006](0006-branching-model.md) | Trimmed main/develop/feature/release/hotfix model | Accepted |
 | [0007](0007-local-first-storage-sqlite.md) | SQLite local-first; Postgres optional | Accepted |
+| [0008](0008-anthropic-direct-model-access.md) | Anthropic direct (native tool-use) over OpenRouter | Accepted |
 
 New ADRs: copy the shape of an existing one, take the next number, start at
 **Proposed**, move to **Accepted** when the direction is locked.
