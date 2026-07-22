@@ -79,14 +79,19 @@ GitHub's diff view to review a chunk of work against `develop`.
 `main`. Bump MINOR for new capability, MAJOR at the first "this is the product"
 cut. Patch tags (`v0.1.1`) come from hotfixes.
 
-## `./amb` does the plumbing
+## Working the flow (plain git)
 
 ```
-./amb feature audit-trail     # checkout develop, pull, branch feature/audit-trail
-./amb release v0.1            # cut release/v0.1 off develop
-./amb hotfix sharpe-annual    # branch hotfix/sharpe-annual off main
-./amb st                      # where am I in the flow?
+git checkout develop && git pull
+git checkout -b feature/audit-trail          # start a feature
+# …commit… then squash back:
+git checkout develop && git merge --squash feature/audit-trail
+
+git checkout -b release/v0.3 develop         # cut a release
+git checkout main && git merge release/v0.3 && git tag v0.3
 ```
+
+`./amb` stays focused on building the memo; branching is plain git.
 
 ## Authorship
 
