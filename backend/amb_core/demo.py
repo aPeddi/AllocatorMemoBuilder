@@ -48,6 +48,10 @@ def main(argv=None) -> int:
     memo, ctx = run(funds_csv, returns_csv, mandate, provider)
 
     print(f"Mandate: {mandate.name}")
+    b = ctx.benchmark
+    if b is not None:
+        kind = {"live": "LIVE · FRED", "cache": "CACHED · FRED", "snapshot": "SNAPSHOT · local"}.get(b.source_kind, b.source_kind)
+        print(f"Benchmark: {b.name} — {kind} · as-of {b.as_of}  (mode: {s.benchmark_mode})")
     if ctx.quarantined:
         print(f"Quarantined rows: {len(ctx.quarantined)}")
     print(f"Universe: {len(ctx.metrics_by_fund)} funds  →  shortlist {len(memo.shortlist)}\n")

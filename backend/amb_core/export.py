@@ -415,9 +415,10 @@ body.screening .node.cand.gone{opacity:0}
 .az-mh,.az-mrow{display:grid;grid-template-columns:1fr .7fr .9fr 1.05fr;font-size:11px;align-items:center}
 .az-mh{background:var(--panel);border-bottom:1px solid var(--border2)}
 .az-mh span{padding:9px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
-.az-mrow{opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s,background .4s}
+.az-mrow{opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s,background .4s;border-bottom:1px solid var(--border)}
+.az-mb .az-mrow:last-child{border-bottom:none}
 .az-mrow.in{opacity:1;transform:none}
-.az-mrow>span{padding:8px 12px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.az-mrow>span{padding:8px 12px;color:var(--ink2)}
 .az-mrow .badc{color:var(--loss)}
 .az-mrow.quarr{background:var(--loss-soft)}.az-mrow.quarr>span{color:var(--loss);text-decoration:line-through}
 .az-mrow .mstat{text-decoration:none!important;font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);white-space:nowrap}

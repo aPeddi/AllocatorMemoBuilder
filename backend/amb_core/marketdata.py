@@ -10,6 +10,7 @@ and test paths never depend on a live call.
 from __future__ import annotations
 
 import io
+import sys
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -40,16 +41,42 @@ def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
-    """Fetch a FRED series as a tidy (date, value) frame. Raises on failure.
+def _http_get(url: str, timeout: float) -> str:
+    """GET text with a hard timeout, robust to macOS's missing SSL cert store.
 
-    Uses urllib with a hard timeout — pandas' URL reader ignores timeouts and can
-    hang a build if the API is slow or blocked.
-    """
+    Tries requests (bundles CA certs) first, then urllib with a certifi context,
+    then urllib's default context. Raises RuntimeError listing every failure so
+    the caller can tell the user *why* a live fetch fell back."""
+    headers = {"User-Agent": "AllocatorMemoBuilder/0.3"}
+    errors = []
+    try:
+        import requests  # bundles its own CA bundle — fixes the common macOS SSL error
+        r = requests.get(url, headers=headers, timeout=timeout)
+        r.raise_for_status()
+        return r.text
+    except ImportError:
+        pass
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"requests: {e!r}")
+    import ssl
+    try:
+        try:
+            import certifi
+            ctx = ssl.create_default_context(cafile=certifi.where())
+        except Exception:  # noqa: BLE001
+            ctx = ssl.create_default_context()
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            return resp.read().decode("utf-8", "replace")
+    except Exception as e:  # noqa: BLE001
+        errors.append(f"urllib: {e!r}")
+    raise RuntimeError("FRED unreachable — " + " | ".join(errors))
+
+
+def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
+    """Fetch a FRED series as a tidy (date, value) frame. Raises on failure."""
     url = _FRED_URL.format(sid=series_id)
-    req = urllib.request.Request(url, headers={"User-Agent": "AllocatorMemoBuilder/0.3"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        raw = resp.read().decode("utf-8", "replace")
+    raw = _http_get(url, timeout)
     df = pd.read_csv(io.StringIO(raw))
     # FRED CSVs have an observation-date column (name varies) + the series column.
     date_col = df.columns[0]
@@ -179,9 +206,12 @@ def resolve_benchmark(
         try:
             bench = fetch_benchmark(benchmark_id)
             _write_cache(bench, cache_dir)
+            print(f"✓ live benchmark: {bench.name} via FRED · {len(bench.points)} monthly obs · as-of {bench.as_of}", file=sys.stderr)
             return bench
-        except Exception:
+        except Exception as e:  # noqa: BLE001
             cached = _load_cache(benchmark_id, cache_dir)
             if cached is not None:
+                print(f"! live FRED fetch failed ({e}); using cached benchmark ({cached.as_of})", file=sys.stderr)
                 return cached
+            print(f"! live FRED fetch failed ({e}); falling back to the committed snapshot", file=sys.stderr)
     return _load_snapshot(benchmark_id, snap_dir)
