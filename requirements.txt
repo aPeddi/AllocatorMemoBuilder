@@ -1,7 +1,6 @@
 # ─────────────────────────────────────────────────────────────
 # AllocatorMemoBuilder — dependencies.  Install with: ./amb setup
-# (also installs backend/ as the editable amb_core package)
-# Local-first: no web server (ADR-0009). The surface is the CLI + file exports.
+# (./amb setup also installs backend/ as the editable amb_core package)
 # ─────────────────────────────────────────────────────────────
 
 # Validation / config (structured outputs live here)
@@ -14,11 +13,21 @@ pyyaml
 pandas
 numpy
 
+# Live market data (FRED). requests bundles a CA cert store, which fixes the
+# common macOS "SSL: CERTIFICATE_VERIFY_FAILED" that otherwise breaks live fetch.
+requests
+certifi
+
 # LLM — Anthropic direct (ADR-0008)
 anthropic
 
-# Exports
-openpyxl            # .xlsx workbook
+# Memo rendering / export
+jinja2
+openpyxl            # .xlsx export (Phase 2)
+
+# API surface (Phase 2 — present so `./amb serve` is ready)
+fastapi
+uvicorn[standard]
 
 # Dev tooling / quality gates
 pytest
