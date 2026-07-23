@@ -1,14 +1,9 @@
 #!/usr/bin/env bash
 #
-# amb — build the Investment Committee memo and serve it live.
+# amb — engine behind ./launch and ./test.
 #
-#   ./launch        build + serve + open the live app   (real FRED API call in-browser)
-#   ./amb           same as ./launch
-#   ./amb open      quick static build + open           (no server, snapshot benchmark)
-#   ./amb serve     serve without auto-opening a browser (headless)
-#   ./amb test      run the test suite
-#   ./amb setup     (re)install dependencies only
-#   ./amb -h        help
+#   ./launch   build + serve + open the live app  (real FRED API call in-browser)
+#   ./test     run the test suite
 #
 set -uo pipefail
 cd "$(dirname "$0")"
@@ -51,12 +46,6 @@ build_memo(){
   "$PY" -m amb_core.demo "$@" || { err "build failed"; return 1; }
 }
 
-build_open(){  # quick static look — no server
-  build_memo "$@" || return 1
-  if [ -f exports/memo.html ]; then ok "Opening exports/memo.html"; open_it exports/memo.html
-  else warn "no memo.html was produced"; fi
-}
-
 serve_live(){  # $1 = "open" to auto-open the browser once the server is up
   local autoopen="$1"; shift || true
   build_memo "$@" || return 1
@@ -75,21 +64,15 @@ serve_live(){  # $1 = "open" to auto-open the browser once the server is up
 }
 
 case "${1:-}" in
-  ""|launch|live|start) serve_live open "${@:2}" ;;
-  open|build)           build_open "${@:2}" ;;
-  serve)                serve_live noopen "${@:2}" ;;
-  setup)                setup ;;
-  test)                 ready || setup; "$PY" -m pytest -q "${@:2}" ;;
+  ""|launch) serve_live open "${@:2}" ;;
+  test)      ready || setup; "$PY" -m pytest -q "${@:2}" ;;
+  setup)     setup ;;
   -h|--help|help)
     echo ""
-    echo -e "  ${B}amb${N} — build the IC memo and serve it live (real FRED API call in-browser)"
+    echo -e "  ${B}amb${N} — build the IC memo and serve it live"
     echo ""
-    echo -e "    ${C}./launch${N}      build + serve + open the live app  ${D}(one command — recommended)${N}"
-    echo -e "    ${C}./amb${N}         same as ./launch"
-    echo -e "    ${C}./amb open${N}    quick static build + open  ${D}(no server, snapshot benchmark)${N}"
-    echo -e "    ${C}./amb serve${N}   serve without auto-opening a browser"
-    echo -e "    ${C}./amb test${N}    run the test suite"
-    echo -e "    ${C}./amb setup${N}   (re)install dependencies only"
+    echo -e "    ${C}./launch${N}   build + serve + open the live app  ${D}(real FRED API call in-browser)${N}"
+    echo -e "    ${C}./test${N}     run the test suite"
     echo "" ;;
-  *) err "unknown option: $1"; echo -e "  try ${C}./launch${N} or ${C}./amb -h${N}" ;;
+  *) err "unknown option: $1"; echo -e "  try ${C}./launch${N} or ${C}./test${N}" ;;
 esac
