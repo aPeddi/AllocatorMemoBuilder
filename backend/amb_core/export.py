@@ -790,6 +790,9 @@ function wire(){
   var wl=$('#weighlegend');if(wl)wl.addEventListener('click',function(e){if(!document.body.classList.contains('settled'))return;var ch=e.target.closest('.lchip');if(!ch)return;var k=ch.dataset.k;var act=(A.activeMetrics||weightFactors().slice()).slice();var i=act.indexOf(k);if(i>=0){if(act.length<=1){toast("<span class='tk' style='color:var(--loss)'>!</span>Keep at least one metric");return}act.splice(i,1)}else act.push(k);applyReweigh(act)});
   document.addEventListener('click',function(e){if(e.target&&e.target.id==='wreset')resetWeights()});
   document.addEventListener('click',function(e){var pop=$('#pop');if(pop&&pop.classList.contains('on')&&!e.target.closest('#pop')&&!e.target.closest('#dlBtn'))pop.classList.remove('on')});
+  // side panels dismiss on any click outside them (triggers are excluded so opening/switching never self-closes)
+  document.addEventListener('click',function(e){var d=$('#drawer');if(!d||!d.classList.contains('open'))return;if(e.target.closest('#drawer'))return;if(e.target.closest('.node.cand')||e.target.closest('.chip')||e.target.closest('#vbadge'))return;d.classList.remove('open')});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){var d=$('#drawer');if(d)d.classList.remove('open')}});
 }
 function toast(html){var t=$('#toast');if(!t)return;t.innerHTML=html;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on')},2600)}
 function auditDrawer(){var A2=A.audit||[];
@@ -1135,9 +1138,9 @@ def render_html(memo, ctx=None):
             '<div class="theme" id="themebtn" role="button" tabindex="0" aria-label="Toggle light or dark theme" aria-pressed="false"><i class="tg tg-d">☾</i><i class="tg tg-l">☀︎</i><span class="knob"></span></div></div>'
             f'<div class="vwrap"><div class="vpre">Investment Committee · Recommendation</div><div class="vtext" id="vtext"></div></div>'
             f'<div class="right">'
+            f'<button class="hbtn" id="skip">skip replay ▸</button>'
             f'<button class="hbtn" id="upBtn" title="Load a fund-universe CSV (funds + returns) and re-run the analysis in place">load csv</button>'
             f'<input type="file" id="upInput" accept=".csv" multiple style="display:none">'
-            f'<button class="hbtn" id="skip">skip intro ▸</button>'
             f'<button class="hbtn" id="shareBtn" title="Share the recommendation summary">share</button>'
             f'<button class="hbtn hbtn-primary" id="dlBtn" title="Download the memo as a PDF">download</button>'
             f'<button class="shieldbtn" id="vbadge" role="button" tabindex="0" title="{a.get("verified_count",0)}/{a.get("claim_count",0)} claims verified against the metrics engine — click for the audit trail">'
