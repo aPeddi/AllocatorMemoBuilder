@@ -584,8 +584,9 @@ body.scoring .stage::after{opacity:1}
 .node .rtag::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border2)}
 .node.rshow .rtag{opacity:1;transform:translate(-50%,0)}
 .node .rtag b{color:var(--accent2)} .node .rtag.neg b{color:var(--loss)}
-/* factor spotlight cue (top-center of field) */
-#factorcue{position:absolute;left:20px;top:8px;transform:translateY(-10px);opacity:0;transition:opacity .5s,transform .5s cubic-bezier(.3,1.1,.4,1);z-index:8;display:flex;align-items:center;gap:11px;background:var(--glass2);border:1px solid var(--border2);border-radius:30px;padding:7px 15px 7px 12px;box-shadow:0 10px 26px var(--shadow)}
+/* factor spotlight cue — removed from the field (redundant with the right-panel "now weighing"
+   ticker + glossary highlight); kept in the DOM but never shown so it can't overlap the nodes */
+#factorcue{display:none!important}
 #factorcue.on{opacity:1;transform:translateY(0)}
 #factorcue::before{content:'weighing';font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim2)}
 #factorcue .fdot{width:10px;height:10px;border-radius:3px;flex:none}
