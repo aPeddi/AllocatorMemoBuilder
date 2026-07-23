@@ -199,7 +199,7 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .sweetz.on{opacity:1}
 .sweetz span{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
 /* gate chips */
-.gates{position:absolute;top:-4px;left:0;display:flex;gap:8px;opacity:0;transition:opacity .5s}
+.gates{display:none!important}
 .gates.on{opacity:1}
 .gate{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:4px 8px;border-radius:3px;background:var(--panel)}
 .gate.act{color:var(--accent2);border-color:var(--accent-dim)}
@@ -239,10 +239,10 @@ body.screening .node.cand.gone{opacity:0}
 .lock i{position:absolute;width:13px;height:13px;border:1.5px solid var(--accent2)}
 .lock .a{top:0;left:0;border-right:0;border-bottom:0}.lock .b{top:0;right:0;border-left:0;border-bottom:0}.lock .c{bottom:0;left:0;border-right:0;border-top:0}.lock .d{bottom:0;right:0;border-left:0;border-top:0}
 /* exclusion header — lives inside the panel */
-.node .stamp{position:absolute;left:50%;top:-58px;transform:translate(-50%,8px);opacity:0;transition:opacity .5s,transform .55s cubic-bezier(.3,1.25,.4,1);pointer-events:none;z-index:15;text-align:center;white-space:nowrap}
+.node .stamp{position:absolute;left:50%;top:-64px;transform:translate(-50%,8px);opacity:0;transition:opacity .5s,transform .55s cubic-bezier(.3,1.25,.4,1);pointer-events:none;z-index:15;text-align:center;white-space:normal;width:200px}
 .node.reject .stamp{opacity:1;transform:translate(-50%,0)}
 .node .stamp .st{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:3px;padding:4px 9px;display:inline-block;box-shadow:0 8px 20px var(--shadow)}
-.node .stamp .sr{display:block;margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--loss);letter-spacing:.02em}
+.node .stamp .sr{display:block;margin-top:6px;font-family:var(--mono);font-size:8.5px;line-height:1.4;color:var(--loss);letter-spacing:.01em;white-space:normal}
 .node.reject .dot{border-color:var(--loss);background:transparent;box-shadow:0 0 0 4px var(--loss-soft)}
 
 /* chapter caption (bottom-left, refined) */
@@ -372,7 +372,7 @@ body.screening .node.cand.gone{opacity:0}
 .hud-log{font-size:11.5px;letter-spacing:.03em;color:var(--ink2);min-height:16px}
 .hl-cur{color:var(--accent2);animation:hblink 1s steps(1) infinite;margin-right:4px}
 /* scene 1 · acquire */
-.az-acq{display:flex;align-items:center;justify-content:center;width:100%;max-width:860px}
+.az-acq{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:860px}
 .az-src{position:relative;flex:1 1 0;max-width:310px;border:1px solid var(--border2);background:var(--panel2);border-radius:11px;padding:17px 19px;opacity:0;transform:translateY(12px);transition:opacity .5s,transform .5s,border-color .4s}
 .az-src.in{opacity:1;transform:none}
 .az-src.az-api{border-color:var(--accent-dim);box-shadow:0 0 30px -14px var(--accent-glow)}
@@ -385,7 +385,11 @@ body.screening .node.cand.gone{opacity:0}
 .az-ep{font-size:11px;color:var(--dim);padding:6px 0;letter-spacing:.01em}
 .az-ep span{color:var(--ink2)}.az-ep b{color:var(--accent2)}
 .az-st{margin-top:13px;font-size:10.5px;letter-spacing:.04em;color:var(--dim2)}
-.az-st .ok{color:var(--gain)}
+.az-st .ok{color:var(--gain)}.az-st .muted{color:var(--dim2)}
+.az-src.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-dim),0 0 34px -12px var(--accent-glow)}
+.az-src.active::after{content:'IN USE';position:absolute;top:-9px;right:14px;font-size:7px;letter-spacing:.14em;color:var(--on-accent);background:var(--accent);border-radius:20px;padding:2px 8px}
+.az-using{position:absolute;left:0;right:0;bottom:-52px;text-align:center;font-size:10.5px;letter-spacing:.03em;color:var(--ink2)}
+.az-using b{color:var(--accent2);letter-spacing:.1em}
 .az-beam{flex:0 1 60px;height:2px;background:linear-gradient(90deg,transparent,var(--accent));opacity:0;transform:scaleX(0);transform-origin:left;transition:opacity .4s,transform .7s}
 .az-beam.b{background:linear-gradient(270deg,transparent,var(--accent2));transform-origin:right}
 .az-beam.on{opacity:.85;transform:scaleX(1)}
@@ -688,7 +692,7 @@ function buildField(){
     n.appendChild(glass);n.appendChild(halo);n.appendChild(lock);n.appendChild(stamp);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(card);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
-  var g=$('#gates');A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
+  var g=$('#gates');if(g){g.innerHTML='';A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)})}
 }
 var _lastLive=null;
 function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id];return !n.classList.contains('gone')&&!n.classList.contains('cutout')}).length;var c=$('#counter');
@@ -875,11 +879,11 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
   var stE={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=elig.map(function(d){return d[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
   elig.forEach(function(d){var s=0;Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});d._rs=s});
   var ranked=elig.slice().sort(function(a,b){return b._rs-a._rs});var nS=ms.topN||5;var shortIds=ranked.slice(0,nS).map(function(d){return d.id});
-  var stS={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=shortIds.map(function(id){return byId(id)[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stS[k]=[_pmean(vals),_ppstd(vals)]});
   A.funds.forEach(function(d){
     if(!d.eligible){d.rank=null;d.cut=false;d.srank=99;d.components=[];d.comp={};d.score=0;if(d._rs!=null)delete d._rs;return}
     var si=shortIds.indexOf(d.id);var rk=si>=0?si+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));
-    var cp=[];Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stS[k]||stS[k][1]===0)return;cp.push({k:k,c:Math.round(W[k]*((v-stS[k][0])/stS[k][1])*(DIR[k]||0)*1000)/1000})});
+    // components on the SAME eligible-z basis as the ranking, so bars == rank order
+    var cp=[];Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;cp.push({k:k,c:Math.round(W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)*1000)/1000})});
     var cm={};cp.forEach(function(x){cm[x.k]=x.c});d.components=cp;d.comp=cm;d.score=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;delete d._rs;});
   A.nShort=shortIds.length;A.nEligible=elig.length;A.nReject=A.funds.filter(function(d){return d.reason}).length;A.nTotal=A.funds.length;
   var win=A.funds.filter(function(d){return d.rank==1})[0];
@@ -1000,6 +1004,7 @@ async function actZero(){
   var az=el('div');az.id='az';stg.appendChild(az);
   var ROWS=(rd.coverage||[]).reduce(function(s,c){return s+(c.n||0)},0)+(rd.quarantined_count||0);
   var UNIV=rd.universe_count||A.funds.length,QN=rd.quarantined_count||0,WR=rd.with_returns||UNIV;
+  var LIVE=(b.kind==='live');
   var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
   az.innerHTML=
     "<div class='hud-grid'></div><div class='hud-scan'></div>"
@@ -1022,6 +1027,7 @@ async function actZero(){
    "<div class='az-acq'>"
    +"<div class='az-src' id='srcA'><div class='az-src-h'><span class='az-ic'>▤</span>LOCAL FILES</div>"
      +"<div class='az-row'><span>funds.csv</span><b id='fa'>—</b></div><div class='az-row'><span>returns.csv</span><b id='fb'>—</b></div>"
+     +(LIVE?"":"<div class='az-row'><span>"+(b.benchFile||'sp500_monthly.csv')+"</span><b>"+(b.n||36)+" obs</b></div>")
      +"<div class='az-st' id='stA'>connecting</div></div>"
    +"<div class='az-beam a' id='beamA'></div>"
    +"<div class='az-hub' id='hub'><div class='az-hub-ring'></div><div class='az-hub-core'></div><div class='az-hub-l'>PARSER</div></div>"
@@ -1029,15 +1035,26 @@ async function actZero(){
    +"<div class='az-src az-api' id='srcB'><div class='az-src-h'><span class='az-ic api'>◈</span>FRED · MARKET-DATA API<span class='az-badge "+(b.kind||'snapshot')+"'>"+bk+"</span></div>"
      +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>SP500</b></span></div>"
      +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>TB3MS</b></span></div>"
-     +"<div class='az-st' id='stB'>resolving host · stlouisfed.org</div></div>"
+     +"<div class='az-st' id='stB'>"+(LIVE?"resolving host · stlouisfed.org":"standby")+"</div></div>"
+   +"<div class='az-using' id='azusing'></div>"
    +"</div>";
   await wait(360);$('#srcA',az).classList.add('in');log('mounting local dataset · data/samples/');await wait(520);if(aborted)return;
   $('#fa',az).textContent=UNIV+' records';$('#fb',az).textContent=ROWS+' rows';$('#stA',az).innerHTML="<span class='ok'>●</span> loaded";
   $('#beamA',az).classList.add('on');await wait(500);if(aborted)return;
-  $('#srcB',az).classList.add('in');log('opening https://fred.stlouisfed.org/graph/fredgraph.csv …');await wait(700);if(aborted)return;
-  $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · S&amp;P 500 · "+(b.n||36)+" monthly obs";$('#beamB',az).classList.add('on');
-  log((b.kind==='live'?'live fetch':'cached snapshot')+' · '+(b.name||'benchmark')+' · as-of '+(b.asOf||'—'));
-  await wait(1000);if(aborted)return;$('#hub',az).classList.add('live');await wait(700);if(aborted)return;
+  $('#srcB',az).classList.add('in');
+  if(LIVE){
+    log('opening https://fred.stlouisfed.org/graph/fredgraph.csv …');await wait(700);if(aborted)return;
+    $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · live fetch · "+(b.n||36)+" monthly obs";
+    $('#srcB',az).classList.add('active');
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+(b.name||'S&amp;P 500')+" · as-of "+(b.asOf||'—');
+  }else{
+    log('FRED endpoint available · this run uses the committed local snapshot');await wait(700);if(aborted)return;
+    $('#stB',az).innerHTML="<span class='muted'>○</span> "+(b.kind==='cache'?'served from cache':'not called · snapshot mode');
+    $('#srcA',az).classList.add('active');
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+(b.name||'S&amp;P 500')+", as-of "+(b.asOf||'—')+") · FRED live available";
+  }
+  $('#beamB',az).classList.add('on');
+  await wait(1100);if(aborted)return;$('#hub',az).classList.add('live');await wait(800);if(aborted)return;
 
   // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
   phase(2,'PARSE · NORMALIZE');
@@ -1120,7 +1137,7 @@ async function story(){
     gates.forEach(lit);$$('#ip-gates .ipg').forEach(lit);
     // stamp: the breached limit tags + the readable reasons
     var tg=$('.stags',en);if(tg)tg.innerHTML=rs.map(function(r){return "<span class='stag "+r.kind+"'>"+r.kind.toLowerCase()+"</span>"}).join('');
-    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" limits · "):"")+rs.map(function(r){return r.text}).join(' · ');
+    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" hard limits"):rs[0].text);
     en.classList.add('reject');await wait(1150+rs.length*950);   // hold longer when more limits break
     gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
     en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(720);
@@ -1224,7 +1241,7 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
   var h="<div class='mv'>"
    +"<div class='mv-eyebrow'>Investment Committee memo · "+A.mandate+"</div>"
    +"<div class='mv-hero'>"+reco+"</div>"
-   +"<div class='mv-pills'><span class='mvp'>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mvp ok'>&#10003; "+A.verified+"/"+A.total+" verified</span><span class='mvp mut'>"+(A.model||'template')+"</span></div>"
+   +"<div class='mv-pills'><span class='mvp'>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mvp ok' title='Every numeric claim in this memo was recomputed from the source series and matched within tolerance'>&#10003; "+A.verified+"/"+A.total+" claims verified</span></div>"
    +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+first(w.name)+"</span><span class='mv-ws'>"+(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
    +(m.summary?("<p class='mv-lead'>"+m.summary+"</p>"):"")
    +"<div class='mv-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>Max DD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
@@ -1349,9 +1366,8 @@ function recompute(funds,ret,order,quar){ try{
   var stE={};Object.keys(W).forEach(function(k){var vals=elig.map(function(id){return mbf[id][k]}).filter(function(v){return v!=null});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
   var scoreE={};elig.forEach(function(id){var s=0;Object.keys(W).forEach(function(k){var v=mbf[id][k];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});scoreE[id]=s});
   var ranked=elig.slice().sort(function(a,b){return scoreE[b]-scoreE[a]});var shortIds=ranked.slice(0,ms.topN);var rankOf={};shortIds.forEach(function(id,i){rankOf[id]=i+1});
-  // visual components: z across shortlist
-  var stS={};Object.keys(W).forEach(function(k){var vals=shortIds.map(function(id){return mbf[id][k]}).filter(function(v){return v!=null});if(vals.length>=2)stS[k]=[_pmean(vals),_ppstd(vals)]});
-  function comps(id){var out=[];Object.keys(W).forEach(function(k){var v=mbf[id][k];if(v==null||!stS[k]||stS[k][1]===0)return;out.push({k:k,c:Math.round(W[k]*((v-stS[k][0])/stS[k][1])*(DIR[k]||0)*1000)/1000})});return out}
+  // visual components on the SAME eligible-z basis as the ranking, so bars == rank order
+  function comps(id){var out=[];Object.keys(W).forEach(function(k){var v=mbf[id][k];if(v==null||!stE[k]||stE[k][1]===0)return;out.push({k:k,c:Math.round(W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)*1000)/1000})});return out}
   // universe scatter range (all funds with metrics)
   var vols=ids.map(function(id){return mbf[id].ann_vol}),rets=ids.map(function(id){return mbf[id].ann_return});
   var vmin=Math.min.apply(null,vols),vmax=Math.max.apply(null,vols),rmin=Math.min.apply(null,rets),rmax=Math.max.apply(null,rets);var vr=(vmax-vmin)||1,rr=(rmax-rmin)||1;
@@ -1429,12 +1445,16 @@ def render_html(memo, ctx=None):
     secs={}
     for i,s in enumerate(sl): secs[s.fund_id]=memo.sections[1+i] if 1+i<len(memo.sections) else None
 
-    # score components across shortlist
+    # score components — z across the ELIGIBLE set, the SAME basis build_shortlist
+    # ranks on, so the displayed bar score a fund shows is the score it's ranked on.
     weights=(mandate.weights if (mandate and mandate.weights) else DEFAULT_WEIGHTS)
     import statistics
+    from .scoring import apply_constraints
+    _usable=[f for f in ctx.funds.values() if f.fund_id in mbf] if ctx else []
+    _elig=(set(apply_constraints(_usable, mbf, mandate)) if (ctx and mandate) else set(ranks)) or set(ranks)
     stats={}
     for k in weights:
-        vals=[mbf[s.fund_id].get(k) for s in sl if mbf[s.fund_id].get(k) is not None]
+        vals=[mbf[fid].get(k) for fid in _elig if mbf.get(fid,{}).get(k) is not None]
         if len(vals)>=2: stats[k]=(statistics.fmean(vals),statistics.pstdev(vals))
     def components(fid):
         out=[]
