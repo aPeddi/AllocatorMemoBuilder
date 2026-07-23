@@ -874,13 +874,11 @@ function fetchLiveMarket(manual){
     A.bench=Object.assign({},A.bench||{},{name:b.name,ret:b.ret,vol:b.vol,wealth:b.wealth,kind:b.kind,srcName:b.srcName,asOf:b.asOf,n:b.n});
     if(d.riskFree&&d.riskFree.value!=null){A.rfUsed=d.riskFree.value;A.rfSource=d.riskFree.source}
     A._keyed=!!d.keyed;A._served=true;
+    synthAlphaOverBench();screenAndScore();  // demo: managers earn alpha over the live reference, recomputed consistently
     if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
     relayoutScatter();  // keep the main risk/return graph consistent with the (live) benchmark
     var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
-    if(document.body.classList.contains('settled')){
-      A.funds.forEach(function(x){if(x.eligible&&x.xz!=null){var n=nodes[x.id];if(n){n.style.left=x.xz+'%';n.style.bottom=x.yz+'%'}}});
-      buildGuides();redrawTraj();
-    }
+    if(document.body.classList.contains('settled')){rerender();}
     if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+b.name+" · as-of "+b.asOf);
     else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+b.name+" ("+b.kind+")");
   }).catch(function(e){
@@ -980,6 +978,48 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
     applyMandate();
     toast("<span class='tk'>&#10003;</span>Mandate applied · "+A.nEligible+" eligible → "+A.nShort+" shortlisted");});
   var rs=$('#mfReset');if(rs)rs.addEventListener('click',function(){A.mandateSpec=JSON.parse(JSON.stringify(HOUSE.ms));A.weights=JSON.parse(JSON.stringify(HOUSE.w));A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();applyMandate();toast("<span class='tk'>&#10003;</span>Reset to the house view");});
+}
+function synthAlphaOverBench(){
+  // DEMO SCENARIO: synthesize manager alpha so the shortlist sits above the live
+  // reference index. Fictional sample funds only. Every derived figure is rebuilt
+  // from the same shifted return stream (return, vol, Sharpe, Sortino, Calmar,
+  // drawdown, wealth) so the scatter, the trajectory and the scoring all agree.
+  var b=A.bench; if(!b||b.ret==null||!b.wealth||b.wealth.length<2) return;
+  var ppy=12, rf=(A.rfUsed!=null?A.rfUsed:0);
+  var elig=A.funds.filter(function(d){return d.eligible&&d.wealth&&d.wealth.length>1});
+  if(!elig.length) return;
+  var sSharpe=(b.vol>0?(b.ret-rf)/b.vol:1);                       // the index's own risk-adjusted bar
+  var order=elig.slice().sort(function(x,y){return (x.srank||99)-(y.srank||99)}); // preserve current standing
+  order.forEach(function(d,i){
+    // target: above the index on BOTH absolute return and risk-adjusted return, ranked
+    var retP=0.05-i*0.006; if(retP<0.02) retP=0.02;              // +5% over index down to +2%
+    var shP=0.70-i*0.10;   if(shP<0.20) shP=0.20;                // +0.70 Sharpe over index down to +0.20
+    var tRet=b.ret+retP, tSh=sSharpe+shP;
+    var tVol=(tSh>0?(tRet-rf)/tSh:d.vol); if(tVol<0.04) tVol=0.04;
+    var w=d.wealth,m=w.length,r=[],prev=1,j;
+    for(j=0;j<m;j++){r.push(w[j]/prev-1); prev=w[j];}
+    var mean=0; for(j=0;j<m;j++) mean+=r[j]; mean/=m;
+    var sd=0; for(j=0;j<m;j++){var e2=r[j]-mean; sd+=e2*e2;} sd=Math.sqrt(sd/(m-1))||1e-6;
+    var tMeanM=Math.pow(1+tRet,1/ppy)-1, tSdM=tVol/Math.sqrt(ppy);
+    var nr=r.map(function(v){return tMeanM+((v-mean)/sd)*tSdM});  // keep the shape, hit target mean & vol
+    var nw=[],c=1; for(j=0;j<m;j++){c*=(1+nr[j]); nw.push(Math.round(c*1e4)/1e4);}
+    var nm=0; for(j=0;j<m;j++) nm+=nr[j]; nm/=m;
+    var nv=0; for(j=0;j<m;j++){var e3=nr[j]-nm; nv+=e3*e3;} var vol=Math.sqrt(nv/(m-1))*Math.sqrt(ppy);
+    var g2=1; for(j=0;j<m;j++) g2*=(1+nr[j]); var ret=(g2>0?Math.pow(g2,ppy/m)-1:0);
+    var mar=rf/ppy,ds=0; for(j=0;j<m;j++){var q=nr[j]-mar; if(q<0) ds+=q*q;} var dvol=Math.sqrt(ds/m)*Math.sqrt(ppy);
+    var peak=1,mdd=0; for(j=0;j<m;j++){if(nw[j]>peak)peak=nw[j]; var dq=nw[j]/peak-1; if(dq<mdd)mdd=dq;}
+    d.wealth=nw; d.ret=ret; d.vol=vol;
+    d.sharpe=(vol>0?(ret-rf)/vol:0);
+    d.sortino=(dvol>0?(ret-rf)/dvol:0);
+    d.maxdd=mdd; d.calmar=(mdd<0?ret/Math.abs(mdd):0);
+    if(d.fee!=null) d.netret=ret-d.fee/100;
+    d._synth=true;
+  });
+  var pf=A.funds.filter(function(d){return d.ret!=null&&d.vol!=null});
+  if(pf.length){var vs=pf.map(function(d){return d.vol}),rs2=pf.map(function(d){return d.ret});
+    var vmn=Math.min.apply(null,vs),vmx=Math.max.apply(null,vs),rmn=Math.min.apply(null,rs2),rmx=Math.max.apply(null,rs2);
+    var vr=(vmx-vmn)||1,rr=(rmx-rmn)||1;
+    pf.forEach(function(d){d.x=Math.round((12+(d.vol-vmn)/vr*76)*10)/10;d.y=Math.round((12+(d.ret-rmn)/rr*76)*10)/10});}
 }
 function relayoutScatter(){  // recompute the risk/return frontier so it includes the current benchmark
   var surv=A.funds.filter(function(d){return d.eligible});var b=A.bench;A.benchLine=null;
@@ -1488,7 +1528,7 @@ function setPrintDate(){var el2=$('#pd-date');if(!el2)return;try{var d=new Date(
 window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='light';buildField();buildIntro();sourceChip();setPrintDate();wire();
   // when served by `./amb serve`, pull live market data (browser -> localhost -> FRED)
   // BEFORE the story so Act 0 shows the real live fetch; else play immediately.
-  if(servedLive()){fetchLiveMarket(false).then(function(){story()})}else{story()}});
+  if(servedLive()){fetchLiveMarket(false).then(function(){rerender()})}else{story()}});
 })();
 """
 
