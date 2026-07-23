@@ -487,18 +487,30 @@ body.screening .node.cand.gone{opacity:0}
 #tip .tn{color:var(--ink-hi);font-weight:600;font-size:12px;font-family:var(--sans)}#tip .ts{color:var(--dim);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em}#tip b{color:var(--accent2)}
 
 .node.leader .dot{box-shadow:0 0 0 2px var(--accent),0 0 22px -2px var(--accent-glow)}
-#weighticker{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:9px;min-height:12px}
+#weighticker{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;min-height:12px}
 #weighticker b{color:var(--accent2)}
+/* prominent "now weighing" callout during the scoring flow */
+#weighticker .wk-lab{font-size:8px;letter-spacing:.16em;color:var(--dim2);margin-right:9px}
+#weighticker .wk-dot{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:8px}
+#weighticker .wk-name{font-size:14px;font-weight:600;letter-spacing:.02em;text-transform:capitalize;color:var(--ink);vertical-align:middle}
+#weighticker .wk-pct{font-size:14px;font-weight:700;color:var(--accent2);margin-left:9px;vertical-align:middle}
+#weighticker .wk-dir{font-size:8px;letter-spacing:.1em;color:var(--dim2);margin-left:9px}
 #weighlegend{display:flex;flex-wrap:wrap;gap:6px 7px;margin-bottom:11px;opacity:0;transition:opacity .5s}
-/* metric chips — selectable at settle to re-weight live */
-#weighlegend .lchip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);border:1px solid var(--border2);background:var(--panel2);border-radius:20px;padding:4px 9px 4px 7px;transition:.2s;cursor:default;user-select:none}
-#weighlegend .lchip i{width:8px;height:8px;border-radius:2px;transition:transform .3s,box-shadow .3s,opacity .2s}
+/* metric glossary — each metric with its weight + direction; lights up as it's weighed; selectable at settle */
+#weighlegend .lchip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink2);border:1px solid var(--border2);background:var(--panel2);border-radius:20px;padding:4px 8px 4px 7px;transition:.22s cubic-bezier(.3,1.1,.4,1);cursor:default;user-select:none}
+#weighlegend .lchip i{width:8px;height:8px;border-radius:2px;transition:transform .3s,box-shadow .3s,opacity .2s;flex:none}
+#weighlegend .lchip .ln{color:inherit}
+#weighlegend .lchip .lw{color:var(--accent2);font-weight:600}
+#weighlegend .lchip .ldir{color:var(--dim2);font-size:9px;line-height:1}
 body.settled #weighlegend .lchip{cursor:pointer}
 body.settled #weighlegend .lchip:hover{border-color:var(--accent)}
-#weighlegend .lchip.off{color:var(--dim2);background:transparent;border-color:var(--border);text-decoration:line-through;opacity:.65}
-#weighlegend .lchip.off i{opacity:.35;filter:grayscale(.6)}
-#weighlegend .lchip.hot{border-color:var(--accent);color:var(--accent2);box-shadow:0 0 0 2px var(--accent-soft)}
-#weighlegend .lchip.hot i{transform:scale(1.25)}
+#weighlegend .lchip.off{color:var(--dim2);background:transparent;border-color:var(--border);opacity:.6}
+#weighlegend .lchip.off .ln{text-decoration:line-through}
+#weighlegend .lchip.off i{opacity:.35;filter:grayscale(.6)}#weighlegend .lchip.off .lw{color:var(--dim2)}
+#weighlegend .lchip.counted{border-color:var(--accent-dim);background:var(--accent-soft)}
+#weighlegend .lchip.hot{border-color:var(--accent);color:var(--accent2);background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft),0 6px 18px -8px var(--accent-glow);transform:translateY(-1px) scale(1.06)}
+#weighlegend .lchip.hot i{transform:scale(1.3)}
+#weighlegend .lchip.hot .lw{font-weight:700}
 #weighlegend .neg{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim2);padding:4px 2px}
 #weighlegend .neg i{width:9px;height:6px;border-radius:1px;background:var(--loss);display:inline-block}
 .weigh-reset{display:none;margin-left:6px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);cursor:pointer;border-bottom:1px dotted var(--accent-dim)}
@@ -674,8 +686,10 @@ var nodes={}, rows={}, segState={}, aborted=false, trajBuilt=false, ROWH=30, ZER
 function computeScale(){var sl=shortlisted();var fs=weightFactors();var mp=0,mn=0; // scale to the shortlist; an outscored cut fund may overflow (clipped)
   sl.forEach(function(d){var p=0,n=0;fs.forEach(function(k){var c=(d.comp[k]||0);if(c>=0)p+=c;else n+=-c});mp=Math.max(mp,p);mn=Math.max(mn,n)});
   UNIT=Math.min((96-ZERO)/(mp||1),(ZERO-4)/(mn||1));}
-function buildLegend(){var h=$('#weighlegend');if(!h)return;var fs=weightFactors();var act=A.activeMetrics||fs.slice();
-  h.innerHTML=fs.map(function(k,i){var on=act.indexOf(k)>=0;return "<span class='lchip"+(on?'':' off')+"' data-k='"+k+"'><i style='background:"+segColor(i,false)+"'></i>"+k.replace(/_/g,' ')+"</span>"}).join('')+"<span class='neg'><i></i>detracts</span>";
+function buildLegend(){var h=$('#weighlegend');if(!h)return;var fs=weightFactors();var act=A.activeMetrics||fs.slice();var DIR=A.dir||{};
+  h.innerHTML=fs.map(function(k,i){var on=act.indexOf(k)>=0;var w=Math.round((A.weights[k]||0)*100);var d=DIR[k]||0;
+    var arrow=d>0?'↑':d<0?'↓':'·';var dt=d>0?'higher is better':d<0?'lower is better':'';
+    return "<span class='lchip"+(on?'':' off')+"' data-k='"+k+"' title='"+k.replace(/_/g,' ')+" · "+w+"% of the score · "+dt+"'><i style='background:"+segColor(i,false)+"'></i><span class='ln'>"+k.replace(/_/g,' ')+"</span><span class='lw'>"+w+"%</span><span class='ldir'>"+arrow+"</span></span>"}).join('')+"<span class='neg'><i></i>detracts</span>";
   h.classList.add('in');}
 function metricField(k){return {ann_return:'ret',ann_vol:'vol',sharpe:'sharpe',sortino:'sortino',calmar:'calmar',max_drawdown:'maxdd'}[k]||k}
 function layoutRows(){var sb=$('#scorebars');if(!sb)return;var n=survivors().length||1;var h=(sb.clientHeight||190)-6;
@@ -782,12 +796,13 @@ function addSeg(d,k,idx,animate){
 }
 /* ---- cinematic decision choreography (the graph tells the story) ---- */
 function zAdj(d,k){return A.weights[k]?((d.comp[k]||0)/A.weights[k]):0} // direction-adjusted z-score
-function factorCue(k,idx){var col=factorColor(k);var w=Math.round(A.weights[k]*100);
-  var t=$('#weighticker');if(t)t.innerHTML="<span class='fdot' style='background:"+col+"'></span>weighing <b>"+k.replace(/_/g,' ')+"</b> <span class='fw'>· "+w+"% weight</span>";
-  $$('#weighlegend span').forEach(function(s,i){s.classList.toggle('hot',i===idx)});
+function factorCue(k,idx){var col=factorColor(k);var w=Math.round(A.weights[k]*100);var DIR=A.dir||{};var d=DIR[k]||0;
+  var dl=d>0?"higher better":d<0?"lower better":"neutral";
+  var t=$('#weighticker');if(t)t.innerHTML="<span class='wk-lab'>now weighing</span><span class='wk-dot' style='background:"+col+"'></span><span class='wk-name'>"+k.replace(/_/g,' ')+"</span><span class='wk-pct'>"+w+"%</span><span class='wk-dir'>"+dl+"</span>";
+  $$('#weighlegend .lchip').forEach(function(s){var on=(s.dataset.k===k);s.classList.toggle('hot',on);if(on)s.classList.add('counted')});
   var c=$('#factorcue');if(c){$('.fdot',c).style.background=col;$('.fname',c).textContent=k.replace(/_/g,' ');$('.fpct',c).textContent=w+'%';var bar=$('.fwt i',c);if(bar){bar.style.background=col;bar.style.width=Math.min(100,w*3)+'%'}c.classList.add('on')}
   var fw=$('#fieldwash');if(fw){fw.style.background='radial-gradient(52% 60% at 32% 30%,'+col+' 0%,transparent 72%)';fw.classList.add('on')}}
-function clearCue(){$$('#weighlegend span').forEach(function(s){s.classList.remove('hot')});var c=$('#factorcue');if(c)c.classList.remove('on');var fw=$('#fieldwash');if(fw)fw.classList.remove('on')}
+function clearCue(){$$('#weighlegend .lchip').forEach(function(s){s.classList.remove('hot')});var c=$('#factorcue');if(c)c.classList.remove('on');var fw=$('#fieldwash');if(fw)fw.classList.remove('on')}
 function nodeRespond(k){survivors().forEach(function(d){var n=nodes[d.id];var z=zAdj(d,k);var mag=Math.max(-1.8,Math.min(1.8,z));
   var sc=(0.85+(mag+1.8)/3.6*2.15).toFixed(2);var op=(0.16+Math.abs(mag)/1.8*0.62).toFixed(2);
   var col=mag>=0?cssv('--accent'):cssv('--loss');var h=$('.halo',n);

@@ -20,16 +20,14 @@ With an `ANTHROPIC_API_KEY` in `.env` it writes a live LLM memo; without one it
 falls back to a deterministic offline memo — either way every figure is verified
 against the metrics engine.
 
-Other commands: `./amb open` (quick static view, no server) · `./amb test` (run the
-suite) · `./amb setup` (reinstall deps).
+That's the whole interface — the other command is `./test` to run the suite.
 
 ## Live market data (real API call in the browser)
 
-```bash
-./amb serve        # then open http://127.0.0.1:8000
-```
+`./launch` handles this for you (it starts the server and opens the page). Under
+the hood:
 
-`./amb serve` runs a tiny local API and serves the memo. On load the page makes a
+the local server serves the memo, and on load the page makes a
 real call to `/api/market`, and the server fetches live data from the **FRED API**
 (S&P 500 + 3-month T-bill) and returns it — the page flips to **LIVE · FRED** and
 the trajectory redraws against the real index.

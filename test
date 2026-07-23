@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# test — run the test suite.
+exec "$(dirname "$0")/amb" test "$@"
