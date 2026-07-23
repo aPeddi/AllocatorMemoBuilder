@@ -364,14 +364,14 @@ body.screening .node.cand.gone{opacity:0}
 .hud-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:46px 46px;opacity:.4;-webkit-mask-image:radial-gradient(ellipse at center,#000 42%,transparent 86%);mask-image:radial-gradient(ellipse at center,#000 42%,transparent 86%)}
 .hud-scan{position:absolute;left:0;right:0;top:-140px;height:140px;background:linear-gradient(180deg,transparent,var(--accent-soft),transparent);opacity:.5;animation:hudscan 5.5s linear infinite}
 @keyframes hudscan{0%{transform:translateY(0)}100%{transform:translateY(140vh)}}
-.hud-top{position:absolute;top:20px;left:28px;right:28px;display:flex;justify-content:space-between;align-items:center}
-.hud-phase{display:flex;align-items:baseline;gap:13px}
-.hp-n{font-size:32px;font-weight:700;color:var(--accent2);letter-spacing:-.02em;line-height:1}
-.hp-l{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink)}
+.hud-top{position:absolute;top:20px;left:28px;right:28px;display:flex;justify-content:flex-end;align-items:center}
+.hud-phase{display:flex;align-items:baseline;gap:12px;margin-bottom:13px}
+.hp-n{font-size:26px;font-weight:700;color:var(--accent2);letter-spacing:-.02em;line-height:1}
+.hp-l{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink)}
 .hud-id{display:flex;align-items:center;gap:9px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim2)}
 .hud-rec{width:8px;height:8px;border-radius:50%;background:var(--loss);animation:hblink 1.2s steps(1) infinite}
 @keyframes hblink{50%{opacity:.25}}
-.hud-stage{position:absolute;left:28px;right:28px;top:78px;bottom:80px;display:flex;align-items:center;justify-content:center}
+.hud-stage{position:absolute;left:28px;right:28px;top:54px;bottom:104px;display:flex;align-items:center;justify-content:center}
 .hud-bot{position:absolute;left:28px;right:28px;bottom:20px}
 .hud-prog{display:flex;gap:10px;margin-bottom:13px}
 .hpseg{flex:1;display:flex;align-items:center;gap:8px;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2)}
@@ -424,6 +424,7 @@ body.screening .node.cand.gone{opacity:0}
 .az-mrow.quarr{background:var(--loss-soft)}.az-mrow.quarr>span{color:var(--loss);text-decoration:line-through}
 .az-mrow .mstat{text-decoration:none!important;font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);white-space:nowrap}
 .az-mrow .mstat .okc{color:var(--gain);font-size:11px}
+.az-mrow .normv{color:var(--accent2);font-weight:600}
 .az-mrow.quarr .mstat{color:var(--loss);font-weight:600;text-decoration:none!important}
 .az-side{flex:1;display:flex;flex-direction:column;gap:7px}
 .az-sh{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-top:6px}
@@ -819,6 +820,7 @@ async function runWeigh(){
     var k=factors[fi],idx=fi;
     // beat 1 — spotlight the factor (panel ticker + legend); halos show per-metric strength
     factorCue(k,idx);nodeRespond(k);
+    var _cs=$('#chapter .s');if(_cs){var _dd=(A.dir&&A.dir[k]);var _da=(_dd>0?' ↑':_dd<0?' ↓':'');_cs.innerHTML="weighing <b style='color:"+factorColor(k)+"'>"+k.replace(/_/g,' ')+_da+"</b> · "+Math.round(A.weights[k]*100)+"% of the score";}
     await wait(600); if(aborted)return;
     // beat 2 — fold it into the running score; re-rank; move the crown
     sl.forEach(function(d){addSeg(d,k,idx,true)});
@@ -836,6 +838,7 @@ async function runWeigh(){
     prevLead=leadId;
   }
   clearRtags();clearHalos();clearCue();
+  var _csf=$('#chapter .s');if(_csf)_csf.textContent='all six metrics weighed · final risk-adjusted score';
   await wait(420);
   $$('.wseg.pulse').forEach(function(s){s.classList.remove('pulse')});
   var win=survivors()[0];if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
@@ -1122,10 +1125,9 @@ async function actZero(){
   var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
   az.innerHTML=
     "<div class='hud-grid'></div><div class='hud-scan'></div>"
-   +"<div class='hud-top'><div class='hud-phase'><span class='hp-n'>00</span><span class='hp-l' id='hudphase'>DATA ACQUISITION</span></div>"
-   +"<div class='hud-id'><span class='hud-rec'></span>EQUI · DATA CORE</div></div>"
+   +"<div class='hud-top'><div class='hud-id'><span class='hud-rec'></span>EQUI · DATA CORE</div></div>"
    +"<div class='hud-stage' id='hudstage'></div>"
-   +"<div class='hud-bot'><div class='hud-prog' id='hudprog'></div><div class='hud-log' id='hudlog'></div></div>";
+   +"<div class='hud-bot'><div class='hud-phase'><span class='hp-n'>00</span><span class='hp-l' id='hudphase'>DATA ACQUISITION</span></div><div class='hud-prog' id='hudprog'></div><div class='hud-log' id='hudlog'></div></div>";
   var prog=$('#hudprog',az),stage=$('#hudstage',az);
   ['acquire','parse','validate','reconcile','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
   function phase(n,label){var pe=$('#hudphase',az);if(pe)pe.textContent=label;var pn=$('.hp-n',az);if(pn)pn.textContent='0'+n;
@@ -1173,7 +1175,8 @@ async function actZero(){
 
   // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
   phase(2,'PARSE · NORMALIZE');
-  var sample=[['2023-07-01','MAC','0.021'],['2023-07-01','EQ-LS','1.95%'],['2023-08-01','MAC','-0.004'],['2023-08-01','MN','0.7%'],['—','VEN','0.031'],['2023-09-01','CR','0,012']];
+  // date, fund_id, raw value, status ('ok' | 'norm' cleaned→col5 | 'bad' date→quarantined); 3 bad matches the real quarantine count
+  var sample=[['2023-07-01','MAC','0.021','ok',''],['2023-07-01','EQ-LS','1.95%','norm','0.0195'],['2023-08-01','MN','0,70%','norm','0.0070'],['—','VEN','0.031','bad',''],['2023-13-01','CR','0.012','bad',''],['n/a','DA','0.008','bad','']];
   stage.innerHTML=
    "<div class='az-parse'>"
    +"<div class='az-matrix'><div class='az-mh'><span>date</span><span>fund_id</span><span>monthly_return</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
@@ -1183,8 +1186,10 @@ async function actZero(){
      +"<div class='az-sh'>OPTIONAL FIELDS</div><div class='az-opt' id='copt'></div>"
    +"</div></div>";
   var mtx=$('#mtx',az);log('streaming rows · detecting schema');
-  for(var r=0;r<sample.length;r++){if(aborted)return;var row=el('div','az-mrow');var bad=(sample[r][0]==='—'||sample[r][2].indexOf(',')>=0);
-    row.innerHTML="<span"+(bad?" class='badc'":"")+">"+sample[r][0]+"</span><span>"+sample[r][1]+"</span><span"+(bad?" class='badc'":"")+">"+sample[r][2]+"</span><span class='mstat'>"+(bad?"":"<span class='okc'>✓</span>")+"</span>";
+  for(var r=0;r<sample.length;r++){if(aborted)return;var sr=sample[r];var stt=sr[3];var baddate=(stt==='bad');var row=el('div','az-mrow');
+    var vcell=(stt==='norm')?"<span>"+sr[2]+" <b class='normv'>&rarr; "+sr[4]+"</b></span>":"<span>"+sr[2]+"</span>";
+    var stat=baddate?"<span class='mstat'></span>":(stt==='norm'?"<span class='mstat'><span class='okc'>✓</span> cleaned</span>":"<span class='mstat'><span class='okc'>✓</span></span>");
+    row.innerHTML=(baddate?"<span class='badc'>":"<span>")+sr[0]+"</span><span>"+sr[1]+"</span>"+vcell+stat;
     mtx.appendChild(row);setTimeout(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
   await wait(360);if(aborted)return;
   var maps=[['date','→ period'],['fund_id','→ id'],['monthly_return','→ return']];var cm=$('#cmap',az);
@@ -1202,7 +1207,7 @@ async function actZero(){
   var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
   for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');
     var ms=$('.mstat',qrows[vi]);if(ms)ms.innerHTML="⊘ "+qreason;await wait(340)}
-  log('validating '+ROWS+' rows · '+(ROWS-QN)+' valid · '+QN+' quarantined ('+qreason+')');
+  log('validating '+ROWS+' rows · '+(ROWS-QN)+' valid · '+QN+' quarantined ('+qreason+') · row-level, no fund dropped');
   await wait(1700);if(aborted)return;
 
   // ══ 4 · RECONCILE — match IDs + align the window ══
@@ -1210,7 +1215,7 @@ async function actZero(){
   stage.innerHTML="<div class='az-rec'><div class='az-rec-h'>IDENTIFIER RECONCILIATION</div><div class='az-chips' id='rchips'></div>"
    +"<div class='az-tl'><div class='az-tl-h'>SHARED WINDOW</div><div class='az-tl-bar'><i id='tlfill'></i></div>"
    +"<div class='az-tl-dates'><span>"+(ov.start||'')+"</span><span>"+(ov.end||'')+"</span></div>"
-   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+WR+"/"+UNIV+" funds matched · 0 unmatched</div></div></div>";
+   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+WR+"/"+UNIV+" funds matched · quarantine was row-level, so every fund keeps its valid months</div></div></div>";
   var rc=$('#rchips',az);
   for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);setTimeout(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
   setTimeout(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);
