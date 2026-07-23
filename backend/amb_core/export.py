@@ -134,7 +134,12 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .ipg.hot{background:var(--loss-soft);border-color:var(--loss-bd);box-shadow:0 0 18px -8px var(--loss)}
 .ipg .k{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--loss);border:1px solid var(--loss-bd);border-radius:3px;padding:3px 6px;white-space:nowrap;flex:none}
 .ipg.hot .k{background:var(--loss);color:var(--on-accent)}
-.ipg .d{font-size:12.5px;color:var(--ink2);line-height:1.4}
+.ipg .d{font-size:12.5px;color:var(--ink2);line-height:1.4;flex:1}
+.ipg .gc{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-bd);border-radius:20px;padding:2px 8px;flex:none;letter-spacing:.02em}
+.ipg .gc.gc0{color:var(--dim2);background:transparent;border-color:var(--border)}
+.ipg.hot .gc{background:var(--loss);color:var(--on-accent);border-color:var(--loss)}
+.node .stamp .brk{display:none;margin-top:4px;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:20px;padding:2px 8px}
+.node.reject .stamp .brk:not(:empty){display:inline-block}
 .ipw{display:grid;grid-template-columns:78px 1fr 34px;gap:10px;align-items:center;margin:11px 0;opacity:0;transform:translateX(8px);transition:opacity .5s,transform .5s}
 .ipw.in{opacity:1;transform:none}
 .ipw .wl{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -295,22 +300,50 @@ body.screening .node.cand.gone{opacity:0}
 .d-name{font-weight:700;font-size:22px;color:var(--ink-hi);letter-spacing:-.01em}
 .d-strat{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:15px}
 .d-p{color:var(--ink2);font-size:13px;line-height:1.6}
-/* memo drawer */
-.mm-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);margin:10px 0 4px}
-.mm-meta .mm-dot{opacity:.5}.mm-meta .mm-vf{color:var(--accent2)}
-.mm-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.mm-p{color:var(--ink2);font-size:12.5px;line-height:1.62;margin:0 0 4px}
-.mm-tbl{width:100%;border-collapse:collapse;font-size:11px;margin:2px 0 4px}
-.mm-tbl th{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);text-align:right;padding:4px 6px;border-bottom:1px solid var(--border)}
+/* memo view — editorial */
+#drawer.wide{width:min(600px,95vw);padding:26px 30px}
+.mv-eyebrow{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin:2px 0 14px}
+.mv-hero{font-size:23px;line-height:1.34;font-weight:600;color:var(--ink);letter-spacing:-.01em;margin-bottom:16px}
+.mv-hero b{color:var(--accent2);font-weight:700}
+.mv-pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}
+.mvp{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:5px 11px}
+.mvp.ok{color:var(--accent2);border-color:var(--accent-dim);background:var(--accent-soft)}
+.mvp.mut{color:var(--dim2)}
+.mv-band{border:1px solid var(--border2);border-radius:12px;background:linear-gradient(180deg,var(--panel2),var(--panel));overflow:hidden;margin-bottom:22px}
+.mv-band-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:15px 18px 13px;border-bottom:1px solid var(--border)}
+.mv-rec{font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--on-accent);background:var(--accent);border-radius:20px;padding:3px 9px;align-self:center}
+.mv-wn{font-size:17px;font-weight:700;color:var(--ink)}
+.mv-ws{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2)}
+.mv-kpis{display:grid;grid-template-columns:repeat(3,1fr)}
+.mvk{padding:13px 16px;border-right:1px solid var(--border);border-top:1px solid var(--border)}
+.mvk:nth-child(3n){border-right:none}.mvk:nth-child(-n+3){border-top:none}
+.mvk b{display:block;font-family:var(--mono);font-size:17px;color:var(--ink);line-height:1;letter-spacing:-.01em}
+.mvk i{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2);font-style:normal;margin-top:7px}
+.mv-lead{color:var(--ink2);font-size:13.5px;line-height:1.68;margin:0 0 8px}
+.mv-lead.sm{font-size:12.5px;color:var(--dim);margin-bottom:12px}
+.mv-h{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin:26px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.mm-tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin:0 0 4px}
+.mm-tbl th{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);text-align:right;padding:5px 7px;border-bottom:1px solid var(--border)}
 .mm-tbl th:nth-child(2){text-align:left}
-.mm-tbl td{text-align:right;padding:5px 6px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.mm-tbl td{text-align:right;padding:8px 7px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.mm-tbl td.mr{font-family:var(--mono);color:var(--dim2);font-size:9px}
 .mm-tbl td.mnm{text-align:left;color:var(--ink);font-weight:500}.mm-tbl td.msc{color:var(--accent2);font-family:var(--mono)}
-.mm-tbl tr.mwin td{color:var(--accent2)}.mm-tbl tr.mwin td.mnm{font-weight:600}
-.mk-list{display:flex;flex-direction:column;gap:6px;margin:8px 0 2px}
-.mk-claim{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel2)}
-.mk-ck{width:16px;height:16px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:10px;display:flex;align-items:center;justify-content:center;flex:none}
-.mk-claim.bad .mk-ck{background:var(--loss)}
-.mk-t{font-size:12px;color:var(--ink2);line-height:1.4}
+.mm-tbl tr.mwin td{background:var(--accent-soft)}.mm-tbl tr.mwin td.mnm{font-weight:700;color:var(--accent2)}.mm-tbl tr.mwin td.mr{color:var(--accent2)}
+.mvr-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.mvr{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-left:3px solid var(--dim2);border-radius:8px;background:var(--panel2)}
+.mvr.md{border-left-color:var(--warm,#C6A566)}
+.mvr.hi{border-left-color:var(--loss)}
+.mvr-ic{width:20px;height:20px;flex:none;color:var(--dim2)}
+.mvr.md .mvr-ic{color:var(--warm,#C6A566)}.mvr.hi .mvr-ic{color:var(--loss)}
+.mvr-ic svg{width:100%;height:100%}
+.mvr-b{flex:1;min-width:0}
+.mvr-t{font-size:12.5px;color:var(--ink2)}.mvr-t b{color:var(--ink);font-family:var(--mono);font-weight:600}
+.mvr-f{font-family:var(--mono);font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);margin-top:3px}
+.mv-apx{margin:22px 0 6px;border-top:1px solid var(--border);padding-top:14px}
+.mv-apx summary{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.mv-apx summary::before{content:'+';font-size:13px;color:var(--dim2)}
+.mv-apx[open] summary::before{content:'\2212'}
+.mv-fine{color:var(--dim);font-size:11.5px;line-height:1.62;margin:12px 0 0}
 .fd-terms{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:14px 0}
 .fd-terms span{flex:1 1 33%;min-width:90px;background:var(--panel2);padding:9px 11px;display:flex;flex-direction:column;gap:3px}
 .fd-terms i{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2);font-style:normal}
@@ -538,7 +571,7 @@ function buildField(){
     var glass=el('div','glass');
     var halo=el('div','halo');
     var lock=el('div','lock');['a','b','c','d'].forEach(function(k){lock.appendChild(el('i',k))});
-    var stamp=el('div','stamp');var st=el('div','st');st.textContent='excluded';var sr=el('div','sr');stamp.appendChild(st);stamp.appendChild(sr);
+    var stamp=el('div','stamp');var st=el('div','st');st.textContent='excluded';var sr=el('div','sr');var brk=el('div','brk');stamp.appendChild(st);stamp.appendChild(sr);stamp.appendChild(brk);
     var crown=el('div','crown');crown.appendChild(document.createTextNode('leader'));
     var rtag=el('div','rtag');
     var dot=el('div','dot');
@@ -556,7 +589,11 @@ function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id
   _lastLive=live;updateTally();}
 function buildIntro(){
   var ip=$('#intropane');if(ip){ip.classList.add('in');ip.classList.remove('out')}
-  var g=$('#ip-gates');if(g){g.innerHTML='';A.gates.forEach(function(gt,i){var r=el('div','ipg');r.dataset.k=gt.label;r.innerHTML="<span class='k'>"+gt.label+"</span><span class='d'>"+gt.detail+"</span>";g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
+  var g=$('#ip-gates');if(g){g.innerHTML='';
+    var cuts={};A.funds.forEach(function(d){(d.reasons||[]).forEach(function(rr){cuts[rr.kind]=(cuts[rr.kind]||0)+1})});
+    A.gates.forEach(function(gt,i){var r=el('div','ipg');r.dataset.k=gt.label;var n=cuts[gt.label]||0;
+      var ct=n>0?"<span class='gc'>−"+n+"</span>":"<span class='gc gc0'>0</span>";
+      r.innerHTML="<span class='k'>"+gt.label+"</span><span class='d'>"+gt.detail+"</span>"+ct;g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
   var w=$('#ip-weights');if(w){w.innerHTML='';var fs=weightFactors();var mx=Math.max.apply(null,fs.map(function(k){return A.weights[k]}));
     fs.forEach(function(k,i){var pctv=Math.round(A.weights[k]*100);var r=el('div','ipw');
       r.innerHTML="<span class='wl'>"+k.replace(/_/g,' ')+"</span><span class='wb'><i></i></span><span class='wp'>"+pctv+"%</span>";
@@ -721,12 +758,12 @@ function rebuildGates(){var ms=A.mandateSpec||{};var g=[];
   if((ms.exclStrats||[]).length)g.push({label:'STRATEGY',detail:'excl. '+ms.exclStrats.join(', ')});
   if(!g.length)g=[{label:'MANDATE',detail:'screen'}];A.gates=g;}
 function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.weights;
-  A.funds.forEach(function(d){var reason=null,kind=null;
-    if(ms.liqCap!=null&&d.redd!=null&&d.redd>ms.liqCap){reason="illiquid · "+(d.redf||'')+" ("+Math.round(d.redd)+"d)";kind="LIQUIDITY"}
-    else if(ms.volCap!=null&&d.vol!=null&&d.vol>ms.volCap){reason="too volatile · "+Math.round(d.vol*100)+"% > "+Math.round(ms.volCap*100)+"% cap";kind="VOLATILITY"}
-    else if(ms.maxddFloor!=null&&d.maxdd!=null&&d.maxdd<ms.maxddFloor){reason="drawdown · "+Math.round(d.maxdd*100)+"% beyond "+Math.round(ms.maxddFloor*100)+"%";kind="DRAWDOWN"}
-    else if((ms.exclStrats||[]).indexOf(d.strategy)>=0){reason="off-strategy · "+d.strategy;kind="STRATEGY"}
-    d.reason=reason;d.rkind=kind;d.eligible=(reason==null);d.excluded=(reason!=null);});
+  A.funds.forEach(function(d){var rs=[];
+    if(ms.liqCap!=null&&d.redd!=null&&d.redd>ms.liqCap)rs.push({text:"illiquid · "+(d.redf||'')+" ("+Math.round(d.redd)+"d)",kind:"LIQUIDITY"});
+    if(ms.volCap!=null&&d.vol!=null&&d.vol>ms.volCap)rs.push({text:"too volatile · "+Math.round(d.vol*100)+"% > "+Math.round(ms.volCap*100)+"% cap",kind:"VOLATILITY"});
+    if(ms.maxddFloor!=null&&d.maxdd!=null&&d.maxdd<ms.maxddFloor)rs.push({text:"drawdown · "+Math.round(d.maxdd*100)+"% beyond "+Math.round(ms.maxddFloor*100)+"% floor",kind:"DRAWDOWN"});
+    if((ms.exclStrats||[]).indexOf(d.strategy)>=0)rs.push({text:"off-strategy · "+d.strategy,kind:"STRATEGY"});
+    d.reasons=rs;d.reason=(rs.length?rs[0].text:null);d.rkind=(rs.length?rs[0].kind:null);d.eligible=(rs.length===0);d.excluded=(rs.length>0);});
   var elig=A.funds.filter(function(d){return d.eligible});
   var stE={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=elig.map(function(d){return d[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
   elig.forEach(function(d){var s=0;Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});d._rs=s});
@@ -858,18 +895,22 @@ async function story(){
   for(var i2=0;i2<total;i2++){if(aborted)return;nodes[A.funds[i2].id].classList.add('labeled');await wait(120)}
   await wait(2000);
   // ── ACT 2 · Screening — cut the mandate failures one at a time, slowly ──
-  chapter('02 · Screening','Apply the mandate','liquidity + volatility limits');
+  chapter('02 · Screening','Apply the mandate',(A.gates||[]).map(function(g){return g.label.toLowerCase()}).join(' · '));
   $('#gates').classList.add('on');document.body.classList.add('screening');
   $('#counter').classList.add('on');updateCounter();
   await wait(1100);
   var gates=$$('.gate');var rj=rejects();
   for(var j=0;j<rj.length;j++){if(aborted)return;var ex=rj[j];var en=nodes[ex.id];
-    var match=function(el){var on=(el.dataset.k===ex.rkind);el.classList.toggle('act',on);el.classList.toggle('hot',on)};
-    gates.forEach(match);$$('#ip-gates .ipg').forEach(match); // light up the matching limit (field chip + right panel)
-    $('.sr',en).textContent=ex.reason;             // fill the readable reason
-    en.classList.add('focus');await wait(750);      // bring it forward
-    en.classList.add('reject');await wait(1900);     // stamp it — hold long enough to read
-    en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(820);
+    en.classList.add('focus');await wait(620);       // bring it forward
+    var rs=(ex.reasons&&ex.reasons.length)?ex.reasons:[{text:ex.reason,kind:ex.rkind}];
+    for(var k=0;k<rs.length;k++){if(aborted)return;var rr=rs[k];
+      (function(rk){var match=function(el){var on=(el.dataset.k===rk);el.classList.toggle('act',on);el.classList.toggle('hot',on)};
+        gates.forEach(match);$$('#ip-gates .ipg').forEach(match);})(rr.kind); // light the matching limit
+      $('.sr',en).textContent=rr.text;               // readable reason for THIS breach
+      if(rs.length>1){var bd=$('.brk',en);if(bd)bd.textContent=(k+1)+'/'+rs.length+' limits breached';}
+      en.classList.add('reject');await wait(rs.length>1?1350:1950);
+    }
+    en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(760);
   }
   gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
   document.body.classList.remove('screening');$('#gates').classList.remove('on');
@@ -901,7 +942,7 @@ function settle(){document.body.classList.add('settled');document.body.classList
 
 function reset(){aborted=true;document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');
   clearHalos();clearRtags();setLeaderNode(null);clearCue();_lastLive=null;
-  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent='';var bk=$('.stamp .brk',n);if(bk)bk.textContent=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
@@ -910,7 +951,7 @@ function reset(){aborted=true;document.body.classList.remove('settled');document
 }
 function replay(){reset();setTimeout(function(){aborted=false;story()},80)}
 
-function openDrawer(h){var d=$('#drawer');d.innerHTML="<div class='x' id='dx'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg>CLOSE</div>"+h;d.classList.add('open');$('#dx').addEventListener('click',function(){d.classList.remove('open')})}
+function openDrawer(h){var d=$('#drawer');d.classList.remove('wide');d.innerHTML="<div class='x' id='dx'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg>CLOSE</div>"+h;d.classList.add('open');d.scrollTop=0;$('#dx').addEventListener('click',function(){d.classList.remove('open')})}
 function fundTerms(d){var cells=[];
   if(d.redf)cells.push(["liquidity",d.redf+(d.redd?" · "+Math.round(d.redd)+"d":"")]);
   if(d.lockup!=null)cells.push(["lockup",(d.lockup?d.lockup+" mo":"none")]);
@@ -957,19 +998,25 @@ function liveMemo(){var sl=shortlisted();var w=sl[0];
   var body=(dd?first(dd.name)+' carries the deepest drawdown at '+pct(dd.maxdd)+'. ':'')+(vv?first(vv.name)+' is the most volatile ('+pct(vv.vol)+'). ':'')+'Recomputed live against the current mandate.';
   var sum=w?('Recomputed live: '+A.nTotal+' funds screened, '+A.nEligible+' eligible, '+A.nShort+' shortlisted. '+first(w.name)+' leads on risk-adjusted return ('+pct(w.ret)+' at '+pct(w.vol)+' vol, Sharpe '+num(w.sharpe)+').'):'No fund met the mandate.';
   return {summary:sum,recommendation:(w?'<b>'+first(w.name)+'</b> leads on risk-adjusted return across the '+A.nShort+' shortlisted funds.':'No fund met the mandate.'),keyRisks:{body:body,claims:claims},appendix:'Metrics recomputed client-side with the same deterministic engine (vol = sample-std annualized; Sharpe/Sortino excess over the mandate risk-free; beta/alpha OLS vs benchmark). Figures reflect the current mandate and inputs.'};}
-function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisks||{};
-  function sec(t,body){return body?("<div class='mm-h'>"+t+"</div><p class='mm-p'>"+body+"</p>"):""}
-  var rows=shortlisted().map(function(s){return "<tr"+(s.rank==1?" class='mwin'":"")+"><td>"+String(s.rank).padStart(2,'0')+"</td><td class='mnm'>"+first(s.name)+"</td><td>"+pct(s.ret)+"</td><td>"+num(s.sharpe)+"</td><td>"+num(s.sortino)+"</td><td>"+pct(s.maxdd)+"</td><td class='msc'>"+(s.score>=0?'+':'')+s.score.toFixed(2)+"</td></tr>"}).join('');
-  var claims=(risks.claims||[]).map(function(c){return "<div class='mk-claim"+(c.verified?'':' bad')+"'><span class='mk-ck'>"+(c.verified?'✓':'!')+"</span><span class='mk-t'>"+c.text+"</span></div>"}).join('');
-  var vpct=(A.total?Math.round(A.verified/A.total*100):0);
-  var h="<div class='d-pre'>Investment Committee memo</div><div class='d-name'>"+A.title+"</div>"
-   +"<div class='mm-meta'><span>"+A.mandate+"</span><span class='mm-dot'>·</span><span>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mm-dot'>·</span><span class='mm-vf'>"+A.verified+"/"+A.total+" claims verified</span></div>"
-   +sec('Summary',m.summary)
-   +sec('Recommendation',m.recommendation)
-   +"<div class='mm-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>MaxDD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
-   +"<div class='mm-h'>Key Risks</div><p class='mm-p'>"+(risks.body||'')+"</p>"+(claims?"<div class='mk-list'>"+claims+"</div>":"")
-   +sec('Data Appendix',m.appendix);
-  openDrawer(h);}
+function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisks||{};var w=shortlisted()[0]||{};
+  var WARN="<svg viewBox='0 0 24 24' fill='none'><path d='M12 3l9 16H3l9-16z' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round'/><path d='M12 10v4' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/><circle cx='12' cy='16.6' r='.6' fill='currentColor' stroke='currentColor'/></svg>";
+  var kpis=[['Ann. return',pct(w.ret)],['Volatility',pct(w.vol)],['Sharpe',num(w.sharpe)],['Sortino',num(w.sortino)],['Max DD',pct(w.maxdd)],['Net of fee',(w.netret!=null?pct(w.netret):'—')]];
+  var kpiH=kpis.map(function(k){return "<div class='mvk'><b>"+k[1]+"</b><i>"+k[0]+"</i></div>"}).join('');
+  var rows=shortlisted().map(function(s){return "<tr"+(s.rank==1?" class='mwin'":"")+"><td class='mr'>"+String(s.rank).padStart(2,'0')+"</td><td class='mnm'>"+first(s.name)+"</td><td>"+pct(s.ret)+"</td><td>"+num(s.sharpe)+"</td><td>"+num(s.sortino)+"</td><td>"+pct(s.maxdd)+"</td><td class='msc'>"+(s.score>=0?'+':'')+s.score.toFixed(2)+"</td></tr>"}).join('');
+  var claims=(risks.claims||[]).map(function(c){var mt=(c.metric||'');var sev=/drawdown/.test(mt)?' hi':/vol|beta/.test(mt)?' md':'';var parts=String(c.text).split(':');var lab=parts[0],val=parts.slice(1).join(':').trim();
+    return "<div class='mvr"+sev+"'><span class='mvr-ic'>"+WARN+"</span><div class='mvr-b'><div class='mvr-t'>"+lab+(val?" <b>"+val+"</b>":"")+"</div><div class='mvr-f'>"+(c.fund||'')+"</div></div></div>"}).join('');
+  var reco=m.recommendation||A.verdictHtml||'';
+  var h="<div class='mv'>"
+   +"<div class='mv-eyebrow'>Investment Committee memo · "+A.mandate+"</div>"
+   +"<div class='mv-hero'>"+reco+"</div>"
+   +"<div class='mv-pills'><span class='mvp'>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mvp ok'>&#10003; "+A.verified+"/"+A.total+" verified</span><span class='mvp mut'>"+(A.model||'template')+"</span></div>"
+   +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+first(w.name)+"</span><span class='mv-ws'>"+(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
+   +(m.summary?("<p class='mv-lead'>"+m.summary+"</p>"):"")
+   +"<div class='mv-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>Max DD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
+   +"<div class='mv-h'>Key risks</div>"+(risks.body?("<p class='mv-lead sm'>"+risks.body+"</p>"):"")+"<div class='mvr-list'>"+claims+"</div>"
+   +(m.appendix?("<details class='mv-apx'><summary>Data appendix &amp; methodology</summary><p class='mv-fine'>"+m.appendix+"</p></details>"):"")
+   +"</div>";
+  openDrawer(h);var d=$('#drawer');if(d)d.classList.add('wide');}
 function auditDrawer(){var A2=A.audit||[];
   var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
   var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+g.fund+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+c.metric+"</span><span class='av-val'>"+(c.value==null?'—':c.value)+"</span></div><div class='av-src' title=\""+src.replace(/"/g,'')+"\">"+src+"</div></div></div>"}).join('')+"</div>"}).join('');
@@ -1094,9 +1141,14 @@ function recompute(funds,ret,order,quar){ try{
   var vols=ids.map(function(id){return mbf[id].ann_vol}),rets=ids.map(function(id){return mbf[id].ann_return});
   var vmin=Math.min.apply(null,vols),vmax=Math.max.apply(null,vols),rmin=Math.min.apply(null,rets),rmax=Math.max.apply(null,rets);var vr=(vmax-vmin)||1,rr=(rmax-rmin)||1;
   var fd=ids.map(function(id){var m=mbf[id];var rk=rankOf[id]||null;var elig1=eligibleOf(id);var cut=(rk==null&&elig1);
-    var reason=null;if(!elig1){if(ms.exclStrats.indexOf(strat[id])>=0)reason='illiquid · '+strat[id];else if(ms.volCap!=null&&m.ann_vol>ms.volCap)reason='too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap'}
+    var reasons=[];if(!elig1){
+      if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
+      if(ms.maxddFloor!=null&&m.max_drawdown!=null&&m.max_drawdown<ms.maxddFloor)reasons.push({text:'drawdown · '+Math.round(m.max_drawdown*100)+'% beyond '+Math.round(ms.maxddFloor*100)+'% floor',kind:'DRAWDOWN'});
+      if(ms.exclStrats.indexOf(strat[id])>=0)reasons.push({text:'off-strategy · '+strat[id],kind:'STRATEGY'});
+      if(!reasons.length)reasons.push({text:'excluded by mandate',kind:'MANDATE'});}
+    var reason=(reasons.length?reasons[0].text:null);
     var cp=elig1?comps(id):[];var cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;
-    return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reason?(reason.indexOf('volatile')>=0?'VOLATILITY':'LIQUIDITY'):null),
+    return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
       srank:(rk||(cut?90:99)),x:Math.round((12+(m.ann_vol-vmin)/vr*76)*10)/10,y:Math.round((12+(m.ann_return-rmin)/rr*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,detail:''};});
   // zoom coords over eligible + bench
@@ -1212,27 +1264,34 @@ def render_html(memo, ctx=None):
     gates=[{"label":g["label"],"detail":g["detail"]} for g in (map(_gate_meta,mandate.constraints) if mandate else [])]
     if not gates: gates=[{"label":"MANDATE","detail":"screen"}]
 
-    def _reject_reason(f,m):
-        """First failing hard constraint -> (human reason, gate kind). None if eligible."""
+    def _one_reason(f,m,c):
+        g=_gate_meta(c)
+        val=_resolve(f,m,c.field)
+        if c.field=="strategy":
+            return {"text":f"off-strategy · {f.strategy}","kind":g["kind"]}
+        if c.field=="redemption_days":
+            fr=(f.redemption_freq or "illiquid")
+            dd=(f"{int(val)}d" if val is not None else "n/a")
+            return {"text":f"illiquid · {fr} ({dd})","kind":g["kind"]}
+        if c.field=="ann_vol":
+            return {"text":f"too volatile · {m.get('ann_vol',0)*100:.0f}% > {c.value*100:.0f}% cap","kind":g["kind"]}
+        if c.field=="max_drawdown":
+            return {"text":f"drawdown · {m.get('max_drawdown',0)*100:.0f}% beyond {c.value*100:.0f}% floor","kind":g["kind"]}
+        return {"text":f"fails {c.field} {c.op} {c.value}","kind":g["kind"]}
+
+    def _reject_reasons(f,m):
+        """EVERY failing hard constraint -> list of {text,kind}. [] if eligible.
+        A fund can breach several limits (a venture sleeve is illiquid AND too
+        drawdown-prone AND off-strategy); the funnel shows each so every gate does
+        visible work."""
         if not mandate or f is None:
-            return None,None
+            return []
+        out=[]
         for c in mandate.constraints:
             val=_resolve(f,m,c.field)
-            if _test(val,c.op,c.value):
-                continue
-            g=_gate_meta(c)
-            if c.field=="strategy":
-                return f"off-strategy · {f.strategy}", g["kind"]
-            if c.field=="redemption_days":
-                fr=(f.redemption_freq or "illiquid")
-                dd=(f"{int(val)}d" if val is not None else "n/a")
-                return f"illiquid · {fr} ({dd})", g["kind"]
-            if c.field=="ann_vol":
-                return f"too volatile · {m.get('ann_vol',0)*100:.0f}% > {c.value*100:.0f}% cap", g["kind"]
-            if c.field=="max_drawdown":
-                return f"drawdown · {m.get('max_drawdown',0)*100:.0f}% beyond {c.value*100:.0f}%", g["kind"]
-            return f"fails {c.field} {c.op} {c.value}", g["kind"]
-        return None,None
+            if not _test(val,c.op,c.value):
+                out.append(_one_reason(f,m,c))
+        return out
 
     volcap=None
     if mandate:
@@ -1249,7 +1308,9 @@ def render_html(memo, ctx=None):
             if ser:
                 for v in ser.values:c*=(1+v);wealth.append(round(c,4))
             rk=ranks.get(fid)
-            reason,reason_kind=_reject_reason(f,m)
+            reasons=_reject_reasons(f,m)
+            reason=(reasons[0]["text"] if reasons else None)
+            reason_kind=(reasons[0]["kind"] if reasons else None)
             eligible=(reason is None)                 # passed the mandate (ranked OR outscored)
             cut=(rk is None and eligible)             # eligible but below the top-N shortlist
             comps=components(fid) if eligible else []
@@ -1263,7 +1324,7 @@ def render_html(memo, ctx=None):
                 "fee":(f.mgmt_fee_pct if f else None),"netret":netret,
                 "redf":(f.redemption_freq if f else None),"redd":(f.redemption_days if f else None),
                 "lockup":(f.lockup_months if f else None),"notice":(f.notice_days if f else None),
-                "wealth":wealth,"reason":reason,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
+                "wealth":wealth,"reason":reason,"reasons":reasons,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
     # zoom positions (all mandate-eligible funds + benchmark, shared range so the
     # frontier reads against the index and the corners carry meaning)
