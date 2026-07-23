@@ -11,11 +11,13 @@ from typing import Optional
 
 import yaml
 
-from .benchmarks import load_benchmark
+from .config import get_settings
 from .ingest import load_funds, load_returns
+from .marketdata import fetch_risk_free_annual, resolve_benchmark
 from .memo import ClaimsProvider, generate, template_claims_provider
 from .metrics import compute_for_fund
 from .models import Mandate, Memo
+from .readiness import build_readiness
 from .retrieval import AnalysisContext
 from .scoring import build_shortlist
 
@@ -30,13 +32,21 @@ def run(
     mandate: Mandate,
     claims_provider: Optional[ClaimsProvider] = None,
     data_dir: str | Path = "data",
+    benchmark_mode: Optional[str] = None,
 ) -> tuple[Memo, AnalysisContext]:
     funds = load_funds(funds_csv)
     series, quarantined = load_returns(returns_csv)
-    try:
-        benchmark = load_benchmark(mandate.benchmark_id, Path(data_dir) / "benchmarks")
-    except FileNotFoundError:
-        benchmark = None
+
+    mode = benchmark_mode or get_settings().benchmark_mode
+    benchmark = resolve_benchmark(mandate.benchmark_id, mode=mode, data_dir=data_dir)
+
+    # risk-free: mandate default, overridden by a live pull only in live/auto mode
+    rf_used = mandate.risk_free_annual
+    rf_source = "mandate"
+    if mode in ("live", "auto"):
+        live_rf = fetch_risk_free_annual()
+        if live_rf is not None:
+            rf_used, rf_source = live_rf, "FRED · 3M T-bill"
 
     metrics_by_fund: dict[str, dict] = {}
     metric_results: dict[str, list] = {}
@@ -44,12 +54,16 @@ def run(
         s = series.get(f.fund_id)
         if s is None:
             continue
-        vals, results = compute_for_fund(s, benchmark, mandate.risk_free_annual)
+        vals, results = compute_for_fund(s, benchmark, rf_used)
         metrics_by_fund[f.fund_id] = vals
         metric_results[f.fund_id] = results
 
     usable = [f for f in funds if f.fund_id in metrics_by_fund]
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)
-    ctx = AnalysisContext(funds, benchmark, metrics_by_fund, metric_results, shortlist, mandate, quarantined, series)
+    readiness = build_readiness(funds, series, benchmark, quarantined, rf_used, rf_source)
+    ctx = AnalysisContext(
+        funds, benchmark, metrics_by_fund, metric_results, shortlist, mandate,
+        quarantined, series, readiness=readiness, rf_used=rf_used, rf_source=rf_source,
+    )
     memo = generate(ctx, claims_provider or template_claims_provider)
     return memo, ctx

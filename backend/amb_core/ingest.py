@@ -122,6 +122,28 @@ def load_returns(path: str | Path) -> tuple[dict[str, ReturnSeries], list[dict]]
     return by_fund, quarantined
 
 
+# named redemption frequency -> days-to-liquidity ordinal (for screening/sorting)
+_REDEMPTION_DAYS = {
+    "daily": 1, "weekly": 7, "biweekly": 14, "semi-monthly": 15,
+    "monthly": 30, "bi-monthly": 60, "quarterly": 90, "semi-annual": 180,
+    "semiannual": 180, "annual": 365, "annually": 365, "yearly": 365,
+    "biennial": 730, "illiquid": 3650, "locked": 3650, "closed": 3650,
+}
+
+
+def redemption_to_days(freq: Optional[str], lockup_months: Optional[float] = None,
+                       notice_days: Optional[float] = None) -> Optional[float]:
+    """Steady-state days-to-liquidity = redemption cadence + notice period.
+    A monotone ordinal so a mandate can screen 'liquid within N days'. Lockup is
+    kept as a separate term (a one-time gate at entry), not folded in here."""
+    if freq is None:
+        return None
+    base = _REDEMPTION_DAYS.get(str(freq).strip().lower())
+    if base is None:
+        return None
+    return round(float(base) + float(notice_days or 0), 1)
+
+
 def load_funds(path: str | Path) -> list[Fund]:
     df = pd.read_csv(path)
     cols = list(df.columns)
@@ -132,6 +154,9 @@ def load_funds(path: str | Path) -> list[Fund]:
     c_inc = _find_col(cols, ["inception", "inception_date", "since"])
     c_fee = _find_col(cols, ["mgmt_fee_pct", "fee", "management_fee", "expense"])
     c_notes = _find_col(cols, ["notes", "note", "comment", "description"])
+    c_redf = _find_col(cols, ["redemption_freq", "redemption", "liquidity", "liquidity_terms", "dealing"])
+    c_lock = _find_col(cols, ["lockup_months", "lockup", "lock_up", "lock"])
+    c_notice = _find_col(cols, ["notice_days", "notice", "notice_period"])
     if not c_id:
         raise ValueError(f"funds CSV needs a fund id column; got {cols}")
 
@@ -140,9 +165,19 @@ def load_funds(path: str | Path) -> list[Fund]:
         def g(c):
             return None if (c is None or pd.isna(r[c])) else r[c]
 
+        def gf(c):
+            v = g(c)
+            try:
+                return float(v) if v is not None else None
+            except (TypeError, ValueError):
+                return None
+
         fee = g(c_fee)
         aum = g(c_aum)
         inc = _parse_date(g(c_inc)) if c_inc else None
+        redf = (str(g(c_redf)).strip() if g(c_redf) is not None else None)
+        lock = gf(c_lock)
+        notice = gf(c_notice)
         funds.append(
             Fund(
                 fund_id=str(r[c_id]).strip(),
@@ -152,6 +187,10 @@ def load_funds(path: str | Path) -> list[Fund]:
                 inception=inc,
                 mgmt_fee_pct=float(fee) if fee is not None else None,
                 notes=(str(g(c_notes)) if g(c_notes) is not None else None),
+                redemption_freq=redf,
+                lockup_months=lock,
+                notice_days=notice,
+                redemption_days=redemption_to_days(redf, lock, notice),
                 source_ref=f"funds.csv:row={int(i)}",
             )
         )

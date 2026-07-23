@@ -3,7 +3,7 @@ and each carries enough provenance to trace it back to a source row + formula.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
@@ -17,6 +17,11 @@ class Fund(BaseModel):
     inception: Optional[date] = None
     mgmt_fee_pct: Optional[float] = None
     notes: Optional[str] = None
+    # liquidity terms (allocator-grade screening inputs)
+    redemption_freq: Optional[str] = None   # Daily | Weekly | Monthly | Quarterly | Annual | Illiquid
+    lockup_months: Optional[float] = None
+    notice_days: Optional[float] = None
+    redemption_days: Optional[float] = None  # derived ordinal: freq -> days-to-liquidity
     source_ref: Optional[str] = None  # e.g. "funds.csv:row=3"
 
 
@@ -45,6 +50,9 @@ class Benchmark(BaseModel):
     periods_per_year: int
     points: list[ReturnPoint]
     source: str
+    source_kind: str = "snapshot"          # live | cache | snapshot
+    source_name: str = "bundled snapshot"  # e.g. "FRED"
+    fetched_at: Optional[datetime] = None
 
     @property
     def values(self) -> list[float]:

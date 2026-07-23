@@ -35,5 +35,8 @@ def test_wrong_value_fails_verification(sample_run):
         }
 
     memo = generate(ctx, bad_provider)
-    assert memo.audit["verified_count"] == 0
-    assert memo.audit["unverified_count"] == 1
+    # the memo always carries a deterministic Key Risks section (metric-backed, so
+    # those claims verify); the point here is that the bogus provider value is caught.
+    bogus = [c for c in memo.audit["claims"] if c["value"] == 999.0]
+    assert len(bogus) == 1 and bogus[0]["verified"] is False
+    assert memo.audit["unverified_count"] >= 1

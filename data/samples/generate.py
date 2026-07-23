@@ -62,13 +62,20 @@ def main() -> int:
         for d, r in zip(dates, market):
             w.writerow([d, round(r, 6)])
 
+    # liquidity terms per fund: (redemption_freq, lockup_months, notice_days)
+    LIQUIDITY = {
+        "EQ-LS": ("Monthly", 12, 30), "MAC": ("Monthly", 0, 15), "MN": ("Monthly", 0, 30),
+        "ED": ("Quarterly", 12, 45), "CR": ("Quarterly", 24, 60), "MS": ("Quarterly", 12, 45),
+        "VEN": ("Illiquid", 60, 90), "RA": ("Annual", 36, 90), "DA": ("Daily", 0, 5),
+    }
     with (SAMPLES / "funds.csv").open("w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["fund_id", "name", "strategy", "aum_mm", "inception_date", "mgmt_fee_pct", "notes"])
-        for fid, name, strat, aum, inc, fee, *_rest, notes in [
-            (f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7], f[8], f[9]) for f in FUNDS
-        ]:
-            w.writerow([fid, name, strat, aum, inc, fee, notes])
+        w.writerow(["fund_id", "name", "strategy", "aum_mm", "inception_date", "mgmt_fee_pct",
+                    "redemption_freq", "lockup_months", "notice_days", "notes"])
+        for f in FUNDS:
+            fid, name, strat, aum, inc, fee, notes = f[0], f[1], f[2], f[3], f[4], f[5], f[9]
+            rf, lk, nd = LIQUIDITY.get(fid, ("Monthly", 0, 30))
+            w.writerow([fid, name, strat, aum, inc, fee, rf, lk, nd, notes])
 
     rows = []
     for fid, _name, _strat, _aum, _inc, _fee, beta, alpha_m, idio, _notes in FUNDS:

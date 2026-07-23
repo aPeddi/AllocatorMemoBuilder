@@ -20,9 +20,36 @@ _MEMO_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
+            "summary": {
+                "type": "string",
+                "description": "1-2 sentence orientation: what was screened, how many advanced, "
+                "and the headline pick. Distinct from the recommendation.",
+            },
             "recommendation": {
                 "type": "string",
                 "description": "2-4 sentence overall recommendation across the shortlist.",
+            },
+            "key_risks": {
+                "type": "object",
+                "description": "Portfolio- and fund-level risks. Each claim MUST cite a provided "
+                "metric value (deepest drawdown, highest beta, highest vol, liquidity, concentration).",
+                "properties": {
+                    "body": {"type": "string"},
+                    "claims": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "text": {"type": "string"},
+                                "metric": {"type": "string"},
+                                "fund_id": {"type": "string"},
+                                "value": {"type": "number"},
+                            },
+                            "required": ["text", "metric", "fund_id", "value"],
+                        },
+                    },
+                },
+                "required": ["body", "claims"],
             },
             "funds": {
                 "type": "array",
@@ -52,7 +79,7 @@ _MEMO_TOOL = {
                 },
             },
         },
-        "required": ["recommendation", "funds"],
+        "required": ["summary", "recommendation", "funds", "key_risks"],
     },
 }
 
@@ -70,9 +97,13 @@ def _build_prompt(ctx: AnalysisContext) -> str:
         f"Benchmark: {m.benchmark_id}. Risk-free: {m.risk_free_annual:.2%}.\n\n"
         "SHORTLIST FACTS (the only numbers you may cite):\n"
         f"{ctx.facts_table()}\n\n"
-        "Write a 2-4 sentence overall recommendation, then one crisp analytical "
-        "paragraph per fund, each decomposed into 3-5 claims that each cite a single "
-        "metric value. Be specific and allocator-grade; no hedging boilerplate."
+        "Write: (1) a 1-2 sentence SUMMARY orienting the reader (what was screened, "
+        "how many advanced, the headline pick); (2) a 2-4 sentence overall RECOMMENDATION; "
+        "(3) one crisp analytical paragraph per fund, each decomposed into 3-5 claims that "
+        "each cite a single metric value; (4) a KEY_RISKS block naming the deepest-drawdown, "
+        "highest-beta, and most-volatile shortlisted funds, each as a metric-cited claim, plus "
+        "a sentence on liquidity and concentration. Be specific and allocator-grade; no hedging "
+        "boilerplate. Every `value` MUST equal a provided number exactly."
     )
 
 
