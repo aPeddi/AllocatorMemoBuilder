@@ -200,6 +200,14 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .sweetz span{position:absolute;left:10px;top:8px;font-family:var(--mono);font-size:8px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
 /* gate chips */
 .gates{display:none!important}
+#srcchip{position:absolute;top:12px;right:16px;z-index:12;display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);background:var(--panel);border:1px solid var(--border2);border-radius:20px;padding:5px 11px;box-shadow:0 4px 14px -8px var(--shadow);pointer-events:auto;cursor:default}
+body.screening #srcchip,body.scoring #srcchip{opacity:0;pointer-events:none}
+#srcchip b{color:var(--dim2);font-weight:400}
+#srcchip i{width:6px;height:6px;border-radius:50%;background:var(--dim2);flex:none}
+#srcchip.live i{background:var(--gain);box-shadow:0 0 0 3px rgba(78,158,119,.18)}
+#srcchip.live{color:var(--accent2);border-color:var(--accent-dim)}
+#srcchip.cache i{background:var(--warm,#C6A566)}
+body.az-run #srcchip{display:none}
 .gates.on{opacity:1}
 .gate{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:4px 8px;border-radius:3px;background:var(--panel)}
 .gate.act{color:var(--accent2);border-color:var(--accent-dim)}
@@ -386,6 +394,7 @@ body.screening .node.cand.gone{opacity:0}
 .az-ep span{color:var(--ink2)}.az-ep b{color:var(--accent2)}
 .az-st{margin-top:13px;font-size:10.5px;letter-spacing:.04em;color:var(--dim2)}
 .az-st .ok{color:var(--gain)}.az-st .muted{color:var(--dim2)}
+.az-src.standby{opacity:.5;filter:saturate(.6)}
 .az-src.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent-dim),0 0 34px -12px var(--accent-glow)}
 .az-src.active::after{content:'IN USE';position:absolute;top:-9px;right:14px;font-size:7px;letter-spacing:.14em;color:var(--on-accent);background:var(--accent);border-radius:20px;padding:2px 8px}
 .az-using{position:absolute;left:0;right:0;bottom:-52px;text-align:center;font-size:10.5px;letter-spacing:.03em;color:var(--ink2)}
@@ -403,16 +412,17 @@ body.screening .node.cand.gone{opacity:0}
 /* scene 2 · parse */
 .az-parse{display:flex;gap:26px;width:100%;max-width:840px;align-items:flex-start}
 .az-matrix{flex:1.2;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--panel2)}
-.az-mh,.az-mrow{display:grid;grid-template-columns:1.1fr .8fr 1fr;font-size:11px}
+.az-mh,.az-mrow{display:grid;grid-template-columns:1fr .7fr .9fr 1.05fr;font-size:11px;align-items:center}
 .az-mh{background:var(--panel);border-bottom:1px solid var(--border2)}
 .az-mh span{padding:9px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
 .az-mrow{opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s,background .4s}
 .az-mrow.in{opacity:1;transform:none}
-.az-mrow span{padding:8px 12px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.az-mrow>span{padding:8px 12px;color:var(--ink2);border-bottom:1px solid var(--border)}
 .az-mrow .badc{color:var(--loss)}
-.az-mrow{position:relative}
-.az-mrow.quarr{background:var(--loss-soft)}.az-mrow.quarr span{color:var(--loss);text-decoration:line-through}
-.qtag{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:20px;padding:2px 7px;text-decoration:none!important;white-space:nowrap}
+.az-mrow.quarr{background:var(--loss-soft)}.az-mrow.quarr>span{color:var(--loss);text-decoration:line-through}
+.az-mrow .mstat{text-decoration:none!important;font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);white-space:nowrap}
+.az-mrow .mstat .okc{color:var(--gain);font-size:11px}
+.az-mrow.quarr .mstat{color:var(--loss);font-weight:600;text-decoration:none!important}
 .az-side{flex:1;display:flex;flex-direction:column;gap:7px}
 .az-sh{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-top:6px}
 .az-mapr,.az-normr{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink2);opacity:0;transform:translateX(8px);transition:.35s}
@@ -835,6 +845,10 @@ function reweigh(active){
   ranked.forEach(function(d,i){var rk=i<nShort?i+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));d.components=d._cp;d.comp=d._cm;d.score=d._sc;delete d._cp;delete d._cm;delete d._sc});
   A.activeMetrics=active.slice();}
 function redrawTraj(){trajBuilt=false;var t=$('#traj');if(t)t.innerHTML='';$$('.tt,.tx,.ty').forEach(function(x){x.remove()});buildTraj();}
+function sourceChip(){var c=$('#srcchip');if(!c)return;var b=A.bench;if(!b){c.style.display='none';return}
+  var kind=b.kind||'snapshot';var lbl=(kind==='live'?'LIVE · FRED':kind==='cache'?'CACHED · FRED':'SNAPSHOT · local');
+  c.className='srcchip '+kind;c.innerHTML="<i></i><b>market data</b> "+lbl;c.style.display='';
+  c.title="Fund data: your local CSVs (funds.csv, returns.csv). Benchmark / market data: "+(kind==='live'?'live FRED API':'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+".";}
 function benchBadge(){var el2=$('#benchsrc');if(!el2)return;var b=A.bench;if(!b){el2.style.display='none';return}
   var kind=b.kind||'snapshot';var label=(kind==='live'?'LIVE · FRED':(kind==='cache'?'CACHED · FRED':'SNAPSHOT'));
   el2.className='srcbadge '+kind;el2.innerHTML="<i></i>"+label+(b.asOf?" · "+b.asOf:"");el2.style.display='';
@@ -1018,6 +1032,7 @@ async function actZero(){
     $$('.hpseg',az).forEach(function(s){var i=+s.dataset.i;s.classList.toggle('done',i<n-1);s.classList.toggle('act',i===n-1)})}
   function log(t){var L=$('#hudlog',az);if(L)L.innerHTML="<span class='hl-cur'>▸</span> "+t}
   var ch=$('#chapter');if(ch)ch.innerHTML='';   // the HUD carries its own titles
+  document.body.classList.add('az-run');
   az.classList.add('on');
   await wait(560);if(aborted)return;
 
@@ -1045,12 +1060,12 @@ async function actZero(){
   if(LIVE){
     log('opening https://fred.stlouisfed.org/graph/fredgraph.csv …');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · live fetch · "+(b.n||36)+" monthly obs";
-    $('#srcB',az).classList.add('active');
+    $('#srcB',az).classList.add('active');$('#srcA',az).classList.add('standby');
     $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+(b.name||'S&amp;P 500')+" · as-of "+(b.asOf||'—');
   }else{
     log('FRED endpoint available · this run uses the committed local snapshot');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='muted'>○</span> "+(b.kind==='cache'?'served from cache':'not called · snapshot mode');
-    $('#srcA',az).classList.add('active');
+    $('#srcA',az).classList.add('active');$('#srcB',az).classList.add('standby');
     $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+(b.name||'S&amp;P 500')+", as-of "+(b.asOf||'—')+") · FRED live available";
   }
   $('#beamB',az).classList.add('on');
@@ -1061,7 +1076,7 @@ async function actZero(){
   var sample=[['2023-07-01','MAC','0.021'],['2023-07-01','EQ-LS','1.95%'],['2023-08-01','MAC','-0.004'],['2023-08-01','MN','0.7%'],['—','VEN','0.031'],['2023-09-01','CR','0,012']];
   stage.innerHTML=
    "<div class='az-parse'>"
-   +"<div class='az-matrix'><div class='az-mh'><span>date</span><span>fund_id</span><span>monthly_return</span></div><div class='az-mb' id='mtx'></div></div>"
+   +"<div class='az-matrix'><div class='az-mh'><span>date</span><span>fund_id</span><span>monthly_return</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
    +"<div class='az-side'>"
      +"<div class='az-sh'>COLUMN MAP</div><div class='az-map' id='cmap'></div>"
      +"<div class='az-sh'>NORMALIZE</div><div class='az-norm' id='cnorm'></div>"
@@ -1069,7 +1084,7 @@ async function actZero(){
    +"</div></div>";
   var mtx=$('#mtx',az);log('streaming rows · detecting schema');
   for(var r=0;r<sample.length;r++){if(aborted)return;var row=el('div','az-mrow');var bad=(sample[r][0]==='—'||sample[r][2].indexOf(',')>=0);
-    row.innerHTML="<span"+(bad?" class='badc'":"")+">"+sample[r][0]+"</span><span>"+sample[r][1]+"</span><span"+(bad?" class='badc'":"")+">"+sample[r][2]+"</span>";
+    row.innerHTML="<span"+(bad?" class='badc'":"")+">"+sample[r][0]+"</span><span>"+sample[r][1]+"</span><span"+(bad?" class='badc'":"")+">"+sample[r][2]+"</span><span class='mstat'>"+(bad?"":"<span class='okc'>✓</span>")+"</span>";
     mtx.appendChild(row);setTimeout(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
   await wait(360);if(aborted)return;
   var maps=[['date','→ period'],['fund_id','→ id'],['monthly_return','→ return']];var cm=$('#cmap',az);
@@ -1084,9 +1099,9 @@ async function actZero(){
   // ══ 3 · VALIDATE — quarantine bad rows ══
   phase(3,'VALIDATE');
   var qreason=(Object.keys(rd.quarantine_reasons||{'bad date':QN})[0]||'bad date');
-  var qi=0;var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
+  var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
   for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');
-    var qt=el('span','qtag');qt.textContent='⊘ '+qreason;qrows[vi].appendChild(qt);await wait(320)}
+    var ms=$('.mstat',qrows[vi]);if(ms)ms.innerHTML="⊘ "+qreason;await wait(340)}
   log('validating '+ROWS+' rows · '+(ROWS-QN)+' valid · '+QN+' quarantined ('+qreason+')');
   await wait(1700);if(aborted)return;
 
@@ -1109,7 +1124,7 @@ async function actZero(){
    +"<div class='az-ready-line'></div></div>";
   log('handoff → screening');await wait(1250);if(aborted)return;
   az.classList.remove('on');await wait(560);
-  var azl=$('#az');if(azl)azl.remove();
+  var azl=$('#az');if(azl)azl.remove();document.body.classList.remove('az-run');
 }
 async function story(){
   paused=false;document.body.classList.remove('paused');document.body.classList.add('playing');var _pb=$('#pausebtn');if(_pb){_pb.innerHTML='❚❚&nbsp;pause';_pb.classList.remove('on')}
@@ -1170,7 +1185,7 @@ function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id=
 function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
   setTimeout(function(){layoutRows();redrawTraj()},680);}
 
-function reset(){aborted=true;paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');var azl=$('#az');if(azl)azl.remove();
+function reset(){aborted=true;paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();
   clearHalos();clearRtags();setLeaderNode(null);clearCue();_lastLive=null;
   A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent='';var tg=$('.stamp .stags',n);if(tg)tg.innerHTML=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
@@ -1198,7 +1213,7 @@ function wire(){
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
   document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
     A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown','labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
     frontier();document.body.classList.add('scoring');$('#scorepane').classList.add('in');buildWeigh();renderFinal();
     var win=shortlisted()[0];nodes[win.id].classList.add('focus','win','locked');var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';nodes[win.id].classList.add('leader');
@@ -1414,7 +1429,7 @@ function doShare(){var txt=A.shareText||document.title;
   try{if(navigator.share){navigator.share({title:A.title||document.title,text:txt}).then(function(){},function(){});toast("<span class='tk'>✓</span>Opening share…");return}}catch(e){}
   try{navigator.clipboard.writeText(txt).then(ok,ok)}catch(e){ok()}}
 function setPrintDate(){var el2=$('#pd-date');if(!el2)return;try{var d=new Date();el2.textContent=d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}catch(e){el2.textContent=''}}
-window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='light';buildField();buildIntro();setPrintDate();wire();story()});
+window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='light';buildField();buildIntro();sourceChip();setPrintDate();wire();story()});
 })();
 """
 
@@ -1676,7 +1691,7 @@ def render_html(memo, ctx=None):
     stage=('<div class="stage"><div id="field"><div id="fieldwash"></div><div class="sweetz"><span>sweet spot · high return / low risk</span></div>'
            '<div id="guides"><div id="benchray"></div><div id="benchmk"><div class="dm"></div><div class="bl"></div></div><div id="beatlbl"></div></div>'
            '<div class="gates" id="gates"></div><div class="gateline" id="gateline"><span></span></div><div class="danger" id="danger"></div><div id="counter"></div><div id="factorcue"><span class="fdot"></span><span class="fname"></span><span class="fwt"><i></i></span><span class="fpct"></span></div><div class="ax y">Return →</div><div class="ax x">Risk · volatility →</div></div>'
-           '<div id="chapter"></div><div id="stagepaused">❚❚ paused</div></div>')
+           '<div id="chapter"></div><div id="stagepaused">❚❚ paused</div><div id="srcchip" title=""></div></div>')
 
     side=('<div class="side">'
           '<div id="intropane"><div class="ip-h">The mandate</div><div class="ip-s">what advances · and how it\'s scored</div>'
