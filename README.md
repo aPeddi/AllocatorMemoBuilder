@@ -8,16 +8,20 @@ that produced it.
 ## Run it
 
 ```bash
-./amb
+./launch
 ```
 
-That's the whole thing. On first run it sets up a virtualenv and installs
-dependencies, then builds the memo from the bundled sample data and opens it in
-your browser. With an `ANTHROPIC_API_KEY` in `.env` it writes a live LLM memo;
-without one it falls back to a deterministic offline memo — either way every
-figure is verified against the metrics engine.
+One command. On first run it sets up a virtualenv, installs dependencies, builds
+the memo from the bundled sample data, starts a local server, and opens the app
+in your browser — where it makes a **real market-data API call to FRED** (S&P 500
++ 3-month T-bill) and renders against the live index. `Ctrl+C` to stop.
 
-Other commands: `./amb test` (run the suite) · `./amb setup` (reinstall deps).
+With an `ANTHROPIC_API_KEY` in `.env` it writes a live LLM memo; without one it
+falls back to a deterministic offline memo — either way every figure is verified
+against the metrics engine.
+
+Other commands: `./amb open` (quick static view, no server) · `./amb test` (run the
+suite) · `./amb setup` (reinstall deps).
 
 ## Live market data (real API call in the browser)
 
