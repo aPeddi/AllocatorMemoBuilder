@@ -3,7 +3,7 @@ import html, json, math
 from pathlib import Path
 from .memo import render_markdown
 from .metrics import METRIC_KEYS
-from .scoring import DIRECTION, DEFAULT_WEIGHTS
+from .scoring import DIRECTION, DEFAULT_WEIGHTS, _resolve, _test
 from .models import Memo
 
 _PCT={"ann_return","ann_vol","max_drawdown","downside_dev","alpha","tracking_error","hit_rate"}
@@ -148,6 +148,16 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .ipb .bm{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:3px}.ipb .bm b{color:var(--ink2)}
 .ipb .btag{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-warm);border:1px solid var(--warm-line);border-radius:3px;padding:3px 6px;flex:none}
 .ip-note{font-size:11.5px;line-height:1.55;color:var(--dim);margin-top:16px}
+#ip-data{display:flex;flex-direction:column;gap:6px}
+.ipd{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--panel2)}
+.ipd .dk{font-family:var(--mono);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);width:64px;flex:none}
+.ipd .dvv{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ipd .dv{font-size:11px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ipd .dd{font-family:var(--mono);font-size:8px;letter-spacing:.05em;color:var(--dim2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ipd .dck{width:7px;height:7px;border-radius:50%;flex:none;background:var(--gain)}
+.ipd.warn .dck{background:var(--warm,#C6A566)}
+.ipd.live .dck{background:var(--gain);box-shadow:0 0 0 3px rgba(78,158,119,.16)}
+.ipd.live{border-color:var(--accent-dim)}
 #ip-tally{margin-top:auto;display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 #ip-tally .tc{flex:1;text-align:center;padding:13px 6px;background:var(--panel2)}
 #ip-tally .tc+.tc{border-left:1px solid var(--border)}
@@ -161,6 +171,13 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .pane .head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
 .pane .head .t{font-weight:600;font-size:13px;color:var(--ink)}
 .pane .head .s{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2)}
+.pane .head{flex-wrap:wrap;gap:2px 8px}
+.srcbadge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);border:1px solid var(--border2);background:var(--panel2);border-radius:20px;padding:3px 8px 3px 6px;white-space:nowrap;cursor:default}
+.srcbadge i{width:6px;height:6px;border-radius:50%;background:var(--dim);flex:none}
+.srcbadge.live i{background:var(--gain);box-shadow:0 0 0 3px rgba(78,158,119,.18)}
+.srcbadge.live{color:var(--accent2);border-color:var(--accent-dim)}
+.srcbadge.cache i{background:var(--warm,#C6A566)}
+.srcbadge.snapshot i{background:var(--dim2)}
 
 /* field */
 #field{position:absolute;inset:26px 30px 22px 34px}
@@ -278,6 +295,45 @@ body.screening .node.cand.gone{opacity:0}
 .d-name{font-weight:700;font-size:22px;color:var(--ink-hi);letter-spacing:-.01em}
 .d-strat{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:15px}
 .d-p{color:var(--ink2);font-size:13px;line-height:1.6}
+/* memo drawer */
+.mm-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim2);margin:10px 0 4px}
+.mm-meta .mm-dot{opacity:.5}.mm-meta .mm-vf{color:var(--accent2)}
+.mm-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.mm-p{color:var(--ink2);font-size:12.5px;line-height:1.62;margin:0 0 4px}
+.mm-tbl{width:100%;border-collapse:collapse;font-size:11px;margin:2px 0 4px}
+.mm-tbl th{font-family:var(--mono);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);text-align:right;padding:4px 6px;border-bottom:1px solid var(--border)}
+.mm-tbl th:nth-child(2){text-align:left}
+.mm-tbl td{text-align:right;padding:5px 6px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.mm-tbl td.mnm{text-align:left;color:var(--ink);font-weight:500}.mm-tbl td.msc{color:var(--accent2);font-family:var(--mono)}
+.mm-tbl tr.mwin td{color:var(--accent2)}.mm-tbl tr.mwin td.mnm{font-weight:600}
+.mk-list{display:flex;flex-direction:column;gap:6px;margin:8px 0 2px}
+.mk-claim{display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel2)}
+.mk-ck{width:16px;height:16px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:10px;display:flex;align-items:center;justify-content:center;flex:none}
+.mk-claim.bad .mk-ck{background:var(--loss)}
+.mk-t{font-size:12px;color:var(--ink2);line-height:1.4}
+.fd-terms{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:14px 0}
+.fd-terms span{flex:1 1 33%;min-width:90px;background:var(--panel2);padding:9px 11px;display:flex;flex-direction:column;gap:3px}
+.fd-terms i{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2);font-style:normal}
+.fd-terms b{font-size:12px;color:var(--ink);font-weight:600}
+/* mandate form */
+.mf-h{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
+.mf-hint{font-size:7.5px;letter-spacing:.08em;color:var(--dim2)}
+.mf-row{margin:0 0 14px}
+.mf-row label{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink2);margin-bottom:6px}
+.mf-row label b{font-family:var(--mono);font-size:11px;color:var(--accent2)}
+.mf-row label .wdot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:7px;vertical-align:middle}
+.mf-row input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:3px;outline:none}
+.mf-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--panel)}
+.mf-row input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--panel)}
+.mf-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mf-chip{font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--ink2);border:1px solid var(--border2);background:var(--panel2);border-radius:20px;padding:5px 11px;cursor:pointer;transition:.15s;user-select:none}
+.mf-chip:hover{border-color:var(--accent)}
+.mf-chip.off{color:var(--loss);border-color:var(--loss);background:transparent;text-decoration:line-through;opacity:.8}
+.mf-act{display:flex;gap:8px;margin:24px 0 8px}
+.mf-apply{flex:1;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);border-radius:5px;padding:11px;cursor:pointer;transition:.2s}
+.mf-apply:hover{background:var(--accent2);border-color:var(--accent2)}
+.mf-reset{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;background:var(--panel2);color:var(--ink2);border:1px solid var(--border2);border-radius:5px;padding:11px 14px;cursor:pointer;transition:.2s}
+.mf-reset:hover{border-color:var(--accent);color:var(--accent2)}
 .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:15px 0;border-radius:4px;overflow:hidden}
 .mgrid .cell{background:var(--panel2);padding:12px 8px;text-align:center}.mgrid .cell b{display:block;font-family:var(--mono);font-size:16px;color:var(--ink)}.mgrid .cell i{font-family:var(--mono);font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim2);font-style:normal;margin-top:4px;display:block}
 .src-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim2);margin:14px 0 9px}
@@ -507,7 +563,25 @@ function buildIntro(){
       w.appendChild(r);var bar=$('.wb i',r);
       setTimeout(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
   var bp=$('#ip-bench');if(bp){if(A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>index</div></div>";}else{bp.innerHTML="<div class='ipb'><div class='bt'><div class='bm'>no benchmark</div></div></div>";}}
+  buildDataReadiness();
   updateTally();
+}
+function buildDataReadiness(){var dp=$('#ip-data');if(!dp)return;var r=A.readiness||{};var b=A.bench;
+  var qs=r.quarantine_reasons||{};var qtxt=Object.keys(qs).map(function(k){return qs[k]+' '+k}).join(' · ');
+  var ov=r.overlap||{};
+  var bkind=b?(b.kind||'snapshot'):null;
+  var bsrc=b?((bkind==='live'?'LIVE':bkind==='cache'?'CACHED':'SNAPSHOT')+' · '+(b.srcName||'')+' · '+(b.asOf||'')):'—';
+  var rows=[
+    ['ingest',(r.universe_count!=null?r.universe_count:'—')+' funds',(r.with_returns!=null?r.with_returns+' with returns':''),'ok'],
+    ['cleaned',(r.quarantined_count||0)+' row'+(r.quarantined_count===1?'':'s')+' quarantined',qtxt||'all rows parsed',(r.quarantined_count?'warn':'ok')],
+    ['aligned',(ov.start||'?')+' → '+(ov.end||'?'),(r.date_ranges_consistent?'one shared window':'ragged windows reconciled'),(r.date_ranges_consistent?'ok':'warn')],
+    ['benchmark',b?b.name:'none',bsrc,(bkind==='live'?'live':'ok')],
+    ['risk-free',(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'—'),(A.rfSource||''),'ok']
+  ];
+  var mm=(r.missing_returns||[]),om=(r.orphan_returns||[]);
+  if(mm.length)rows.push(['id check',mm.length+' listed w/o returns',mm.slice(0,4).join(', '),'warn']);
+  if(om.length)rows.push(['id check',om.length+' returns w/o metadata',om.slice(0,4).join(', '),'warn']);
+  dp.innerHTML=rows.map(function(x){return "<div class='ipd "+x[3]+"'><span class='dk'>"+x[0]+"</span><div class='dvv'><span class='dv'>"+x[1]+"</span><span class='dd'>"+x[2]+"</span></div><span class='dck'></span></div>"}).join('');
 }
 function updateTally(){var t=$('#ip-tally');if(!t)return;var gone=A.funds.filter(function(d){return nodes[d.id].classList.contains('gone')}).length;var uni=A.funds.length;var rem=uni-gone;
   t.innerHTML="<div class='tc'><b>"+uni+"</b><i>universe</i></div><div class='tc red'><b>"+gone+"</b><i>excluded</i></div><div class='tc hot'><b>"+rem+"</b><i>advancing</i></div>";}
@@ -613,6 +687,10 @@ function reweigh(active){
   ranked.forEach(function(d,i){var rk=i<nShort?i+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));d.components=d._cp;d.comp=d._cm;d.score=d._sc;delete d._cp;delete d._cm;delete d._sc});
   A.activeMetrics=active.slice();}
 function redrawTraj(){trajBuilt=false;var t=$('#traj');if(t)t.innerHTML='';$$('.tt,.tx,.ty').forEach(function(x){x.remove()});buildTraj();}
+function benchBadge(){var el2=$('#benchsrc');if(!el2)return;var b=A.bench;if(!b){el2.style.display='none';return}
+  var kind=b.kind||'snapshot';var label=(kind==='live'?'LIVE · FRED':(kind==='cache'?'CACHED · FRED':'SNAPSHOT'));
+  el2.className='srcbadge '+kind;el2.innerHTML="<i></i>"+label+(b.asOf?" · "+b.asOf:"");el2.style.display='';
+  el2.title=(b.srcName||'')+' · '+(b.name||'')+' · '+(b.n||0)+' monthly points';}
 function paintSettledGraph(){var sl=shortlisted();var win=sl[0];
   A.funds.forEach(function(d){var n=nodes[d.id];if(!n)return;n.classList.remove('leader','focus','cutfocus');
     if(!d.eligible)return;
@@ -635,6 +713,69 @@ function updateAdjNote(active){var full=weightFactors();var adj=active.length<fu
   else t.innerHTML='Final · weighted risk-adjusted score';}
 function applyReweigh(active){if(active.length<1)return;reweigh(active);buildWeigh();renderFinal();layoutRows();paintSettledGraph();updateAdjNote(active);}
 function resetWeights(){applyReweigh(weightFactors().slice())}
+/* ── in-app mandate: re-screen + re-score the loaded universe against edited constraints/weights ── */
+function rebuildGates(){var ms=A.mandateSpec||{};var g=[];
+  if(ms.liqCap!=null)g.push({label:'LIQUIDITY',detail:'≤ '+Math.round(ms.liqCap)+'d'});
+  if(ms.volCap!=null)g.push({label:'VOLATILITY',detail:'≤ '+Math.round(ms.volCap*100)+'%'});
+  if(ms.maxddFloor!=null)g.push({label:'DRAWDOWN',detail:'≥ '+Math.round(ms.maxddFloor*100)+'%'});
+  if((ms.exclStrats||[]).length)g.push({label:'STRATEGY',detail:'excl. '+ms.exclStrats.join(', ')});
+  if(!g.length)g=[{label:'MANDATE',detail:'screen'}];A.gates=g;}
+function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.weights;
+  A.funds.forEach(function(d){var reason=null,kind=null;
+    if(ms.liqCap!=null&&d.redd!=null&&d.redd>ms.liqCap){reason="illiquid · "+(d.redf||'')+" ("+Math.round(d.redd)+"d)";kind="LIQUIDITY"}
+    else if(ms.volCap!=null&&d.vol!=null&&d.vol>ms.volCap){reason="too volatile · "+Math.round(d.vol*100)+"% > "+Math.round(ms.volCap*100)+"% cap";kind="VOLATILITY"}
+    else if(ms.maxddFloor!=null&&d.maxdd!=null&&d.maxdd<ms.maxddFloor){reason="drawdown · "+Math.round(d.maxdd*100)+"% beyond "+Math.round(ms.maxddFloor*100)+"%";kind="DRAWDOWN"}
+    else if((ms.exclStrats||[]).indexOf(d.strategy)>=0){reason="off-strategy · "+d.strategy;kind="STRATEGY"}
+    d.reason=reason;d.rkind=kind;d.eligible=(reason==null);d.excluded=(reason!=null);});
+  var elig=A.funds.filter(function(d){return d.eligible});
+  var stE={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=elig.map(function(d){return d[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
+  elig.forEach(function(d){var s=0;Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});d._rs=s});
+  var ranked=elig.slice().sort(function(a,b){return b._rs-a._rs});var nS=ms.topN||5;var shortIds=ranked.slice(0,nS).map(function(d){return d.id});
+  var stS={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=shortIds.map(function(id){return byId(id)[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stS[k]=[_pmean(vals),_ppstd(vals)]});
+  A.funds.forEach(function(d){
+    if(!d.eligible){d.rank=null;d.cut=false;d.srank=99;d.components=[];d.comp={};d.score=0;if(d._rs!=null)delete d._rs;return}
+    var si=shortIds.indexOf(d.id);var rk=si>=0?si+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));
+    var cp=[];Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stS[k]||stS[k][1]===0)return;cp.push({k:k,c:Math.round(W[k]*((v-stS[k][0])/stS[k][1])*(DIR[k]||0)*1000)/1000})});
+    var cm={};cp.forEach(function(x){cm[x.k]=x.c});d.components=cp;d.comp=cm;d.score=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;delete d._rs;});
+  A.nShort=shortIds.length;A.nEligible=elig.length;A.nReject=A.funds.filter(function(d){return d.reason}).length;A.nTotal=A.funds.length;
+  var win=A.funds.filter(function(d){return d.rank==1})[0];
+  A.verdict=(win?first(win.name)+" leads on risk-adjusted return.":"No fund met the mandate.");
+  A.verdictHtml=(win?"<b>"+first(win.name)+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
+  A._snap=null;rebuildGates();}
+function applyMandate(){screenAndScore();var d=$('#drawer');if(d)d.classList.remove('open');rerender();}
+var HOUSE=null;
+function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSpec,w:A.weights}));
+  var ms=A.mandateSpec||{};var str016=[];A.funds.forEach(function(d){if(str016.indexOf(d.strategy)<0)str016.push(d.strategy)});
+  var liq=ms.liqCap==null?400:ms.liqCap, vol=ms.volCap==null?0.5:ms.volCap, mdd=ms.maxddFloor==null?-0.5:ms.maxddFloor;
+  var fs=weightFactors();
+  function sld(id,lbl,val,min,max,step,fmt){return "<div class='mf-row'><label>"+lbl+"<b id='"+id+"v'>"+fmt(val)+"</b></label><input type='range' id='"+id+"' min='"+min+"' max='"+max+"' step='"+step+"' value='"+val+"'></div>"}
+  var chips=str016.map(function(s){var on=(ms.exclStrats||[]).indexOf(s)<0;return "<span class='mf-chip"+(on?'':' off')+"' data-s=\""+s+"\">"+s+"</span>"}).join('');
+  var wsl=fs.map(function(k,i){var pv=Math.round((A.weights[k]||0)*100);return "<div class='mf-row'><label><span class='wdot' style='background:"+segColor(i,false)+"'></span>"+k.replace(/_/g,' ')+"<b id='w_"+k+"v'>"+pv+"%</b></label><input type='range' class='mf-w' data-k='"+k+"' min='0' max='50' step='1' value='"+pv+"'></div>"}).join('');
+  var h="<div class='d-pre'>Mandate · investable constraints</div><div class='d-name'>Edit the house view</div>"
+   +"<p class='mm-p'>Re-screen and re-score the loaded universe live. Changes are stamped against the default mandate.</p>"
+   +"<div class='mf-h'>Hard limits</div>"
+   +sld('mf_liq','Liquidity · redeem within',liq,15,400,5,function(v){return Math.round(v)+' days'})
+   +sld('mf_vol','Target vol ceiling',vol,0.05,0.6,0.01,function(v){return Math.round(v*100)+'%'})
+   +sld('mf_mdd','Max drawdown tolerance',mdd,-0.6,-0.05,0.01,function(v){return Math.round(v*100)+'%'})
+   +"<div class='mf-h'>Strategy exclusions <span class='mf-hint'>tap to exclude</span></div><div class='mf-chips'>"+chips+"</div>"
+   +"<div class='mf-h'>Scoring weights</div>"+wsl
+   +"<div class='mf-act'><button class='mf-apply' id='mfApply'>Apply &amp; re-decide</button><button class='mf-reset' id='mfReset'>Reset to house view</button></div>";
+  openDrawer(h);
+  var upd=function(){$('#mf_liqv').textContent=Math.round(+$('#mf_liq').value)+' days';$('#mf_volv').textContent=Math.round($('#mf_vol').value*100)+'%';$('#mf_mddv').textContent=Math.round($('#mf_mdd').value*100)+'%';};
+  ['mf_liq','mf_vol','mf_mdd'].forEach(function(id){var e2=$('#'+id);if(e2)e2.addEventListener('input',upd)});
+  $$('.mf-w').forEach(function(s){s.addEventListener('input',function(){$('#w_'+s.dataset.k+'v').textContent=Math.round(+s.value)+'%'})});
+  $$('.mf-chip').forEach(function(c){c.addEventListener('click',function(){c.classList.toggle('off')})});
+  var ap=$('#mfApply');if(ap)ap.addEventListener('click',function(){
+    var ms2=Object.assign({},A.mandateSpec);
+    ms2.liqCap=+$('#mf_liq').value;ms2.volCap=+$('#mf_vol').value;ms2.maxddFloor=+$('#mf_mdd').value;
+    ms2.exclStrats=$$('.mf-chip.off').map(function(c){return c.dataset.s});
+    A.mandateSpec=ms2;
+    var nw={};var raw={};var tot=0;$$('.mf-w').forEach(function(s){raw[s.dataset.k]=+s.value;tot+=+s.value});
+    if(tot>0){Object.keys(raw).forEach(function(k){nw[k]=raw[k]/tot});A.weights=nw;A.weights0=Object.assign({},nw);A.activeMetrics=weightFactors().slice();}
+    applyMandate();
+    toast("<span class='tk'>&#10003;</span>Mandate applied · "+A.nEligible+" eligible → "+A.nShort+" shortlisted");});
+  var rs=$('#mfReset');if(rs)rs.addEventListener('click',function(){A.mandateSpec=JSON.parse(JSON.stringify(HOUSE.ms));A.weights=JSON.parse(JSON.stringify(HOUSE.w));A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();applyMandate();toast("<span class='tk'>&#10003;</span>Reset to the house view");});
+}
 function buildGuides(){var g=$('#guides');
   if(!A.bench){if(g)g.classList.remove('on');return}
   var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).textContent=A.bench.name}
@@ -656,6 +797,7 @@ function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
   var n=funds[0].wealth.length;
   var bench=(A.bench&&A.bench.wealth&&A.bench.wealth.length===n)?A.bench.wealth:null;
   var subEl=$('#trajpane .head .s');if(subEl)subEl.textContent='growth of $1'+(bench?' · vs '+A.bench.name.split(' ')[0]:'');
+  benchBadge();
   var lo=1e9,hi=-1e9;funds.forEach(function(d){d.wealth.forEach(function(w){lo=Math.min(lo,w);hi=Math.max(hi,w)})});
   if(bench)bench.forEach(function(w){lo=Math.min(lo,w);hi=Math.max(hi,w)});
   lo=Math.min(lo,1);hi=Math.max(hi,1);var mg=(hi-lo)*0.08||0.1;lo-=mg;hi+=mg;
@@ -769,7 +911,16 @@ function reset(){aborted=true;document.body.classList.remove('settled');document
 function replay(){reset();setTimeout(function(){aborted=false;story()},80)}
 
 function openDrawer(h){var d=$('#drawer');d.innerHTML="<div class='x' id='dx'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg>CLOSE</div>"+h;d.classList.add('open');$('#dx').addEventListener('click',function(){d.classList.remove('open')})}
-function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+d.name+"</div><div class='d-strat'>"+d.strategy+"</div>"+d.detail)}
+function fundTerms(d){var cells=[];
+  if(d.redf)cells.push(["liquidity",d.redf+(d.redd?" · "+Math.round(d.redd)+"d":"")]);
+  if(d.lockup!=null)cells.push(["lockup",(d.lockup?d.lockup+" mo":"none")]);
+  if(d.notice!=null)cells.push(["notice",Math.round(d.notice)+" d"]);
+  if(d.fee!=null)cells.push(["mgmt fee",d.fee+"%"]);
+  if(d.netret!=null)cells.push(["net return",pct(d.netret)]);
+  if(d.beta!=null)cells.push(["beta",num(d.beta)]);
+  if(!cells.length)return "";
+  return "<div class='fd-terms'>"+cells.map(function(c){return "<span><i>"+c[0]+"</i><b>"+c[1]+"</b></span>"}).join('')+"</div>";}
+function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+d.name+"</div><div class='d-strat'>"+d.strategy+"</div>"+fundTerms(d)+d.detail)}
 
 function wire(){
   var tip=$('#tip');
@@ -786,15 +937,39 @@ function wire(){
   var dl=$('#dlBtn');if(dl)dl.addEventListener('click',function(e){e.stopPropagation();openExportPop(dl)});
   var sh=$('#shareBtn');if(sh)sh.addEventListener('click',function(){doShare()});
   var vb=$('#vbadge');if(vb)vb.addEventListener('click',function(){auditDrawer()});
+  var mb=$('#memoBtn');if(mb)mb.addEventListener('click',function(){openMemo()});
+  var mdb=$('#mandateBtn');if(mdb)mdb.addEventListener('click',function(){openMandate()});
   var ub=$('#upBtn'),ui=$('#upInput');if(ub&&ui){ub.addEventListener('click',function(){ui.click()});ui.addEventListener('change',function(){ingestFiles(ui.files);ui.value=''})}
   var wl=$('#weighlegend');if(wl)wl.addEventListener('click',function(e){if(!document.body.classList.contains('settled'))return;var ch=e.target.closest('.lchip');if(!ch)return;var k=ch.dataset.k;var act=(A.activeMetrics||weightFactors().slice()).slice();var i=act.indexOf(k);if(i>=0){if(act.length<=1){toast("<span class='tk' style='color:var(--loss)'>!</span>Keep at least one metric");return}act.splice(i,1)}else act.push(k);applyReweigh(act)});
   document.addEventListener('click',function(e){if(e.target&&e.target.id==='wreset')resetWeights()});
   document.addEventListener('click',function(e){var pop=$('#pop');if(pop&&pop.classList.contains('on')&&!e.target.closest('#pop')&&!e.target.closest('#dlBtn'))pop.classList.remove('on')});
   // side panels dismiss on any click outside them (triggers are excluded so opening/switching never self-closes)
-  document.addEventListener('click',function(e){var d=$('#drawer');if(!d||!d.classList.contains('open'))return;if(e.target.closest('#drawer'))return;if(e.target.closest('.node.cand')||e.target.closest('.chip')||e.target.closest('#vbadge'))return;d.classList.remove('open')});
+  document.addEventListener('click',function(e){var d=$('#drawer');if(!d||!d.classList.contains('open'))return;if(e.target.closest('#drawer'))return;if(e.target.closest('.node.cand')||e.target.closest('.chip')||e.target.closest('#vbadge')||e.target.closest('#memoBtn')||e.target.closest('#mandateBtn'))return;d.classList.remove('open')});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){var d=$('#drawer');if(d)d.classList.remove('open')}});
 }
 function toast(html){var t=$('#toast');if(!t)return;t.innerHTML=html;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on')},2600)}
+function liveMemo(){var sl=shortlisted();var w=sl[0];
+  function pick(f,worst){var c=sl.filter(function(d){return d[f]!=null&&isFinite(d[f])});if(!c.length)return null;return c.reduce(function(a,b){return (worst?b[f]<a[f]:b[f]>a[f])?b:a})}
+  var dd=pick('maxdd',true),vv=pick('vol',false),bb=pick('beta',false);var claims=[];
+  if(dd)claims.push({text:'Deepest drawdown: '+pct(dd.maxdd),fund:first(dd.name),verified:true});
+  if(bb&&bb.beta!=null)claims.push({text:'Highest beta: '+num(bb.beta),fund:first(bb.name),verified:true});
+  if(vv)claims.push({text:'Highest volatility: '+pct(vv.vol),fund:first(vv.name),verified:true});
+  var body=(dd?first(dd.name)+' carries the deepest drawdown at '+pct(dd.maxdd)+'. ':'')+(vv?first(vv.name)+' is the most volatile ('+pct(vv.vol)+'). ':'')+'Recomputed live against the current mandate.';
+  var sum=w?('Recomputed live: '+A.nTotal+' funds screened, '+A.nEligible+' eligible, '+A.nShort+' shortlisted. '+first(w.name)+' leads on risk-adjusted return ('+pct(w.ret)+' at '+pct(w.vol)+' vol, Sharpe '+num(w.sharpe)+').'):'No fund met the mandate.';
+  return {summary:sum,recommendation:(w?'<b>'+first(w.name)+'</b> leads on risk-adjusted return across the '+A.nShort+' shortlisted funds.':'No fund met the mandate.'),keyRisks:{body:body,claims:claims},appendix:'Metrics recomputed client-side with the same deterministic engine (vol = sample-std annualized; Sharpe/Sortino excess over the mandate risk-free; beta/alpha OLS vs benchmark). Figures reflect the current mandate and inputs.'};}
+function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisks||{};
+  function sec(t,body){return body?("<div class='mm-h'>"+t+"</div><p class='mm-p'>"+body+"</p>"):""}
+  var rows=shortlisted().map(function(s){return "<tr"+(s.rank==1?" class='mwin'":"")+"><td>"+String(s.rank).padStart(2,'0')+"</td><td class='mnm'>"+first(s.name)+"</td><td>"+pct(s.ret)+"</td><td>"+num(s.sharpe)+"</td><td>"+num(s.sortino)+"</td><td>"+pct(s.maxdd)+"</td><td class='msc'>"+(s.score>=0?'+':'')+s.score.toFixed(2)+"</td></tr>"}).join('');
+  var claims=(risks.claims||[]).map(function(c){return "<div class='mk-claim"+(c.verified?'':' bad')+"'><span class='mk-ck'>"+(c.verified?'✓':'!')+"</span><span class='mk-t'>"+c.text+"</span></div>"}).join('');
+  var vpct=(A.total?Math.round(A.verified/A.total*100):0);
+  var h="<div class='d-pre'>Investment Committee memo</div><div class='d-name'>"+A.title+"</div>"
+   +"<div class='mm-meta'><span>"+A.mandate+"</span><span class='mm-dot'>·</span><span>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mm-dot'>·</span><span class='mm-vf'>"+A.verified+"/"+A.total+" claims verified</span></div>"
+   +sec('Summary',m.summary)
+   +sec('Recommendation',m.recommendation)
+   +"<div class='mm-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>MaxDD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
+   +"<div class='mm-h'>Key Risks</div><p class='mm-p'>"+(risks.body||'')+"</p>"+(claims?"<div class='mk-list'>"+claims+"</div>":"")
+   +sec('Data Appendix',m.appendix);
+  openDrawer(h);}
 function auditDrawer(){var A2=A.audit||[];
   var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
   var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+g.fund+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+c.metric+"</span><span class='av-val'>"+(c.value==null?'—':c.value)+"</span></div><div class='av-src' title=\""+src.replace(/"/g,'')+"\">"+src+"</div></div></div>"}).join('')+"</div>"}).join('');
@@ -848,6 +1023,16 @@ function downloadPDF(){
   // excluded
   var exs=A.funds.filter(function(d){return d.reason});
   if(exs.length){sec('EXCLUDED BY MANDATE');exs.forEach(function(d){T(M,y,d.name,10,'F2',CI);T(M+150,y,d.reason,9.5,'F3',CLo);TR(W-M,y,pct(d.ret)+'  vol '+pct(d.vol),9,'F3',CD);y-=17});y-=8}
+  // key risks — compact, metric-backed (space-guarded so the one-pager never overflows)
+  var kr=(A.memo&&A.memo.keyRisks)?A.memo.keyRisks:null;
+  if(kr&&kr.claims&&kr.claims.length&&y>150){sec('KEY RISKS');
+    kr.claims.slice(0,4).forEach(function(c){T(M,y,'- '+String(c.text).replace(/<[^>]+>/g,''),9.5,'F3',CI);TR(W-M,y,String(c.fund||''),8.5,'F3',CD);y-=14});y-=6}
+  // data appendix — one methodology + provenance line
+  if(y>110){sec('DATA APPENDIX - METHODOLOGY');
+    var bp=(A.bench?(A.bench.name+' ('+(A.bench.kind||'snapshot')+(A.bench.asOf?', as of '+A.bench.asOf:'')+')'):'none');
+    body('Metrics from cleaned monthly returns; vol = sample-std annualized; Sharpe/Sortino excess over '
+      +(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'rf')+' risk-free ('+(A.rfSource||'mandate')+'); beta/alpha OLS vs benchmark. '
+      +'Benchmark: '+bp+'.');}
   // footer
   LN(M,y,W-M,y,CL,0.7);y-=14;T(M,y,'Every figure re-verified against the deterministic metrics engine - '+A.verified+'/'+A.total+' claims verified',8.5,'F3',CD);
   var stream=ns.join('\n');
@@ -935,7 +1120,7 @@ function recompute(funds,ret,order,quar){ try{
   rerender();
   toast("<span class='tk'>&#10003;</span>Re-ran the analysis · "+A.nTotal+" funds → "+A.nShort+" shortlisted"+(quar?" · "+quar+" bad rows quarantined":""));
  }catch(err){toast("<span class='tk' style='color:var(--loss)'>!</span>Analysis failed on that data")}}
-function rerender(){aborted=true;A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
+function rerender(){aborted=true;A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
   document.body.classList.remove('settled','scoring','screening');$('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('#weighlegend').innerHTML='';$('#weighlegend').classList.remove('in');$('#traj').innerHTML='';$$('.tt,.tx,.ty').forEach(function(t){t.remove()});
   $('.rail').classList.remove('in');$('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');$('.sweetz').classList.remove('on');clearCue();
   // rebuild the shortlist rail
@@ -1008,16 +1193,46 @@ def render_html(memo, ctx=None):
             bvol=(bvar**0.5)*(bppy**0.5)
             bwealth=[];bc=1.0
             for v in bvals: bc*=(1.0+v);bwealth.append(round(bc,4))
-            bench={"name":bmk.name,"vol":bvol,"ret":bret,"wealth":bwealth}
+            bench={"name":bmk.name,"vol":bvol,"ret":bret,"wealth":bwealth,
+                   "kind":getattr(bmk,"source_kind","snapshot"),"srcName":getattr(bmk,"source_name","snapshot"),
+                   "asOf":str(getattr(bmk,"as_of","")),"n":nb}
 
-    # gates
-    gates=[]
-    if mandate:
-        for c in mandate.constraints:
-            if c.field=="strategy" and c.op=="not_in": gates.append({"label":"LIQUIDITY","detail":"exclude illiquid"})
-            elif c.field=="ann_vol" and c.op=="<=": gates.append({"label":"VOLATILITY","detail":f"≤ {c.value*100:.0f}%"})
-            else: gates.append({"label":c.field.upper()[:9],"detail":f"{c.op} {c.value}"})
+    # gates — one per hard constraint, with an allocator-legible label
+    def _gate_meta(c):
+        if c.field=="strategy" and c.op=="not_in":
+            vals=", ".join(map(str,c.value or [])) if isinstance(c.value,(list,tuple)) else str(c.value)
+            return {"label":"STRATEGY","detail":f"excl. {vals}","kind":"STRATEGY"}
+        if c.field=="redemption_days" and c.op in ("<=","<"):
+            return {"label":"LIQUIDITY","detail":f"≤ {int(c.value)}d","kind":"LIQUIDITY"}
+        if c.field=="ann_vol" and c.op in ("<=","<"):
+            return {"label":"VOLATILITY","detail":f"≤ {c.value*100:.0f}%","kind":"VOLATILITY"}
+        if c.field=="max_drawdown" and c.op in (">=",">"):
+            return {"label":"DRAWDOWN","detail":f"≥ {c.value*100:.0f}%","kind":"DRAWDOWN"}
+        return {"label":c.field.upper()[:9],"detail":f"{c.op} {c.value}","kind":c.field.upper()[:9]}
+    gates=[{"label":g["label"],"detail":g["detail"]} for g in (map(_gate_meta,mandate.constraints) if mandate else [])]
     if not gates: gates=[{"label":"MANDATE","detail":"screen"}]
+
+    def _reject_reason(f,m):
+        """First failing hard constraint -> (human reason, gate kind). None if eligible."""
+        if not mandate or f is None:
+            return None,None
+        for c in mandate.constraints:
+            val=_resolve(f,m,c.field)
+            if _test(val,c.op,c.value):
+                continue
+            g=_gate_meta(c)
+            if c.field=="strategy":
+                return f"off-strategy · {f.strategy}", g["kind"]
+            if c.field=="redemption_days":
+                fr=(f.redemption_freq or "illiquid")
+                dd=(f"{int(val)}d" if val is not None else "n/a")
+                return f"illiquid · {fr} ({dd})", g["kind"]
+            if c.field=="ann_vol":
+                return f"too volatile · {m.get('ann_vol',0)*100:.0f}% > {c.value*100:.0f}% cap", g["kind"]
+            if c.field=="max_drawdown":
+                return f"drawdown · {m.get('max_drawdown',0)*100:.0f}% beyond {c.value*100:.0f}%", g["kind"]
+            return f"fails {c.field} {c.op} {c.value}", g["kind"]
+        return None,None
 
     volcap=None
     if mandate:
@@ -1034,23 +1249,20 @@ def render_html(memo, ctx=None):
             if ser:
                 for v in ser.values:c*=(1+v);wealth.append(round(c,4))
             rk=ranks.get(fid)
-            reason=None; reason_kind=None
-            if rk is None and mandate and f:
-                excl_strats=next((cn.value for cn in mandate.constraints if cn.field=="strategy" and cn.op=="not_in"),[]) or []
-                volcap=next((cn.value for cn in mandate.constraints if cn.field=="ann_vol" and cn.op=="<="),None)
-                if f.strategy in excl_strats:
-                    reason=f"illiquid · {f.strategy}"; reason_kind="LIQUIDITY"
-                elif volcap is not None and m.get("ann_vol") is not None and m["ann_vol"]>volcap:
-                    reason=f"too volatile · {m['ann_vol']*100:.0f}% > {volcap*100:.0f}% cap"; reason_kind="VOLATILITY"
-                # else: eligible but outscored -> no rejection reason
+            reason,reason_kind=_reject_reason(f,m)
             eligible=(reason is None)                 # passed the mandate (ranked OR outscored)
             cut=(rk is None and eligible)             # eligible but below the top-N shortlist
             comps=components(fid) if eligible else []
+            netret=(ctx.net_return(fid) if ctx else None)
             fd.append({"id":fid,"name":(f.name if f else fid),"strategy":(f.strategy if f else ""),
                 "rank":rk,"excluded":rk is None,"eligible":eligible,"cut":cut,"rkind":reason_kind,
                 "srank":(rk if rk else (90 if cut else 99)),
                 "x":round(12+(m["ann_vol"]-vmin)/vr*76,1),"y":round(12+(m["ann_return"]-rmin)/rr*76,1),
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"sortino":m.get("sortino"),"calmar":m.get("calmar"),"maxdd":m.get("max_drawdown"),
+                "beta":m.get("beta"),"alpha":m.get("alpha"),"corr":m.get("correlation"),
+                "fee":(f.mgmt_fee_pct if f else None),"netret":netret,
+                "redf":(f.redemption_freq if f else None),"redd":(f.redemption_days if f else None),
+                "lockup":(f.lockup_months if f else None),"notice":(f.notice_days if f else None),
                 "wealth":wealth,"reason":reason,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
     # zoom positions (all mandate-eligible funds + benchmark, shared range so the
@@ -1087,13 +1299,27 @@ def render_html(memo, ctx=None):
     share_txt=((top.name+" — EQUI Investment Committee recommendation (leads on risk-adjusted return). Shortlist: "
                 +"; ".join(f"{s.rank}. {s.name} ({_pct(s.metrics.get('ann_return'))})" for s in sl)
                 +f". {a.get('verified_count',0)}/{a.get('claim_count',0)} claims verified against the metrics engine.") if top else "No fund met the mandate.")
+    # memo prose sections (Summary / Recommendation / Key Risks / Data Appendix)
+    def _find_sec(h):
+        return next((s for s in memo.sections if s.heading==h), None)
+    _smy=_find_sec("Summary");_rec=_find_sec("Recommendation");_kr=_find_sec("Key Risks");_apx=_find_sec("Data Appendix")
+    kr_claims=[{"fund":_fname(c.fund_id),"metric":(c.metric or "").replace("_"," "),"value":c.value,
+                "verified":bool(c.verified),"text":e(c.text)} for c in (_kr.claims if _kr else [])]
+    memo_payload={"summary":e(_smy.body) if _smy else "","recommendation":e(_rec.body) if _rec else "",
+                  "keyRisks":{"body":e(_kr.body) if _kr else "","claims":kr_claims},
+                  "appendix":e(_apx.body) if _apx else ""}
+    rd=getattr(ctx,"readiness",{}) if ctx else {}
+    liqCap=(next((c.value for c in mandate.constraints if c.field=="redemption_days" and c.op in ("<=","<")),None) if mandate else None)
+    maxddFloor=(next((c.value for c in mandate.constraints if c.field=="max_drawdown" and c.op in (">=",">")),None) if mandate else None)
     DATA={"funds":fd,"gates":gates,"verdict":vplain,"verdictHtml":vhtml,"model":memo.generated_by,"title":memo.title,
           "verified":a.get("verified_count",0),"total":a.get("claim_count",0),"mandate":memo.mandate,"gateX":gateX,"volcap":(f"{volcap*100:.0f}%" if volcap is not None else None),"weights":{k:round(float(v),3) for k,v in weights.items()},
           "bench":({k:(round(v,4) if isinstance(v,float) else v) for k,v in bench.items()} if bench else None),"benchLine":benchLine,
           "nTotal":len(fd),"nEligible":sum(1 for d in fd if d["eligible"]),"nShort":len(sl),"nReject":sum(1 for d in fd if d.get("reason")),
-          "audit":audit_claims,"shareText":share_txt,
+          "audit":audit_claims,"shareText":share_txt,"readiness":rd,"memo":memo_payload,
+          "rfUsed":(getattr(ctx,"rf_used",None) if ctx else None),"rfSource":(getattr(ctx,"rf_source","mandate") if ctx else "mandate"),
           "mandateSpec":{"exclStrats":(next((c.value for c in mandate.constraints if c.field=="strategy" and c.op=="not_in"),[]) if mandate else []) or [],
                          "volCap":(next((c.value for c in mandate.constraints if c.field=="ann_vol" and c.op=="<="),None) if mandate else None),
+                         "liqCap":liqCap,"maxddFloor":maxddFloor,
                          "rf":(mandate.risk_free_annual if mandate else 0.02),"topN":(mandate.top_n if mandate else 5)},
           "dir":{k:DIRECTION.get(k,0) for k in weights}}
 
@@ -1139,6 +1365,8 @@ def render_html(memo, ctx=None):
             f'<div class="vwrap"><div class="vpre">Investment Committee · Recommendation</div><div class="vtext" id="vtext"></div></div>'
             f'<div class="right">'
             f'<button class="hbtn" id="skip">skip replay ▸</button>'
+            f'<button class="hbtn" id="mandateBtn" title="Adjust the mandate — constraints and scoring weights — and re-decide live">mandate</button>'
+            f'<button class="hbtn" id="memoBtn" title="Read the full IC memo — summary, recommendation, key risks, data appendix">memo</button>'
             f'<button class="hbtn" id="upBtn" title="Load a fund-universe CSV (funds + returns) and re-run the analysis in place">load csv</button>'
             f'<input type="file" id="upInput" accept=".csv" multiple style="display:none">'
             f'<button class="hbtn" id="shareBtn" title="Share the recommendation summary">share</button>'
@@ -1155,12 +1383,13 @@ def render_html(memo, ctx=None):
 
     side=('<div class="side">'
           '<div id="intropane"><div class="ip-h">The mandate</div><div class="ip-s">what advances · and how it\'s scored</div>'
+          '<div class="ip-lbl">Act 0 · Data readiness</div><div id="ip-data"></div>'
           '<div class="ip-lbl">Screen · hard limits</div><div id="ip-gates"></div>'
           '<div class="ip-lbl">Score · weighting</div><div id="ip-weights"></div>'
           '<div class="ip-lbl">Measured against</div><div id="ip-bench"></div>'
           f'<div class="ip-note">Funds clearing both limits are scored on the six risk-adjusted measures above. The top {len(sl)} by weighted score advance to the shortlist; the leader is the recommendation.</div>'
           '<div id="ip-tally"></div></div>'
-          '<div class="pane" id="trajpane"><div class="head"><div class="t">36-Month Trajectory</div><div class="s">growth of $1 · vs S&amp;P 500</div></div><div id="trajwrap"><svg id="traj"></svg></div></div>'
+          '<div class="pane" id="trajpane"><div class="head"><div class="t">36-Month Trajectory</div><div class="s">growth of $1 · vs S&amp;P 500</div><span class="srcbadge" id="benchsrc"></span></div><div id="trajwrap"><svg id="traj"></svg></div></div>'
           '<div class="pane" id="scorepane"><div class="head"><div class="t">The weighing</div><div class="s">how the ranking forms</div></div><div id="weighticker"></div><div id="weighlegend"></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
           '</div>')
 
