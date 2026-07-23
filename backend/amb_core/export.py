@@ -1418,10 +1418,12 @@ function downloadPDF(){
   // excluded
   var exs=A.funds.filter(function(d){return d.reason});
   if(exs.length){sec('EXCLUDED BY MANDATE');exs.forEach(function(d){T(M,y,d.name,10,'F2',CI);T(M+150,y,d.reason,9.5,'F3',CLo);TR(W-M,y,pct(d.ret)+'  vol '+pct(d.vol),9,'F3',CD);y-=17});y-=8}
-  // key risks — compact, metric-backed (space-guarded so the one-pager never overflows)
-  var kr=(A.memo&&A.memo.keyRisks)?A.memo.keyRisks:null;
+  // key risks — wrapped to page width so nothing overruns; same source as the on-screen memo
+  var _km=(A._reran?liveMemo():(A.memo||{}));var kr=(_km&&_km.keyRisks)?_km.keyRisks:null;
   if(kr&&kr.claims&&kr.claims.length&&y>150){sec('KEY RISKS');
-    kr.claims.slice(0,4).forEach(function(c){T(M,y,'- '+String(c.text).replace(/<[^>]+>/g,''),9.5,'F3',CI);TR(W-M,y,String(c.fund||''),8.5,'F3',CD);y-=14});y-=6}
+    kr.claims.slice(0,4).forEach(function(c){var t=String(c.text||'').replace(/<[^>]+>/g,'').trim();var fn=String(c.fund||'').trim();
+      if(fn&&t.toLowerCase().indexOf(fn.toLowerCase())<0)t=fn+' - '+t;   // add fund only if not already named in the text
+      wrap('- '+t,9.5,'F3',IW).forEach(function(l,i){if(y<96)return;T(i===0?M:M+9,y,l,9.5,'F3',CI);y-=13});y-=3});y-=4}
   // data appendix — one methodology + provenance line
   if(y>110){sec('DATA APPENDIX - METHODOLOGY');
     var bp=(A.bench?(A.bench.name+' ('+(A.bench.kind||'snapshot')+(A.bench.asOf?', as of '+A.bench.asOf:'')+')'):'none');
