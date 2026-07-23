@@ -29,10 +29,22 @@ class Settings(BaseSettings):
     # Benchmarks / risk-free
     benchmark_mode: str = Field("snapshot", alias="AMB_BENCHMARK_MODE")
     risk_free_annual: float = Field(0.02, alias="AMB_RISK_FREE_ANNUAL")
+    # FRED market-data API key. Read server-side only; NEVER sent to the browser.
+    # The `./amb serve` proxy uses it so a page can fetch live data without ever
+    # exposing the secret client-side.
+    fred_api_key: str = Field("", alias="FRED_API_KEY")
+
+    # Local API server (./amb serve)
+    serve_host: str = Field("127.0.0.1", alias="AMB_SERVE_HOST")
+    serve_port: int = Field(8000, alias="AMB_SERVE_PORT")
 
     @property
     def has_llm(self) -> bool:
         return bool(self.anthropic_api_key.strip())
+
+    @property
+    def has_fred_key(self) -> bool:
+        return bool(self.fred_api_key.strip())
 
 
 @lru_cache

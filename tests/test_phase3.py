@@ -104,6 +104,21 @@ def test_key_risks_claims_verify(sample_run):
     assert kr.claims and all(c.verified for c in kr.claims)
 
 
+def test_serve_market_payload_offline():
+    """The live-market server endpoint computes a benchmark payload; in snapshot
+    mode it stays fully offline (no FRED call) and returns an aligned curve."""
+    from amb_core.serve import _annualize, market_payload
+    p = market_payload("data", mode="snapshot")
+    assert p["ok"] is True
+    b = p["benchmark"]
+    assert b["kind"] == "snapshot" and b["n"] >= 12
+    assert b["ret"] is not None and b["vol"] is not None
+    assert len(b["wealth"]) == b["n"]
+    # _annualize sanity: a flat 0% series compounds to $1 wealth, 0 return
+    ret, vol, wealth = _annualize([0.0] * 12)
+    assert abs(ret) < 1e-9 and abs(wealth[-1] - 1.0) < 1e-9
+
+
 def test_net_return_reflects_fee(sample_run):
     _memo, ctx = sample_run
     fid = ctx.shortlist[0].fund_id
