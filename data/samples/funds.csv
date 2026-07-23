@@ -1,10 +1,10 @@
-fund_id,name,strategy,aum_mm,inception_date,mgmt_fee_pct,notes
-EQ-LS,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,"Concentrated single-name L/S, net ~50%."
-MAC,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Discretionary rates + FX.
-MN,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Beta-neutral quant equity.
-ED,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Merger arb + special situations.
-CR,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Securitized + corporate credit.
-MS,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,"Multi-PM platform, tight risk."
-VEN,SoHo Venture I,Venture,180,2019-02-01,2.5,"Early-stage; illiquid, quarterly marks."
-RA,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Infra + real estate.
-DA,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Liquid crypto; very high vol.
+fund_id,name,strategy,aum_mm,inception_date,mgmt_fee_pct,redemption_freq,lockup_months,notice_days,notes
+EQ-LS,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+MAC,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+MN,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+ED,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+CR,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+MS,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+VEN,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+RA,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+DA,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.

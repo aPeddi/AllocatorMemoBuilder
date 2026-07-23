@@ -21,6 +21,9 @@ class AnalysisContext:
         mandate: Mandate,
         quarantined: Optional[list[dict]] = None,
         series_by_fund: Optional[dict] = None,
+        readiness: Optional[dict] = None,
+        rf_used: Optional[float] = None,
+        rf_source: str = "mandate",
     ):
         self.funds = {f.fund_id: f for f in funds}
         self.benchmark = benchmark
@@ -30,6 +33,18 @@ class AnalysisContext:
         self.mandate = mandate
         self.quarantined = quarantined or []
         self.series_by_fund = series_by_fund or {}
+        self.readiness = readiness or {}
+        self.rf_used = rf_used if rf_used is not None else mandate.risk_free_annual
+        self.rf_source = rf_source
+
+    def net_return(self, fund_id: str) -> Optional[float]:
+        """Ann. return net of the stated management fee (gross - fee). Labeled,
+        never scored by default — a display/appendix figure."""
+        f = self.funds.get(fund_id)
+        gross = self.metric_value(fund_id, "ann_return")
+        if f is None or gross is None or f.mgmt_fee_pct is None:
+            return None
+        return round(gross - f.mgmt_fee_pct / 100.0, 6)
 
     def get_fund(self, fund_id: str) -> Optional[Fund]:
         return self.funds.get(fund_id)

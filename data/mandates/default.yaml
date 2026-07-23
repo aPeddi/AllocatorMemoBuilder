@@ -4,10 +4,14 @@ benchmark_id: SP500
 risk_free_annual: 0.02
 top_n: 5
 
-# Hard filters. Excludes illiquid sleeves and anything too volatile.
+# Hard filters. Liquidity requirement + target-vol ceiling + drawdown tolerance,
+# plus an explicit strategy exclusion. redemption_days is derived from each
+# fund's stated terms (cadence + notice) in ingest.
 constraints:
+  - {field: redemption_days, op: "<=", value: 200}          # liquid within ~2 quarters
+  - {field: ann_vol, op: "<=", value: 0.35}                 # target-vol ceiling
+  - {field: max_drawdown, op: ">=", value: -0.35}           # max-drawdown tolerance
   - {field: strategy, op: not_in, value: ["Venture", "Real Assets"]}
-  - {field: ann_vol, op: "<=", value: 0.35}
 
 # Scoring weights (metric -> weight). Signed automatically by scoring.DIRECTION.
 weights:
