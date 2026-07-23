@@ -59,12 +59,18 @@ case "${1:-}" in
   ""|launch|open|start) launch "${@:2}" ;;
   setup)                setup ;;
   test)                 ready || setup; "$PY" -m pytest -q "${@:2}" ;;
+  serve)
+    ready || setup || exit 1
+    step "Building the memo…"
+    "$PY" -m amb_core.demo "${@:2}" || { err "build failed"; exit 1; }
+    "$PY" -c "from amb_core.serve import run_server; raise SystemExit(run_server())" ;;
   -h|--help|help)
     echo ""
     echo -e "  ${B}amb${N} — build the IC memo and open it in your browser"
     echo ""
     echo -e "    ${C}./amb${N}         build the memo and open it  ${D}(installs deps on first run)${N}"
     echo -e "    ${C}./amb test${N}    run the test suite"
+    echo -e "    ${C}./amb serve${N}   run a local server so the page fetches LIVE market data from FRED"
     echo -e "    ${C}./amb setup${N}   (re)install dependencies only"
     echo "" ;;
   *) err "unknown option: $1"; echo -e "  try ${C}./amb${N} or ${C}./amb -h${N}" ;;

@@ -10,7 +10,9 @@ and test paths never depend on a live call.
 from __future__ import annotations
 
 import io
+import json
 import sys
+import urllib.parse
 import urllib.request
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -18,8 +20,13 @@ from typing import Optional
 
 import pandas as pd
 
+from .config import get_settings
 from .ingest import _parse_date, normalize_return
 from .models import Benchmark, ReturnPoint
+
+# Official FRED API (keyed) — has real history and is the "proper" integration.
+# The key lives server-side (config/.env) and is never shipped to the browser.
+_FRED_API = "https://api.stlouisfed.org/fred/series/observations"
 
 # benchmark_id -> (FRED series id, display name). FRED index series are daily
 # price levels; we convert to monthly returns. Total-return series need a key,
@@ -73,8 +80,29 @@ def _http_get(url: str, timeout: float) -> str:
     raise RuntimeError("FRED unreachable — " + " | ".join(errors))
 
 
+def _read_fred_api(series_id: str, api_key: str, timeout: float = 12.0) -> pd.DataFrame:
+    """Fetch a series via the official keyed FRED API (JSON). Raises on failure."""
+    q = urllib.parse.urlencode({"series_id": series_id, "api_key": api_key, "file_type": "json"})
+    raw = _http_get(f"{_FRED_API}?{q}", timeout)
+    obs = json.loads(raw).get("observations", [])
+    rows = [(o.get("date"), o.get("value")) for o in obs if o.get("value") not in (None, ".", "")]
+    out = pd.DataFrame(rows, columns=["date", "value"])
+    out["date"] = pd.to_datetime(out["date"], errors="coerce")
+    out["value"] = pd.to_numeric(out["value"], errors="coerce")
+    out = out.dropna()
+    if out.empty:
+        raise ValueError(f"FRED API series {series_id} returned no usable rows")
+    return out
+
+
 def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
-    """Fetch a FRED series as a tidy (date, value) frame. Raises on failure."""
+    """Fetch a FRED series as a tidy (date, value) frame. Raises on failure.
+
+    Uses the keyed official API when a key is configured (proper integration,
+    full history), else the keyless fredgraph.csv endpoint."""
+    key = get_settings().fred_api_key.strip()
+    if key:
+        return _read_fred_api(series_id, key, timeout)
     url = _FRED_URL.format(sid=series_id)
     raw = _http_get(url, timeout)
     df = pd.read_csv(io.StringIO(raw))

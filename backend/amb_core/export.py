@@ -207,6 +207,7 @@ body.screening #srcchip,body.scoring #srcchip{opacity:0;pointer-events:none}
 #srcchip.live i{background:var(--gain);box-shadow:0 0 0 3px rgba(78,158,119,.18)}
 #srcchip.live{color:var(--accent2);border-color:var(--accent-dim)}
 #srcchip.cache i{background:var(--warm,#C6A566)}
+#srcchip.busy{color:var(--accent2)}#srcchip.busy i{background:var(--accent);animation:hblink 1s steps(1) infinite}
 body.az-run #srcchip{display:none}
 .gates.on{opacity:1}
 .gate{font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--border2);padding:4px 8px;border-radius:3px;background:var(--panel)}
@@ -846,6 +847,28 @@ function reweigh(active){
   ranked.forEach(function(d,i){var rk=i<nShort?i+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));d.components=d._cp;d.comp=d._cm;d.score=d._sc;delete d._cp;delete d._cm;delete d._sc});
   A.activeMetrics=active.slice();}
 function redrawTraj(){trajBuilt=false;var t=$('#traj');if(t)t.innerHTML='';$$('.tt,.tx,.ty').forEach(function(x){x.remove()});buildTraj();}
+function servedLive(){return location.protocol==='http:'||location.protocol==='https:'}
+function fetchLiveMarket(manual){
+  var chip=$('#srcchip');if(chip){chip.classList.add('busy');chip.innerHTML="<i></i><b>market data</b> fetching live…";chip.style.display=''}
+  var ctrl=('AbortController' in window)?new AbortController():null;
+  var tmo=setTimeout(function(){if(ctrl)ctrl.abort()},8000);
+  return fetch('/api/market',ctrl?{signal:ctrl.signal}:{}).then(function(r){return r.json()}).then(function(d){
+    clearTimeout(tmo);
+    if(!d||!d.ok||!d.benchmark)throw new Error((d&&d.error)||'no data');
+    var b=d.benchmark;
+    A.bench=Object.assign({},A.bench||{},{name:b.name,ret:b.ret,vol:b.vol,wealth:b.wealth,kind:b.kind,srcName:b.srcName,asOf:b.asOf,n:b.n});
+    if(d.riskFree&&d.riskFree.value!=null){A.rfUsed=d.riskFree.value;A.rfSource=d.riskFree.source}
+    A._keyed=!!d.keyed;A._served=true;
+    if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
+    var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>index</div></div>"}
+    if(document.body.classList.contains('settled')){redrawTraj()}
+    if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+b.name+" · as-of "+b.asOf);
+    else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+b.name+" ("+b.kind+")");
+  }).catch(function(e){
+    clearTimeout(tmo);if(chip){chip.classList.remove('busy')}sourceChip();
+    if(manual)toast("<span class='tk' style='color:var(--loss)'>!</span>Live fetch needs the server — run <b>./amb serve</b>");
+  });
+}
 function sourceChip(){var c=$('#srcchip');if(!c)return;var b=A.bench;if(!b){c.style.display='none';return}
   var kind=b.kind||'snapshot';var lbl=(kind==='live'?'LIVE · FRED':kind==='cache'?'CACHED · FRED':'SNAPSHOT · local');
   c.className='srcchip '+kind;c.innerHTML="<i></i><b>market data</b> "+lbl;c.style.display='';
@@ -1020,6 +1043,7 @@ async function actZero(){
   var ROWS=(rd.coverage||[]).reduce(function(s,c){return s+(c.n||0)},0)+(rd.quarantined_count||0);
   var UNIV=rd.universe_count||A.funds.length,QN=rd.quarantined_count||0,WR=rd.with_returns||UNIV;
   var LIVE=(b.kind==='live');
+  var _EPB=(A._keyed?"fred/series/observations?series_id=":"fredgraph.csv?id=");
   var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
   az.innerHTML=
     "<div class='hud-grid'></div><div class='hud-scan'></div>"
@@ -1049,8 +1073,8 @@ async function actZero(){
    +"<div class='az-hub' id='hub'><div class='az-hub-ring'></div><div class='az-hub-core'></div><div class='az-hub-l'>PARSER</div></div>"
    +"<div class='az-beam b' id='beamB'></div>"
    +"<div class='az-src az-api' id='srcB'><div class='az-src-h'><span class='az-ic api'>◈</span>FRED · MARKET-DATA API<span class='az-badge "+(b.kind||'snapshot')+"'>"+bk+"</span></div>"
-     +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>SP500</b></span></div>"
-     +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>TB3MS</b></span></div>"
+     +"<div class='az-ep'>GET <span>"+_EPB+"<b>SP500</b></span></div>"
+     +"<div class='az-ep'>GET <span>"+_EPB+"<b>TB3MS</b></span></div>"
      +"<div class='az-st' id='stB'>"+(LIVE?"resolving host · stlouisfed.org":"standby")+"</div></div>"
    +"<div class='az-using' id='azusing'></div>"
    +"</div>";
@@ -1059,7 +1083,7 @@ async function actZero(){
   $('#beamA',az).classList.add('on');await wait(500);if(aborted)return;
   $('#srcB',az).classList.add('in');
   if(LIVE){
-    log('opening https://fred.stlouisfed.org/graph/fredgraph.csv …');await wait(700);if(aborted)return;
+    log('opening https://'+(A._keyed?'api':'fred')+'.stlouisfed.org …');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · live fetch · "+(b.n||36)+" monthly obs";
     $('#srcB',az).classList.add('active');$('#srcA',az).classList.add('standby');
     $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+(b.name||'S&amp;P 500')+" · as-of "+(b.asOf||'—');
@@ -1226,6 +1250,7 @@ function wire(){
   var vb=$('#vbadge');if(vb)vb.addEventListener('click',function(){auditDrawer()});
   var pbtn=$('#pausebtn');if(pbtn)pbtn.addEventListener('click',function(){togglePause()});
   document.addEventListener('keydown',function(e){if(e.code==='Space'&&document.body.classList.contains('playing')&&!/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))){e.preventDefault();togglePause()}});
+  var lvb=$('#liveBtn');if(lvb)lvb.addEventListener('click',function(){fetchLiveMarket(true)});
   var mb=$('#memoBtn');if(mb)mb.addEventListener('click',function(){openMemo()});
   var mdb=$('#mandateBtn');if(mdb)mdb.addEventListener('click',function(){openMandate()});
   var ub=$('#upBtn'),ui=$('#upInput');if(ub&&ui){ub.addEventListener('click',function(){ui.click()});ui.addEventListener('change',function(){ingestFiles(ui.files);ui.value=''})}
@@ -1430,7 +1455,10 @@ function doShare(){var txt=A.shareText||document.title;
   try{if(navigator.share){navigator.share({title:A.title||document.title,text:txt}).then(function(){},function(){});toast("<span class='tk'>✓</span>Opening share…");return}}catch(e){}
   try{navigator.clipboard.writeText(txt).then(ok,ok)}catch(e){ok()}}
 function setPrintDate(){var el2=$('#pd-date');if(!el2)return;try{var d=new Date();el2.textContent=d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}catch(e){el2.textContent=''}}
-window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='light';buildField();buildIntro();sourceChip();setPrintDate();wire();story()});
+window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='light';buildField();buildIntro();sourceChip();setPrintDate();wire();
+  // when served by `./amb serve`, pull live market data (browser -> localhost -> FRED)
+  // BEFORE the story so Act 0 shows the real live fetch; else play immediately.
+  if(servedLive()){fetchLiveMarket(false).then(function(){story()})}else{story()}});
 })();
 """
 
@@ -1678,6 +1706,7 @@ def render_html(memo, ctx=None):
             f'<div class="right">'
             f'<button class="hbtn hbtn-pause" id="pausebtn" title="Pause or resume the replay (spacebar)">❚❚&nbsp;pause</button>'
             f'<button class="hbtn" id="skip">skip replay ▸</button>'
+            f'<button class="hbtn" id="liveBtn" title="Fetch live market data from FRED (requires ./amb serve)">↻ live data</button>'
             f'<button class="hbtn" id="mandateBtn" title="Adjust the mandate — constraints and scoring weights — and re-decide live">mandate</button>'
             f'<button class="hbtn" id="memoBtn" title="Read the full IC memo — summary, recommendation, key risks, data appendix">memo</button>'
             f'<button class="hbtn" id="upBtn" title="Load a fund-universe CSV (funds + returns) and re-run the analysis in place">load csv</button>'
