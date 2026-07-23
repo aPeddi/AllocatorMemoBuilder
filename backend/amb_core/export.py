@@ -89,7 +89,31 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 /* body grid */
 .mid{display:grid;grid-template-columns:1fr 380px;min-height:0}
 .stage{position:relative;overflow:hidden}
-.side{border-left:1px solid var(--border);display:grid;grid-template-rows:1fr 1fr;min-height:0}
+.side{border-left:1px solid var(--border);display:grid;grid-template-rows:1fr 1fr;min-height:0;position:relative}
+/* intro pane — fills the side with the decision framework during universe/screening */
+#intropane{position:absolute;inset:0;z-index:5;background:var(--panel);padding:20px 20px;display:flex;flex-direction:column;opacity:0;transition:opacity .7s;overflow:hidden}
+#intropane.in{opacity:1}
+#intropane.out{opacity:0;pointer-events:none}
+.ip-h{font-weight:600;font-size:15px;color:var(--ink);letter-spacing:-.01em}
+.ip-s{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);margin-top:3px}
+.ip-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin:18px 0 9px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.ipg{display:flex;align-items:flex-start;gap:9px;padding:7px 0;opacity:0;transform:translateX(8px);transition:opacity .5s,transform .5s}
+.ipg.in{opacity:1;transform:none}
+.ipg .k{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--loss);border:1px solid var(--loss-bd);border-radius:3px;padding:3px 6px;white-space:nowrap;flex:none;margin-top:1px}
+.ipg .d{font-size:12px;color:var(--ink2);line-height:1.4}
+.ipw{display:grid;grid-template-columns:74px 1fr 34px;gap:9px;align-items:center;margin:8px 0;opacity:0;transform:translateX(8px);transition:opacity .5s,transform .5s}
+.ipw.in{opacity:1;transform:none}
+.ipw .wl{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ipw .wb{position:relative;height:7px;border-radius:4px;background:var(--panel2);border:1px solid var(--border);overflow:hidden}
+.ipw .wb i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:4px;transition:width .8s cubic-bezier(.3,.85,.3,1)}
+.ipw .wp{font-family:var(--mono);font-size:10px;color:var(--ink);text-align:right}
+#ip-tally{margin-top:auto;display:flex;gap:0;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+#ip-tally .tc{flex:1;text-align:center;padding:11px 6px;background:var(--panel2)}
+#ip-tally .tc+.tc{border-left:1px solid var(--border)}
+#ip-tally .tc b{display:block;font-family:var(--mono);font-size:20px;color:var(--ink);line-height:1;transition:color .4s}
+#ip-tally .tc.hot b{color:var(--accent2)}
+#ip-tally .tc.red b{color:var(--loss)}
+#ip-tally .tc i{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);font-style:normal;margin-top:6px}
 .pane{padding:16px 18px;min-height:0;display:flex;flex-direction:column;opacity:0;transition:opacity .6s}
 .pane.in{opacity:1}
 .pane+.pane{border-top:1px solid var(--border)}
@@ -115,12 +139,12 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .node .dot{width:17px;height:17px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--ink2);display:grid;place-items:center;transition:width .5s cubic-bezier(.3,1.2,.4,1),height .5s cubic-bezier(.3,1.2,.4,1),border-color .5s,box-shadow .5s,background .5s;position:relative}
 .node.cand{cursor:pointer}.node.cand:hover .dot{border-color:var(--accent2)}
 .node.win .dot,.node.locked .dot{border-color:var(--accent);background:radial-gradient(circle at 38% 34%,var(--winface1),var(--winface2));box-shadow:0 0 0 1px var(--accent-soft),0 0 24px -3px var(--accent-glow)}
-/* focus — bring the active item forward with a glass hero card */
+/* focus — bring the active item forward inside a glass hero panel */
 .node.focus{z-index:10}
-.node.focus .dot{width:30px;height:30px;border-color:var(--accent2);box-shadow:0 0 0 7px var(--accent-soft),0 0 30px -4px var(--accent-glow)}
-.node .glass{position:absolute;left:50%;top:calc(50% + 24px);width:168px;height:112px;transform:translate(-50%,-50%) scale(.82);opacity:0;border-radius:15px;background:var(--glass-fill);border:1px solid var(--glass-bd);-webkit-backdrop-filter:blur(10px) saturate(1.15);backdrop-filter:blur(10px) saturate(1.15);box-shadow:0 22px 55px -14px var(--shadow),0 0 26px -10px var(--accent-glow),inset 0 1px 0 var(--glass-hi);pointer-events:none;z-index:-1;transition:opacity .5s,transform .55s cubic-bezier(.3,1.2,.4,1),border-color .4s,box-shadow .4s}
+.node.focus .dot{width:28px;height:28px;border-color:var(--accent2);box-shadow:0 0 0 7px var(--accent-soft),0 0 30px -4px var(--accent-glow)}
+.node .glass{position:absolute;left:50%;top:calc(50% + 12px);width:208px;height:150px;transform:translate(-50%,-50%) scale(.82);opacity:0;border-radius:16px;background:var(--glass-fill);border:1px solid var(--glass-bd);-webkit-backdrop-filter:blur(11px) saturate(1.15);backdrop-filter:blur(11px) saturate(1.15);box-shadow:0 24px 58px -14px var(--shadow),0 0 26px -10px var(--accent-glow),inset 0 1px 0 var(--glass-hi);pointer-events:none;z-index:-1;transition:opacity .5s,transform .55s cubic-bezier(.3,1.2,.4,1),border-color .4s,box-shadow .4s}
 .node.focus .glass{opacity:1;transform:translate(-50%,-50%) scale(1)}
-.node.reject .glass,.node.cutfocus .glass{border-color:var(--loss-bd);box-shadow:0 22px 55px -14px var(--shadow),0 0 30px -8px var(--loss),inset 0 1px 0 var(--glass-hi)}
+.node.reject .glass,.node.cutfocus .glass{border-color:var(--loss-bd);box-shadow:0 24px 58px -14px var(--shadow),0 0 30px -8px var(--loss),inset 0 1px 0 var(--glass-hi)}
 .node.dimmed{opacity:.28;filter:saturate(.6)}
 .node.cutout{opacity:.22;filter:grayscale(.7)}
 body.screening .node.cand{opacity:.22;transition:opacity .55s}
@@ -131,19 +155,21 @@ body.screening .node.cand.gone{opacity:0}
 .node .card{position:absolute;left:50%;top:calc(100% + 9px);transform:translate(-50%,4px);text-align:center;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .5s,transform .5s cubic-bezier(.3,1.1,.4,1)}
 .node.labeled .card{opacity:1;transform:translate(-50%,0)}
 .node .card .nm{font-weight:600;font-size:12.5px;color:var(--ink);letter-spacing:-.01em;line-height:1.15}
+.node .card .nm .nfull{display:none}.node.focus .card .nm .nfull{display:inline}
+.node.focus .card .nm .nshort{display:none}
 .node.win .card .nm,.node.leader .card .nm{color:var(--accent2)}
 .node .card .sub{font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);margin-top:2px}
 .node .card .stat{font-family:var(--mono);font-size:9px;color:var(--ink2);margin-top:3px;max-height:0;opacity:0;overflow:hidden;transition:opacity .45s,max-height .45s}
-.node.showstat .card .stat{opacity:1;max-height:16px}
+.node.showstat .card .stat,.node.focus .card .stat{opacity:1;max-height:16px}
 .node .card .stat b{color:var(--ink)}
-/* lock crosshair on winner */
-.lock{position:absolute;inset:-15px;opacity:0;transform:scale(1.4);transition:opacity .4s,transform .45s cubic-bezier(.3,1.3,.4,1);pointer-events:none}
-.node.locked .lock{opacity:1;transform:scale(1)}
-.lock i{position:absolute;width:9px;height:9px;border:1.5px solid var(--accent2)}
+/* corner brackets wrap the whole panel */
+.lock{position:absolute;left:50%;top:calc(50% + 12px);width:226px;height:168px;transform:translate(-50%,-50%) scale(1.06);opacity:0;transition:opacity .4s,transform .5s cubic-bezier(.3,1.3,.4,1);pointer-events:none}
+.node.locked .lock{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.lock i{position:absolute;width:14px;height:14px;border:1.5px solid var(--accent2)}
 .lock .a{top:0;left:0;border-right:0;border-bottom:0}.lock .b{top:0;right:0;border-left:0;border-bottom:0}.lock .c{bottom:0;left:0;border-right:0;border-top:0}.lock .d{bottom:0;right:0;border-left:0;border-top:0}
-/* exclusion stamp — big and readable */
-.node .stamp{position:absolute;left:50%;bottom:calc(100% + 13px);transform:translate(-50%,10px) scale(.92);opacity:0;transition:opacity .5s,transform .55s cubic-bezier(.3,1.25,.4,1);pointer-events:none;z-index:15;text-align:center}
-.node.reject .stamp{opacity:1;transform:translate(-50%,0) scale(1)}
+/* exclusion header — lives inside the panel */
+.node .stamp{position:absolute;left:50%;top:-56px;transform:translate(-50%,8px);opacity:0;transition:opacity .5s,transform .55s cubic-bezier(.3,1.25,.4,1);pointer-events:none;z-index:15;text-align:center}
+.node.reject .stamp{opacity:1;transform:translate(-50%,0)}
 .node .stamp .st{font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:3px;padding:4px 9px;display:inline-block;box-shadow:0 8px 20px var(--shadow)}
 .node .stamp .sr{display:block;margin-top:5px;font-family:var(--mono);font-size:9px;color:var(--loss);letter-spacing:.02em}
 .node.reject .dot{border-color:var(--loss);background:transparent;box-shadow:0 0 0 4px var(--loss-soft)}
@@ -263,13 +289,13 @@ body.scoring .stage::after{opacity:1}
 /* per-factor response halo (behind the dot) */
 .node .halo{position:absolute;inset:-6px;border-radius:50%;pointer-events:none;opacity:0;z-index:-1;transform:scale(.55);transition:transform .6s cubic-bezier(.3,1.05,.4,1),opacity .55s,background .4s}
 /* cumulative leader: bright ring + crown */
-.node .crown{position:absolute;left:50%;top:-15px;transform:translate(-50%,4px) scale(.8);opacity:0;transition:opacity .4s,transform .45s cubic-bezier(.3,1.3,.4,1);pointer-events:none;font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);white-space:nowrap;display:flex;align-items:center;gap:4px}
+.node .crown{position:absolute;left:50%;top:-46px;transform:translate(-50%,6px) scale(.8);opacity:0;transition:opacity .4s,transform .45s cubic-bezier(.3,1.3,.4,1);pointer-events:none;font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2);white-space:nowrap;display:flex;align-items:center;gap:5px;z-index:15}
 .node .crown::before{content:'';width:0;height:0;border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-bottom:5px solid var(--accent)}
 .node.leader{opacity:1!important}
 .node.leader .crown{opacity:1;transform:translate(-50%,0) scale(1)}
 .node.leader .dot{box-shadow:0 0 0 2px var(--accent),0 0 22px -2px var(--accent-glow)}
 /* reasoning tag anchored above a node */
-.node .rtag{position:absolute;left:50%;bottom:calc(100% + 13px);transform:translate(-50%,7px);opacity:0;transition:opacity .4s,transform .45s cubic-bezier(.3,1.25,.4,1);pointer-events:none;white-space:nowrap;font-family:var(--mono);font-size:8.5px;letter-spacing:.02em;color:var(--ink);background:var(--glass2);border:1px solid var(--border2);border-radius:5px;padding:5px 9px;z-index:16;box-shadow:0 8px 22px var(--shadow)}
+.node .rtag{position:absolute;left:50%;bottom:calc(100% + 72px);transform:translate(-50%,7px);opacity:0;transition:opacity .4s,transform .45s cubic-bezier(.3,1.25,.4,1);pointer-events:none;white-space:nowrap;font-family:var(--mono);font-size:8.5px;letter-spacing:.02em;color:var(--ink);background:var(--glass2);border:1px solid var(--border2);border-radius:5px;padding:5px 9px;z-index:16;box-shadow:0 8px 22px var(--shadow)}
 .node .rtag::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--border2)}
 .node.rshow .rtag{opacity:1;transform:translate(-50%,0)}
 .node .rtag b{color:var(--accent2)} .node .rtag.neg b{color:var(--loss)}
@@ -327,13 +353,25 @@ function buildField(){
     var rtag=el('div','rtag');
     var dot=el('div','dot');
     var card=el('div','card');
-    card.innerHTML="<div class='nm'>"+first(d.name)+"</div><div class='sub'>"+stratShort(d.strategy)+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
+    card.innerHTML="<div class='nm'><span class='nfull'>"+d.name+"</span><span class='nshort'>"+first(d.name)+"</span></div><div class='sub'>"+stratShort(d.strategy)+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
     n.appendChild(glass);n.appendChild(halo);n.appendChild(lock);n.appendChild(stamp);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(card);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
   var g=$('#gates');A.gates.forEach(function(gt){var e=el('div','gate');e.textContent=gt.label+' · '+gt.detail;e.dataset.k=gt.label;g.appendChild(e)});
 }
-function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id];return !n.classList.contains('gone')&&!n.classList.contains('cutout')}).length;var c=$('#counter');if(c)c.innerHTML=(lbl||'Candidates')+' · <b>'+String(live).padStart(2,'0')+'</b>'}
+function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id];return !n.classList.contains('gone')&&!n.classList.contains('cutout')}).length;var c=$('#counter');if(c)c.innerHTML=(lbl||'Candidates')+' · <b>'+String(live).padStart(2,'0')+'</b>';updateTally();}
+function buildIntro(){
+  var ip=$('#intropane');if(ip){ip.classList.add('in');ip.classList.remove('out')}
+  var g=$('#ip-gates');if(g){g.innerHTML='';A.gates.forEach(function(gt,i){var r=el('div','ipg');r.innerHTML="<span class='k'>"+gt.label+"</span><span class='d'>"+gt.detail+"</span>";g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
+  var w=$('#ip-weights');if(w){w.innerHTML='';var fs=weightFactors();var mx=Math.max.apply(null,fs.map(function(k){return A.weights[k]}));
+    fs.forEach(function(k,i){var pctv=Math.round(A.weights[k]*100);var r=el('div','ipw');
+      r.innerHTML="<span class='wl'>"+k.replace(/_/g,' ')+"</span><span class='wb'><i></i></span><span class='wp'>"+pctv+"%</span>";
+      w.appendChild(r);var bar=$('.wb i',r);
+      setTimeout(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
+  updateTally();
+}
+function updateTally(){var t=$('#ip-tally');if(!t)return;var gone=A.funds.filter(function(d){return nodes[d.id].classList.contains('gone')}).length;var uni=A.funds.length;var rem=uni-gone;
+  t.innerHTML="<div class='tc'><b>"+uni+"</b><i>universe</i></div><div class='tc red'><b>"+gone+"</b><i>excluded</i></div><div class='tc hot'><b>"+rem+"</b><i>advancing</i></div>";}
 function universePos(i){var cols=3;var r=Math.floor(i/cols),c=i%cols;
   var L=[26,50,74][c],B=[77,50,23][r];
   var jx=(((i*37)%7)-3)*1.5,jy=(((i*29)%7)-3)*1.3;
@@ -482,6 +520,7 @@ async function story(){
   await wait(700);
   // ── ACT 3 · Scoring — survivors take the frontier; weigh them in focus ──
   chapter('03 · Scoring',cap(NUM[A.nEligible]||A.nEligible)+' clear the mandate','scored on risk-adjusted return');
+  var ip=$('#intropane');if(ip)ip.classList.add('out');
   frontier();document.body.classList.add('scoring');updateCounter();await wait(1300);
   $('#scorepane').classList.add('in');buildWeigh();await wait(700);
   await runWeigh();
@@ -509,6 +548,7 @@ function reset(){aborted=true;document.body.classList.remove('settled');document
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
   $$('.tt').forEach(function(t){t.remove()});$('#traj').innerHTML='';trajBuilt=false;$('#chapter').innerHTML='';
+  buildIntro();
 }
 function replay(){reset();setTimeout(function(){aborted=false;story()},80)}
 
@@ -520,7 +560,7 @@ function wire(){
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
   document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;clearRtags();clearHalos();document.body.classList.remove('screening');
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;clearRtags();clearHalos();document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
     A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown','labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
     frontier();document.body.classList.add('scoring');$('#scorepane').classList.add('in');buildWeigh();renderFinal();
     var win=shortlisted()[0];nodes[win.id].classList.add('focus','win','locked');var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';nodes[win.id].classList.add('leader');
@@ -528,7 +568,7 @@ function wire(){
   window.addEventListener('resize',function(){if($('#guides')&&$('#guides').classList.contains('on'))drawBenchLine()});
   var tb=$('#themebtn');if(tb){var tog=function(){applyTheme(document.documentElement.dataset.theme!=='light')};tb.addEventListener('click',tog);tb.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}});}
 }
-window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='dark';buildField();wire();story()});
+window.addEventListener('DOMContentLoaded',function(){document.documentElement.dataset.theme='dark';buildField();buildIntro();wire();story()});
 })();
 """
 
@@ -678,6 +718,10 @@ def render_html(memo, ctx=None):
            '<div id="chapter"></div></div>')
 
     side=('<div class="side">'
+          '<div id="intropane"><div class="ip-h">The mandate</div><div class="ip-s">what advances · and how it\'s scored</div>'
+          '<div class="ip-lbl">Screen · hard limits</div><div id="ip-gates"></div>'
+          '<div class="ip-lbl">Score · weighting</div><div id="ip-weights"></div>'
+          '<div id="ip-tally"></div></div>'
           '<div class="pane" id="trajpane"><div class="head"><div class="t">36-Month Trajectory</div><div class="s">growth of $1</div></div><div id="trajwrap"><svg id="traj"></svg></div></div>'
           '<div class="pane" id="scorepane"><div class="head"><div class="t">The weighing</div><div class="s">how the ranking forms</div></div><div id="weighticker"></div><div id="weighlegend"></div><div id="scorebars"></div><div class="why-note" id="whynote"></div></div>'
           '</div>')
