@@ -875,8 +875,12 @@ function fetchLiveMarket(manual){
     if(d.riskFree&&d.riskFree.value!=null){A.rfUsed=d.riskFree.value;A.rfSource=d.riskFree.source}
     A._keyed=!!d.keyed;A._served=true;
     if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
+    relayoutScatter();  // keep the main risk/return graph consistent with the (live) benchmark
     var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>index</div></div>"}
-    if(document.body.classList.contains('settled')){redrawTraj()}
+    if(document.body.classList.contains('settled')){
+      A.funds.forEach(function(x){if(x.eligible&&x.xz!=null){var n=nodes[x.id];if(n){n.style.left=x.xz+'%';n.style.bottom=x.yz+'%'}}});
+      buildGuides();redrawTraj();
+    }
     if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+b.name+" · as-of "+b.asOf);
     else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+b.name+" ("+b.kind+")");
   }).catch(function(e){
@@ -977,10 +981,23 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
     toast("<span class='tk'>&#10003;</span>Mandate applied · "+A.nEligible+" eligible → "+A.nShort+" shortlisted");});
   var rs=$('#mfReset');if(rs)rs.addEventListener('click',function(){A.mandateSpec=JSON.parse(JSON.stringify(HOUSE.ms));A.weights=JSON.parse(JSON.stringify(HOUSE.w));A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();applyMandate();toast("<span class='tk'>&#10003;</span>Reset to the house view");});
 }
+function relayoutScatter(){  // recompute the risk/return frontier so it includes the current benchmark
+  var surv=A.funds.filter(function(d){return d.eligible});var b=A.bench;A.benchLine=null;
+  if(!surv.length)return;
+  var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});
+  if(b){zv=zv.concat([b.vol]);zr=zr.concat([b.ret])}
+  var zvmin=Math.min.apply(null,zv),zvmax=Math.max.apply(null,zv),zrmin=Math.min.apply(null,zr),zrmax=Math.max.apply(null,zr);
+  var zvr=(zvmax-zvmin)||1,zrr=(zrmax-zrmin)||1;
+  surv.forEach(function(d){d.xz=Math.round((14+(d.vol-zvmin)/zvr*72)*10)/10;d.yz=Math.round((14+(d.ret-zrmin)/zrr*72)*10)/10});
+  if(b){b.xz=Math.round((14+(b.vol-zvmin)/zvr*72)*10)/10;b.yz=Math.round((14+(b.ret-zrmin)/zrr*72)*10)/10;
+    if(b.vol>0){var s=b.ret/b.vol;var mp=function(vol){return [Math.round((14+(vol-zvmin)/zvr*72)*10)/10,Math.round((14+(s*vol-zrmin)/zrr*72)*10)/10]};var p1=mp(zvmin),p2=mp(zvmax);A.benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
+  A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});}
 function buildGuides(){var g=$('#guides');
   if(!A.bench){if(g)g.classList.remove('on');return}
   var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).textContent=A.bench.name}
-  var bl=$('#beatlbl');if(bl)bl.innerHTML='above line ·<br>beats index<br>risk-adjusted';
+  var bl=$('#beatlbl');if(bl){var sp=(A.bench.ret&&A.bench.vol)?A.bench.ret/A.bench.vol:0;
+    var anyAbove=A.funds.some(function(d){return d.eligible&&d.vol>0&&(d.ret/d.vol)>sp});
+    bl.innerHTML=anyAbove?'above line ·<br>beats index<br>risk-adjusted':'below line ·<br>trails index<br>risk-adjusted';}
   drawBenchLine();if(g)g.classList.add('on');
 }
 function drawBenchLine(){ if(!A.benchLine)return;var f=$('#field');if(!f)return;var W=f.clientWidth,H=f.clientHeight,L=A.benchLine;
