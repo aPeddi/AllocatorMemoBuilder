@@ -50,3 +50,12 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Editor / patch backups (safe to delete)
+*.bak
+*.bak*
+_to_delete/
+
+# Runtime market-data cache (regenerated on demand)
+data/benchmarks/cache/
+data/local/
