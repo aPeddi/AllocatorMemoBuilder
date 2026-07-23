@@ -143,8 +143,8 @@ body.scoring #trajpane{opacity:0;pointer-events:none}
 .ipg .gc{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-bd);border-radius:20px;padding:2px 8px;flex:none;letter-spacing:.02em}
 .ipg .gc.gc0{color:var(--dim2);background:transparent;border-color:var(--border)}
 .ipg.hot .gc{background:var(--loss);color:var(--on-accent);border-color:var(--loss)}
-.node .stamp .brk{display:none;margin-top:4px;font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:20px;padding:2px 8px}
-.node.reject .stamp .brk:not(:empty){display:inline-block}
+.node .stamp .stags{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:7px}
+.node .stamp .stag{font-family:var(--mono);font-size:7.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--loss);background:var(--loss-soft);border:1px solid var(--loss-bd);border-radius:20px;padding:2px 8px}
 .ipw{display:grid;grid-template-columns:78px 1fr 34px;gap:10px;align-items:center;margin:11px 0;opacity:0;transform:translateX(8px);transition:opacity .5s,transform .5s}
 .ipw.in{opacity:1;transform:none}
 .ipw .wl{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -307,9 +307,9 @@ body.screening .node.cand.gone{opacity:0}
 .d-p{color:var(--ink2);font-size:13px;line-height:1.6}
 /* memo view — editorial */
 #drawer.wide{width:min(600px,95vw);padding:26px 30px}
-.mv-eyebrow{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin:2px 0 14px}
-.mv-hero{font-size:23px;line-height:1.34;font-weight:600;color:var(--ink);letter-spacing:-.01em;margin-bottom:16px}
-.mv-hero b{color:var(--accent2);font-weight:700}
+.mv-eyebrow{font-family:var(--mono);font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin:2px 0 10px}
+.mv-hero{font-size:14.5px;line-height:1.55;font-weight:400;color:var(--ink2);letter-spacing:0;margin-bottom:16px}
+.mv-hero b{color:var(--accent2);font-weight:600}
 .mv-pills{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:22px}
 .mvp{font-family:var(--mono);font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink2);background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:5px 11px}
 .mvp.ok{color:var(--accent2);border-color:var(--accent-dim);background:var(--accent-soft)}
@@ -349,32 +349,95 @@ body.screening .node.cand.gone{opacity:0}
 .mv-apx summary::before{content:'+';font-size:13px;color:var(--dim2)}
 .mv-apx[open] summary::before{content:'\2212'}
 .mv-fine{color:var(--dim);font-size:11.5px;line-height:1.62;margin:12px 0 0}
-/* Act 0 · data ingestion animation (main canvas) */
-#az{position:absolute;inset:0;z-index:6;pointer-events:none;opacity:0;transition:opacity .5s}
+/* Act 0 · data-acquisition HUD (full canvas) */
+#az{position:absolute;inset:0;z-index:8;pointer-events:none;opacity:0;transition:opacity .55s;font-family:var(--mono)}
 #az.on{opacity:1}
-.azst{position:absolute;top:7%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);opacity:0;transition:opacity .5s,color .5s}
-.azst.on{opacity:1;color:var(--accent2)}
-.azline{position:absolute;top:12%;bottom:24%;width:1px;background:linear-gradient(180deg,transparent,var(--border2),transparent);opacity:.7}
-.azline.r{background:linear-gradient(180deg,transparent,var(--accent-dim),transparent)}
-.azp{position:absolute;height:17px;padding:0 9px;display:flex;align-items:center;gap:6px;border:1px solid var(--border2);background:var(--panel2);border-radius:20px;font-family:var(--mono);font-size:8px;letter-spacing:.05em;color:var(--dim);white-space:nowrap;opacity:0;transform:translateY(-50%);transition:left 1.5s cubic-bezier(.35,.1,.2,1),opacity .5s,transform .6s,background .35s,border-color .35s,color .35s;box-shadow:0 4px 14px -8px var(--shadow)}
-.azp.in{opacity:1}
-.azp .azdot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
-.azp.landed{color:var(--ink2);border-color:var(--accent-dim)}
-.azp.landed .azdot{background:var(--accent2)}
-.azp.quar{border-color:var(--loss);color:var(--loss);background:var(--loss-soft)}
-.azp.quar .azdot{background:var(--loss)}
-.azp.drop{opacity:0!important;transform:translateY(42px) scale(.85)}
-.azbeam{position:absolute;left:75%;right:4%;top:50%;height:1px;background:linear-gradient(90deg,var(--accent2),transparent);opacity:0;transform:scaleX(0);transform-origin:left;transition:opacity .5s,transform .9s}
-.azbeam.on{opacity:.8;transform:scaleX(1)}
-.azbench{position:absolute;right:4%;top:calc(50% - 32px);display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--ink2);background:var(--panel2);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;opacity:0;transform:translateX(14px);transition:opacity .5s,transform .5s}
-.azbench.on{opacity:1;transform:none}
-.azbdot{width:6px;height:6px;border-radius:50%;background:var(--dim2);flex:none}
-.azbdot.live{background:var(--gain);box-shadow:0 0 0 3px rgba(78,158,119,.18)}
-.azbdot.snapshot{background:var(--dim2)}.azbdot.cache{background:var(--warm,#C6A566)}
-.azstat{position:absolute;left:50%;bottom:11%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--dim);background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:7px 16px;white-space:nowrap;opacity:0;transition:opacity .4s}
-.azstat.on{opacity:1}
-.azstat b{color:var(--accent2);text-transform:uppercase;letter-spacing:.1em;font-size:8.5px}
-.azstat .azx{color:var(--loss);margin-left:6px}
+.hud-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:46px 46px;opacity:.4;-webkit-mask-image:radial-gradient(ellipse at center,#000 42%,transparent 86%);mask-image:radial-gradient(ellipse at center,#000 42%,transparent 86%)}
+.hud-scan{position:absolute;left:0;right:0;top:-140px;height:140px;background:linear-gradient(180deg,transparent,var(--accent-soft),transparent);opacity:.5;animation:hudscan 5.5s linear infinite}
+@keyframes hudscan{0%{transform:translateY(0)}100%{transform:translateY(140vh)}}
+.hud-top{position:absolute;top:20px;left:28px;right:28px;display:flex;justify-content:space-between;align-items:center}
+.hud-phase{display:flex;align-items:baseline;gap:13px}
+.hp-n{font-size:32px;font-weight:700;color:var(--accent2);letter-spacing:-.02em;line-height:1}
+.hp-l{font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink)}
+.hud-id{display:flex;align-items:center;gap:9px;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim2)}
+.hud-rec{width:8px;height:8px;border-radius:50%;background:var(--loss);animation:hblink 1.2s steps(1) infinite}
+@keyframes hblink{50%{opacity:.25}}
+.hud-stage{position:absolute;left:28px;right:28px;top:78px;bottom:80px;display:flex;align-items:center;justify-content:center}
+.hud-bot{position:absolute;left:28px;right:28px;bottom:20px}
+.hud-prog{display:flex;gap:10px;margin-bottom:13px}
+.hpseg{flex:1;display:flex;align-items:center;gap:8px;font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2)}
+.hpseg i{flex:1;height:2px;background:var(--border2);border-radius:2px;transition:background .4s}
+.hpseg.act{color:var(--accent2)}.hpseg.act i{background:var(--accent);box-shadow:0 0 10px -2px var(--accent-glow)}
+.hpseg.done{color:var(--ink2)}.hpseg.done i{background:var(--accent-dim)}
+.hud-log{font-size:11.5px;letter-spacing:.03em;color:var(--ink2);min-height:16px}
+.hl-cur{color:var(--accent2);animation:hblink 1s steps(1) infinite;margin-right:4px}
+/* scene 1 · acquire */
+.az-acq{display:flex;align-items:center;justify-content:center;width:100%;max-width:860px}
+.az-src{position:relative;flex:1 1 0;max-width:310px;border:1px solid var(--border2);background:var(--panel2);border-radius:11px;padding:17px 19px;opacity:0;transform:translateY(12px);transition:opacity .5s,transform .5s,border-color .4s}
+.az-src.in{opacity:1;transform:none}
+.az-src.az-api{border-color:var(--accent-dim);box-shadow:0 0 30px -14px var(--accent-glow)}
+.az-src-h{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin-bottom:14px;flex-wrap:wrap}
+.az-ic{color:var(--dim2);font-size:14px}.az-ic.api{color:var(--accent2)}
+.az-badge{margin-left:auto;font-size:7.5px;letter-spacing:.1em;padding:2px 8px;border-radius:20px;border:1px solid var(--border2);color:var(--dim2)}
+.az-badge.live{color:var(--accent2);border-color:var(--accent-dim);background:var(--accent-soft)}.az-badge.cache{color:var(--warm)}
+.az-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--dim);padding:6px 0;border-bottom:1px solid var(--border)}
+.az-row b{color:var(--ink2);font-weight:600}
+.az-ep{font-size:11px;color:var(--dim);padding:6px 0;letter-spacing:.01em}
+.az-ep span{color:var(--ink2)}.az-ep b{color:var(--accent2)}
+.az-st{margin-top:13px;font-size:10.5px;letter-spacing:.04em;color:var(--dim2)}
+.az-st .ok{color:var(--gain)}
+.az-beam{flex:0 1 60px;height:2px;background:linear-gradient(90deg,transparent,var(--accent));opacity:0;transform:scaleX(0);transform-origin:left;transition:opacity .4s,transform .7s}
+.az-beam.b{background:linear-gradient(270deg,transparent,var(--accent2));transform-origin:right}
+.az-beam.on{opacity:.85;transform:scaleX(1)}
+.az-hub{position:relative;width:100px;height:100px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2}
+.az-hub-ring{position:absolute;inset:16px;border:1px dashed var(--border2);border-radius:50%;animation:hspin 8s linear infinite}
+.az-hub.live .az-hub-ring{border-color:var(--accent-dim)}
+@keyframes hspin{100%{transform:rotate(360deg)}}
+.az-hub-core{width:36px;height:36px;border-radius:50%;background:var(--panel);border:2px solid var(--border2);transition:.5s}
+.az-hub.live .az-hub-core{border-color:var(--accent);box-shadow:0 0 0 5px var(--accent-soft),0 0 28px -4px var(--accent-glow)}
+.az-hub-l{font-size:7.5px;letter-spacing:.16em;color:var(--dim2);margin-top:9px}
+/* scene 2 · parse */
+.az-parse{display:flex;gap:26px;width:100%;max-width:840px;align-items:flex-start}
+.az-matrix{flex:1.2;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.az-mh,.az-mrow{display:grid;grid-template-columns:1.1fr .8fr 1fr;font-size:11px}
+.az-mh{background:var(--panel);border-bottom:1px solid var(--border2)}
+.az-mh span{padding:9px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
+.az-mrow{opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s,background .4s}
+.az-mrow.in{opacity:1;transform:none}
+.az-mrow span{padding:8px 12px;color:var(--ink2);border-bottom:1px solid var(--border)}
+.az-mrow .badc{color:var(--loss)}
+.az-mrow{position:relative}
+.az-mrow.quarr{background:var(--loss-soft)}.az-mrow.quarr span{color:var(--loss);text-decoration:line-through}
+.qtag{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:7.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--on-accent);background:var(--loss);border-radius:20px;padding:2px 7px;text-decoration:none!important;white-space:nowrap}
+.az-side{flex:1;display:flex;flex-direction:column;gap:7px}
+.az-sh{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent2);margin-top:6px}
+.az-mapr,.az-normr{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink2);opacity:0;transform:translateX(8px);transition:.35s}
+.az-mapr.in,.az-normr.in{opacity:1;transform:none}
+.az-mapr b{color:var(--ink);font-weight:600}.az-mapr span{color:var(--dim2)}
+.az-normr .ck{color:var(--gain);font-size:11px}
+.az-opt{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.optt{font-size:9px;letter-spacing:.03em;color:var(--accent2);border:1px solid var(--accent-dim);background:var(--accent-soft);border-radius:20px;padding:3px 9px;opacity:0;transform:scale(.9);transition:.3s}
+.optt.in{opacity:1;transform:none}
+.opt-note{width:100%;font-size:9.5px;color:var(--dim2);margin-top:3px}
+/* scene 4 · reconcile */
+.az-rec{width:100%;max-width:760px;text-align:center}
+.az-rec-h{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent2);margin-bottom:16px}
+.az-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:28px}
+.az-fchip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);border:1px solid var(--border2);background:var(--panel2);border-radius:20px;padding:6px 13px;opacity:0;transform:translateY(8px);transition:.3s}
+.az-fchip.in{opacity:1;transform:none}
+.az-fchip .ck{color:var(--gain);font-size:11px}
+.az-tl-h{font-size:8px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim2);margin-bottom:10px}
+.az-tl-bar{position:relative;height:8px;border:1px solid var(--border2);border-radius:20px;background:var(--panel2);margin:0 auto 8px;max-width:520px;overflow:hidden}
+.az-tl-bar i{position:absolute;inset:0;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:20px;transition:width 1.1s ease}
+.az-tl-bar i.on{width:100%}
+.az-tl-dates{display:flex;justify-content:space-between;max-width:520px;margin:0 auto;font-size:9px;color:var(--dim2)}
+.az-tl-n{font-size:11px;color:var(--ink2);margin-top:18px}.az-tl-n b{color:var(--accent2);font-weight:600}
+/* scene 5 · ready */
+.az-ready{text-align:center}
+.az-ready-big{font-size:34px;font-weight:700;letter-spacing:.06em;color:var(--accent2);text-shadow:0 0 30px var(--accent-glow)}
+.az-ready-sub{font-size:12px;color:var(--ink2);margin-top:12px;letter-spacing:.03em}
+.az-ready-line{width:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:20px auto 0;animation:azline 1s ease forwards}
+@keyframes azline{to{width:300px}}
 .fd-terms{display:flex;flex-wrap:wrap;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin:14px 0}
 .fd-terms span{flex:1 1 33%;min-width:90px;background:var(--panel2);padding:9px 11px;display:flex;flex-direction:column;gap:3px}
 .fd-terms i{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2);font-style:normal}
@@ -616,7 +679,7 @@ function buildField(){
     var glass=el('div','glass');
     var halo=el('div','halo');
     var lock=el('div','lock');['a','b','c','d'].forEach(function(k){lock.appendChild(el('i',k))});
-    var stamp=el('div','stamp');var st=el('div','st');st.textContent='excluded';var sr=el('div','sr');var brk=el('div','brk');stamp.appendChild(st);stamp.appendChild(sr);stamp.appendChild(brk);
+    var stamp=el('div','stamp');var st=el('div','st');st.textContent='excluded';var stags=el('div','stags');var sr=el('div','sr');stamp.appendChild(st);stamp.appendChild(stags);stamp.appendChild(sr);
     var crown=el('div','crown');crown.appendChild(document.createTextNode('leader'));
     var rtag=el('div','rtag');
     var dot=el('div','dot');
@@ -645,7 +708,6 @@ function buildIntro(){
       w.appendChild(r);var bar=$('.wb i',r);
       setTimeout(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
   var bp=$('#ip-bench');if(bp){if(A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>index</div></div>";}else{bp.innerHTML="<div class='ipb'><div class='bt'><div class='bm'>no benchmark</div></div></div>";}}
-  buildDataReadiness();
   updateTally();
 }
 function buildDataReadiness(){var dp=$('#ip-data');if(!dp)return;var r=A.readiness||{};var b=A.bench;
@@ -930,44 +992,105 @@ function typeVerdict(){var e=$('#vtext');var t=A.verdict;var i=0;clearInterval(v
 
 var NUM=['','one','two','three','four','five','six','seven','eight','nine','ten'];
 function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
-function azStat(az,txt){var s=$('.azstat',az);if(!s){s=el('div','azstat');az.appendChild(s)}s.innerHTML=txt;s.classList.add('on')}
+// ── Act 0 · a full-canvas HUD data-acquisition sequence ──
+async function typeInto(elm,txt,step){if(!elm)return;elm.textContent='';for(var i=0;i<txt.length;i++){if(aborted)return;elm.textContent+=txt[i];if(i%2===0)await wait(step||14)}}
 async function actZero(){
-  var rd=A.readiness||{};var stg=$('#field');if(!stg)return;
+  var rd=A.readiness||{},b=A.bench||{},stg=$('#field');if(!stg)return;
   var old=$('#az');if(old)old.remove();
   var az=el('div');az.id='az';stg.appendChild(az);
-  [['ingest','13%'],['clean','46%'],['reconcile','75%']].forEach(function(s){var l=el('div','azst');l.style.left=s[1];l.textContent=s[0];az.appendChild(l)});
-  var cl=el('div','azline');cl.style.left='46%';az.appendChild(cl);
-  var rl=el('div','azline r');rl.style.left='75%';az.appendChild(rl);
-  chapter('00 · Data','Ingesting the universe','clean · reconcile · benchmark');
-  az.classList.add('on');await wait(480);if(aborted)return;
-  $$('.azst',az).forEach(function(l,i){setTimeout(function(){l.classList.add('on')},i*160)});
-  var tickers=A.funds.map(function(d){return d.id});
-  var N=16,qn=Math.min(rd.quarantined_count||3,4),lanes=6,packets=[];
-  azStat(az,"<b>reading</b> data/samples/returns.csv");
-  for(var i=0;i<N;i++){if(aborted)return;
-    var p=el('div','azp');p.style.top=(15+(i%lanes)*11)+'%';
-    var isQ=(i<qn);p.dataset.q=isQ?'1':'';
-    p.innerHTML="<span class='azdot'></span>"+(isQ?("row "+(i+1)+" · bad date"):(tickers[i%tickers.length]||('row '+(i+1))));
-    az.appendChild(p);p.style.left='-9%';packets.push(p);
-    (function(pp){setTimeout(function(){pp.classList.add('in');pp.style.left='42%'},20)})(p);
-    await wait(140);
-  }
-  await wait(650);if(aborted)return;
-  packets.forEach(function(p){if(p.dataset.q)p.classList.add('quar')});
-  azStat(az,"<b>cleaning</b> · "+qn+" row"+(qn===1?'':'s')+" quarantined <span class='azx'>bad date</span>");
-  await wait(1050);if(aborted)return;
-  packets.forEach(function(p){if(p.dataset.q)p.classList.add('drop')});
-  await wait(680);if(aborted)return;
-  packets.forEach(function(p){if(!p.dataset.q){p.style.left='71%';p.classList.add('landed')}});
-  var ov=rd.overlap||{};
-  azStat(az,"<b>reconciling</b> · "+(rd.universe_count||9)+" funds · "+(rd.with_returns||9)+" with returns · "+((ov.start||'')+' → '+(ov.end||'')));
-  await wait(1450);if(aborted)return;
-  var b=A.bench||{};var bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
-  var beam=el('div','azbeam');az.appendChild(beam);setTimeout(function(){beam.classList.add('on')},20);
-  var bench=el('div','azbench');bench.innerHTML="<span class='azbdot "+(b.kind||'snapshot')+"'></span>"+bk+" · "+((b.name||'benchmark').split(' ').slice(0,2).join(' '))+(b.asOf?" · "+b.asOf:"");
-  az.appendChild(bench);setTimeout(function(){bench.classList.add('on')},260);
-  azStat(az,"<b>benchmark</b> · fetched "+(b.name||'index')+" · risk-free "+(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'—')+" ("+(A.rfSource||'mandate')+")");
+  var ROWS=(rd.coverage||[]).reduce(function(s,c){return s+(c.n||0)},0)+(rd.quarantined_count||0);
+  var UNIV=rd.universe_count||A.funds.length,QN=rd.quarantined_count||0,WR=rd.with_returns||UNIV;
+  var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
+  az.innerHTML=
+    "<div class='hud-grid'></div><div class='hud-scan'></div>"
+   +"<div class='hud-top'><div class='hud-phase'><span class='hp-n'>00</span><span class='hp-l' id='hudphase'>DATA ACQUISITION</span></div>"
+   +"<div class='hud-id'><span class='hud-rec'></span>EQUI · DATA CORE</div></div>"
+   +"<div class='hud-stage' id='hudstage'></div>"
+   +"<div class='hud-bot'><div class='hud-prog' id='hudprog'></div><div class='hud-log' id='hudlog'></div></div>";
+  var prog=$('#hudprog',az),stage=$('#hudstage',az);
+  ['acquire','parse','validate','reconcile','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
+  function phase(n,label){var pe=$('#hudphase',az);if(pe)pe.textContent=label;var pn=$('.hp-n',az);if(pn)pn.textContent='0'+n;
+    $$('.hpseg',az).forEach(function(s){var i=+s.dataset.i;s.classList.toggle('done',i<n-1);s.classList.toggle('act',i===n-1)})}
+  function log(t){var L=$('#hudlog',az);if(L)L.innerHTML="<span class='hl-cur'>▸</span> "+t}
+  var ch=$('#chapter');if(ch)ch.innerHTML='';   // the HUD carries its own titles
+  az.classList.add('on');
+  await wait(560);if(aborted)return;
+
+  // ══ 1 · ACQUIRE — local files + FRED market-data API ══
+  phase(1,'ACQUIRE SOURCES');
+  stage.innerHTML=
+   "<div class='az-acq'>"
+   +"<div class='az-src' id='srcA'><div class='az-src-h'><span class='az-ic'>▤</span>LOCAL FILES</div>"
+     +"<div class='az-row'><span>funds.csv</span><b id='fa'>—</b></div><div class='az-row'><span>returns.csv</span><b id='fb'>—</b></div>"
+     +"<div class='az-st' id='stA'>connecting</div></div>"
+   +"<div class='az-beam a' id='beamA'></div>"
+   +"<div class='az-hub' id='hub'><div class='az-hub-ring'></div><div class='az-hub-core'></div><div class='az-hub-l'>PARSER</div></div>"
+   +"<div class='az-beam b' id='beamB'></div>"
+   +"<div class='az-src az-api' id='srcB'><div class='az-src-h'><span class='az-ic api'>◈</span>FRED · MARKET-DATA API<span class='az-badge "+(b.kind||'snapshot')+"'>"+bk+"</span></div>"
+     +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>SP500</b></span></div>"
+     +"<div class='az-ep'>GET <span>fredgraph.csv?id=<b>TB3MS</b></span></div>"
+     +"<div class='az-st' id='stB'>resolving host · stlouisfed.org</div></div>"
+   +"</div>";
+  await wait(360);$('#srcA',az).classList.add('in');log('mounting local dataset · data/samples/');await wait(520);if(aborted)return;
+  $('#fa',az).textContent=UNIV+' records';$('#fb',az).textContent=ROWS+' rows';$('#stA',az).innerHTML="<span class='ok'>●</span> loaded";
+  $('#beamA',az).classList.add('on');await wait(500);if(aborted)return;
+  $('#srcB',az).classList.add('in');log('opening https://fred.stlouisfed.org/graph/fredgraph.csv …');await wait(700);if(aborted)return;
+  $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · S&amp;P 500 · "+(b.n||36)+" monthly obs";$('#beamB',az).classList.add('on');
+  log((b.kind==='live'?'live fetch':'cached snapshot')+' · '+(b.name||'benchmark')+' · as-of '+(b.asOf||'—'));
+  await wait(1000);if(aborted)return;$('#hub',az).classList.add('live');await wait(700);if(aborted)return;
+
+  // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
+  phase(2,'PARSE · NORMALIZE');
+  var sample=[['2023-07-01','MAC','0.021'],['2023-07-01','EQ-LS','1.95%'],['2023-08-01','MAC','-0.004'],['2023-08-01','MN','0.7%'],['—','VEN','0.031'],['2023-09-01','CR','0,012']];
+  stage.innerHTML=
+   "<div class='az-parse'>"
+   +"<div class='az-matrix'><div class='az-mh'><span>date</span><span>fund_id</span><span>monthly_return</span></div><div class='az-mb' id='mtx'></div></div>"
+   +"<div class='az-side'>"
+     +"<div class='az-sh'>COLUMN MAP</div><div class='az-map' id='cmap'></div>"
+     +"<div class='az-sh'>NORMALIZE</div><div class='az-norm' id='cnorm'></div>"
+     +"<div class='az-sh'>OPTIONAL FIELDS</div><div class='az-opt' id='copt'></div>"
+   +"</div></div>";
+  var mtx=$('#mtx',az);log('streaming rows · detecting schema');
+  for(var r=0;r<sample.length;r++){if(aborted)return;var row=el('div','az-mrow');var bad=(sample[r][0]==='—'||sample[r][2].indexOf(',')>=0);
+    row.innerHTML="<span"+(bad?" class='badc'":"")+">"+sample[r][0]+"</span><span>"+sample[r][1]+"</span><span"+(bad?" class='badc'":"")+">"+sample[r][2]+"</span>";
+    mtx.appendChild(row);setTimeout(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
+  await wait(360);if(aborted)return;
+  var maps=[['date','→ period'],['fund_id','→ id'],['monthly_return','→ return']];var cm=$('#cmap',az);
+  for(var mi=0;mi<maps.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+maps[mi][0]+"</b><span>"+maps[mi][1]+"</span>";cm.appendChild(mr);setTimeout(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
+  var norms=['% → decimal','strip 1,000s','ISO-8601 dates','coerce n/a → null'];var cn=$('#cnorm',az);
+  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+norms[ni];cn.appendChild(nr);setTimeout(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
+  var opt=$('#copt',az);opt.innerHTML="<span class='optt'>redemption_freq</span><span class='optt'>lockup_months</span><span class='optt'>notice_days</span><span class='optt'>mgmt_fee</span><div class='opt-note'>→ liquidity + fee model</div>";
+  setTimeout(function(){$$('.optt',az).forEach(function(t,i){setTimeout(function(){t.classList.add('in')},i*120)})},20);
+  log('normalizing types · mapping optional liquidity & fee fields');
+  await wait(1500);if(aborted)return;
+
+  // ══ 3 · VALIDATE — quarantine bad rows ══
+  phase(3,'VALIDATE');
+  var qreason=(Object.keys(rd.quarantine_reasons||{'bad date':QN})[0]||'bad date');
+  var qi=0;var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
+  for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');
+    var qt=el('span','qtag');qt.textContent='⊘ '+qreason;qrows[vi].appendChild(qt);await wait(320)}
+  log('validating '+ROWS+' rows · '+(ROWS-QN)+' valid · '+QN+' quarantined ('+qreason+')');
   await wait(1700);if(aborted)return;
+
+  // ══ 4 · RECONCILE — match IDs + align the window ══
+  phase(4,'RECONCILE');
+  stage.innerHTML="<div class='az-rec'><div class='az-rec-h'>IDENTIFIER RECONCILIATION</div><div class='az-chips' id='rchips'></div>"
+   +"<div class='az-tl'><div class='az-tl-h'>SHARED WINDOW</div><div class='az-tl-bar'><i id='tlfill'></i></div>"
+   +"<div class='az-tl-dates'><span>"+(ov.start||'')+"</span><span>"+(ov.end||'')+"</span></div>"
+   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+WR+"/"+UNIV+" funds matched · 0 unmatched</div></div></div>";
+  var rc=$('#rchips',az);
+  for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);setTimeout(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
+  setTimeout(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);
+  log('reconciled '+WR+' identifiers · aligned '+(ov.start||'')+' → '+(ov.end||''));
+  await wait(1600);if(aborted)return;
+
+  // ══ 5 · READY ══
+  phase(5,'UNIVERSE READY');
+  stage.innerHTML="<div class='az-ready'><div class='az-ready-big'>UNIVERSE READY</div>"
+   +"<div class='az-ready-sub'>"+UNIV+" funds · benchmark bound ("+(b.name||'index')+") · risk-free "+(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'—')+"</div>"
+   +"<div class='az-ready-line'></div></div>";
+  log('handoff → screening');await wait(1250);if(aborted)return;
   az.classList.remove('on');await wait(560);
   var azl=$('#az');if(azl)azl.remove();
 }
@@ -989,16 +1112,18 @@ async function story(){
   await wait(1100);
   var gates=$$('.gate');var rj=rejects();
   for(var j=0;j<rj.length;j++){if(aborted)return;var ex=rj[j];var en=nodes[ex.id];
-    en.classList.add('focus');await wait(620);       // bring it forward
     var rs=(ex.reasons&&ex.reasons.length)?ex.reasons:[{text:ex.reason,kind:ex.rkind}];
-    for(var k=0;k<rs.length;k++){if(aborted)return;var rr=rs[k];
-      (function(rk){var match=function(el){var on=(el.dataset.k===rk);el.classList.toggle('act',on);el.classList.toggle('hot',on)};
-        gates.forEach(match);$$('#ip-gates .ipg').forEach(match);})(rr.kind); // light the matching limit
-      $('.sr',en).textContent=rr.text;               // readable reason for THIS breach
-      if(rs.length>1){var bd=$('.brk',en);if(bd)bd.textContent=(k+1)+'/'+rs.length+' limits breached';}
-      en.classList.add('reject');await wait(rs.length>1?1350:1950);
-    }
-    en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(760);
+    var kinds=rs.map(function(r){return r.kind});
+    en.classList.add('focus');await wait(560);       // bring it forward
+    // light EVERY limit this fund breaches — all at once, so it's unambiguous
+    var lit=function(el){var on=(kinds.indexOf(el.dataset.k)>=0);el.classList.toggle('act',on);el.classList.toggle('hot',on)};
+    gates.forEach(lit);$$('#ip-gates .ipg').forEach(lit);
+    // stamp: the breached limit tags + the readable reasons
+    var tg=$('.stags',en);if(tg)tg.innerHTML=rs.map(function(r){return "<span class='stag "+r.kind+"'>"+r.kind.toLowerCase()+"</span>"}).join('');
+    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" limits · "):"")+rs.map(function(r){return r.text}).join(' · ');
+    en.classList.add('reject');await wait(1150+rs.length*950);   // hold longer when more limits break
+    gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
+    en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(720);
   }
   gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
   document.body.classList.remove('screening');$('#gates').classList.remove('on');
@@ -1030,7 +1155,7 @@ function settle(){document.body.classList.add('settled');document.body.classList
 
 function reset(){aborted=true;paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');var azl=$('#az');if(azl)azl.remove();
   clearHalos();clearRtags();setLeaderNode(null);clearCue();_lastLive=null;
-  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent='';var bk=$('.stamp .brk',n);if(bk)bk.textContent=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
+  A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent='';var tg=$('.stamp .stags',n);if(tg)tg.innerHTML=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
   $('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');
   $('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('.rail').classList.remove('in');
@@ -1535,7 +1660,6 @@ def render_html(memo, ctx=None):
 
     side=('<div class="side">'
           '<div id="intropane"><div class="ip-h">The mandate</div><div class="ip-s">what advances · and how it\'s scored</div>'
-          '<div class="ip-lbl">Act 0 · Data readiness</div><div id="ip-data"></div>'
           '<div class="ip-lbl">Screen · hard limits</div><div id="ip-gates"></div>'
           '<div class="ip-lbl">Score · weighting</div><div id="ip-weights"></div>'
           '<div class="ip-lbl">Measured against</div><div id="ip-bench"></div>'
