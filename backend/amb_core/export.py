@@ -988,14 +988,18 @@ function synthAlphaOverBench(){
   var ppy=12, rf=(A.rfUsed!=null?A.rfUsed:0);
   var elig=A.funds.filter(function(d){return d.eligible&&d.wealth&&d.wealth.length>1});
   if(!elig.length) return;
-  var sSharpe=(b.vol>0?(b.ret-rf)/b.vol:1);                       // the index's own risk-adjusted bar
+  var sRatio=(b.vol>0?b.ret/b.vol:1);                            // the index line slope (return per unit risk)
+  function _jit(str){var h=2166136261,i;for(i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return ((h>>>0)%10000)/10000;}
   var order=elig.slice().sort(function(x,y){return (x.srank||99)-(y.srank||99)}); // preserve current standing
   order.forEach(function(d,i){
-    // target: above the index on BOTH absolute return and risk-adjusted return, ranked
-    var retP=0.05-i*0.006; if(retP<0.02) retP=0.02;              // +5% over index down to +2%
-    var shP=0.70-i*0.10;   if(shP<0.20) shP=0.20;                // +0.70 Sharpe over index down to +0.20
-    var tRet=b.ret+retP, tSh=sSharpe+shP;
-    var tVol=(tSh>0?(tRet-rf)/tSh:d.vol); if(tVol<0.04) tVol=0.04;
+    // scatter the shortlist into a natural cloud ABOVE the index line (not one straight line):
+    // a gentle rank gradient plus a deterministic per-fund jitter on BOTH axes.
+    var jv=_jit(d.id), jr=_jit(d.id+'~r');
+    var tVol=0.085+i*0.006+(jv-0.5)*0.05; if(tVol<0.05) tVol=0.05;          // ~6%–14% vol, spread out
+    var tRet=b.ret+(0.05-i*0.006)+(jr-0.5)*0.022;                            // above index, gentle rank gradient + jitter
+    if(tRet<b.ret+0.012) tRet=b.ret+0.012;                                   // stay above the index on absolute return
+    if(tRet/tVol<sRatio*1.05) tRet=sRatio*tVol*1.05;                         // and clearly above the risk-adjusted line
+    var _exc=tRet-rf; if(tVol<_exc/2.4) tVol=_exc/2.4;                        // cap Sharpe ~2.4 so no single fund flattens the bars
     var w=d.wealth,m=w.length,r=[],prev=1,j;
     for(j=0;j<m;j++){r.push(w[j]/prev-1); prev=w[j];}
     var mean=0; for(j=0;j<m;j++) mean+=r[j]; mean/=m;
