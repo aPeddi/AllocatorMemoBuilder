@@ -818,9 +818,11 @@ async function runWeigh(){
   var sl=survivors();var factors=weightFactors();var prevLead=null;
   for(var fi=0;fi<factors.length;fi++){ if(aborted)return;
     var k=factors[fi],idx=fi;
-    // beat 1 — spotlight the factor (panel ticker + legend); halos show per-metric strength
+    // beat 1 — spotlight the factor: promote it to the big bottom-left title so it's prominent
     factorCue(k,idx);nodeRespond(k);
-    var _cs=$('#chapter .s');if(_cs){var _dd=(A.dir&&A.dir[k]);var _da=(_dd>0?' ↑':_dd<0?' ↓':'');_cs.innerHTML="weighing <b style='color:"+factorColor(k)+"'>"+k.replace(/_/g,' ')+_da+"</b> · "+Math.round(A.weights[k]*100)+"% of the score";}
+    var _ct=$('#chapter .t'),_cs=$('#chapter .s'),_mn=k.replace(/_/g,' ').replace(/\b\w/g,function(ch){return ch.toUpperCase()});
+    if(_ct)_ct.innerHTML="Weighing <span style='color:"+factorColor(k)+"'>"+_mn+"</span>";
+    if(_cs){var _dd=(A.dir&&A.dir[k]);_cs.innerHTML=Math.round(A.weights[k]*100)+"% of the score"+(_dd>0?" · higher is better":_dd<0?" · lower is better":"");}
     await wait(600); if(aborted)return;
     // beat 2 — fold it into the running score; re-rank; move the crown
     sl.forEach(function(d){addSeg(d,k,idx,true)});
@@ -838,7 +840,7 @@ async function runWeigh(){
     prevLead=leadId;
   }
   clearRtags();clearHalos();clearCue();
-  var _csf=$('#chapter .s');if(_csf)_csf.textContent='all six metrics weighed · final risk-adjusted score';
+  var _ctf=$('#chapter .t'),_csf=$('#chapter .s');if(_ctf)_ctf.textContent='Weighted score complete';if(_csf)_csf.textContent='all six metrics counted';
   await wait(420);
   $$('.wseg.pulse').forEach(function(s){s.classList.remove('pulse')});
   var win=survivors()[0];if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
