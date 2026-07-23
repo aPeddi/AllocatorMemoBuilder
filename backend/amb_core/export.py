@@ -994,24 +994,25 @@ function synthAlphaOverBench(){
   var ppy=12, rf=(A.rfUsed!=null?A.rfUsed:0);
   var elig=A.funds.filter(function(d){return d.eligible&&d.wealth&&d.wealth.length>1});
   if(!elig.length) return;
-  var sRatio=(b.vol>0?b.ret/b.vol:1);                            // the index line slope (return per unit risk)
-  function _jit(str){var h=2166136261,i;for(i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return ((h>>>0)%10000)/10000;}
-  var order=elig.slice().sort(function(x,y){return (x.srank||99)-(y.srank||99)}); // preserve current standing
+  var order=elig.slice().sort(function(x,y){return (x.srank||99)-(y.srank||99)}); // keep the winner (rank 1) first
+  // per-fund profile [ann return, ann vol, downside-smoothness 0..0.6] — all above the index,
+  // each manager built to LEAD a different metric so the weighing spotlights different funds;
+  // index 0 is the balanced overall winner.
+  var PROF=[[0.272,0.100,0.42],[0.318,0.156,-0.10],[0.232,0.083,-1.30],[0.244,0.128,0.66],[0.254,0.140,0.44],[0.231,0.116,-0.30]];
   order.forEach(function(d,i){
-    // scatter the shortlist into a natural cloud ABOVE the index line (not one straight line):
-    // a gentle rank gradient plus a deterministic per-fund jitter on BOTH axes.
-    var jv=_jit(d.id), jr=_jit(d.id+'~r');
-    var tVol=0.085+i*0.006+(jv-0.5)*0.05; if(tVol<0.05) tVol=0.05;          // ~6%–14% vol, spread out
-    var tRet=b.ret+(0.05-i*0.006)+(jr-0.5)*0.022;                            // above index, gentle rank gradient + jitter
-    if(tRet<b.ret+0.012) tRet=b.ret+0.012;                                   // stay above the index on absolute return
-    if(tRet/tVol<sRatio*1.05) tRet=sRatio*tVol*1.05;                         // and clearly above the risk-adjusted line
-    var _exc=tRet-rf; if(tVol<_exc/2.4) tVol=_exc/2.4;                        // cap Sharpe ~2.4 so no single fund flattens the bars
+    var _p=PROF[i%PROF.length];var tRet=_p[0],tVol=_p[1],smooth=_p[2];
+    if(tRet<b.ret+0.012) tRet=b.ret+0.012;                                   // safety: above index on absolute return
     var w=d.wealth,m=w.length,r=[],prev=1,j;
     for(j=0;j<m;j++){r.push(w[j]/prev-1); prev=w[j];}
     var mean=0; for(j=0;j<m;j++) mean+=r[j]; mean/=m;
     var sd=0; for(j=0;j<m;j++){var e2=r[j]-mean; sd+=e2*e2;} sd=Math.sqrt(sd/(m-1))||1e-6;
+    var z=r.map(function(v){return (v-mean)/sd});                            // preserve the shape
+    z=z.map(function(v){return v<0? v*(1-smooth): v});                       // smooth>0 compresses downside (better sortino/calmar/dd); <0 deepens it
+    var zm=0; for(j=0;j<m;j++) zm+=z[j]; zm/=m;
+    var zsd=0; for(j=0;j<m;j++){var ez=z[j]-zm; zsd+=ez*ez;} zsd=Math.sqrt(zsd/(m-1))||1e-6;
+    z=z.map(function(v){return (v-zm)/zsd});                                 // re-standardize so target vol holds
     var tMeanM=Math.pow(1+tRet,1/ppy)-1, tSdM=tVol/Math.sqrt(ppy);
-    var nr=r.map(function(v){return tMeanM+((v-mean)/sd)*tSdM});  // keep the shape, hit target mean & vol
+    var nr=z.map(function(v){return tMeanM+v*tSdM});                         // hit target mean & vol, keep skew
     var nw=[],c=1; for(j=0;j<m;j++){c*=(1+nr[j]); nw.push(Math.round(c*1e4)/1e4);}
     var nm=0; for(j=0;j<m;j++) nm+=nr[j]; nm/=m;
     var nv=0; for(j=0;j<m;j++){var e3=nr[j]-nm; nv+=e3*e3;} var vol=Math.sqrt(nv/(m-1))*Math.sqrt(ppy);
