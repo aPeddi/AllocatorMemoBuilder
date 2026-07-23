@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# launch — one command: build + serve + open the live app in your browser.
+# (Real market-data API call to FRED happens live in the page. Ctrl+C to stop.)
+exec "$(dirname "$0")/amb" launch "$@"
