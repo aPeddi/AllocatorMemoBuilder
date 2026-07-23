@@ -20,38 +20,38 @@ _CSS = r"""
 :root{
  --bg:#0D0F13;--panel:#141821;--panel2:#191E28;--border:#232A36;--border2:#2E3745;
  --ink:#D7DCE4;--ink2:#AEB6C2;--ink-hi:#FFFFFF;--dim:#788393;--dim2:#4A5464;--on-accent:#F6F9FB;
- --accent:#5E8CA8;--accent2:#84AEC8;--accent-dim:#39515F;
+ --accent:#4E9E77;--accent2:#7AC6A0;--accent-dim:#2C5240;
  --accent-warm:#B79363;--accent-warm2:#CDAD7C;
  --gain:#6E9E82;--loss:#C0736A;
  --g2:#98A1AE;--g3:#6E7889;--g4:#525C6B;
  --glass:rgba(13,15,19,.6);--glass2:rgba(13,15,19,.92);--tipbg:rgba(13,15,19,.97);
- --grid:rgba(35,42,54,.5);--atmo:rgba(94,140,168,.05);--sweet:rgba(94,140,168,.07);
- --accent-soft:rgba(94,140,168,.18);--accent-glow:rgba(94,140,168,.55);--accent-line:rgba(94,140,168,.5);
+ --grid:rgba(35,42,54,.5);--atmo:rgba(78,158,119,.05);--sweet:rgba(78,158,119,.07);
+ --accent-soft:rgba(78,158,119,.18);--accent-glow:rgba(78,158,119,.52);--accent-line:rgba(78,158,119,.5);
  --warm-line:rgba(183,147,99,.6);--warm-soft:rgba(183,147,99,.16);
  --loss-line:rgba(192,115,106,.55);--loss-soft:rgba(192,115,106,.08);--loss-bd:rgba(192,115,106,.4);--gain-bd:rgba(110,158,130,.4);
  --seg-div:rgba(13,15,19,.55);
- --seg-a:#39414D;--seg-b:#9BA5B2;--segw-a:#33505F;--segw-b:#9DC4DA;
+ --seg-a:#39414D;--seg-b:#9BA5B2;--segw-a:#2E5844;--segw-b:#8FD3B0;
  --traj1:#C2CAD4;--traj2:#98A1AE;--traj3:#6E7889;--traj4:#525C6B;
- --winface1:#2A3F4D;--winface2:#1A2A34;--shadow:rgba(0,0,0,.5);
+ --winface1:#284A39;--winface2:#193024;--shadow:rgba(0,0,0,.5);
  --glass-fill:rgba(24,29,39,.5);--glass-bd:rgba(255,255,255,.10);--glass-hi:rgba(255,255,255,.07);
  --sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
 }
 :root[data-theme=light]{
  --bg:#EAE7DF;--panel:#F6F4EF;--panel2:#FCFBF7;--border:#DBD6CB;--border2:#C8C2B4;
  --ink:#24272C;--ink2:#4B515A;--ink-hi:#16191E;--dim:#6E727A;--dim2:#A49E90;--on-accent:#F6F9FB;
- --accent:#4E82A0;--accent2:#2C5872;--accent-dim:#B7CDDA;
+ --accent:#3E8560;--accent2:#21402E;--accent-dim:#B6D4C2;
  --accent-warm:#8A6A34;--accent-warm2:#6F5326;
  --gain:#3E7A59;--loss:#AE5148;
  --g2:#8A93A0;--g3:#6E7889;--g4:#525C6B;
  --glass:rgba(246,244,239,.78);--glass2:rgba(255,255,255,.94);--tipbg:rgba(255,255,255,.97);
- --grid:rgba(90,86,74,.10);--atmo:rgba(78,130,160,.06);--sweet:rgba(78,130,160,.08);
- --accent-soft:rgba(78,130,160,.16);--accent-glow:rgba(78,130,160,.30);--accent-line:rgba(78,130,160,.55);
+ --grid:rgba(90,86,74,.10);--atmo:rgba(62,133,96,.06);--sweet:rgba(62,133,96,.08);
+ --accent-soft:rgba(62,133,96,.16);--accent-glow:rgba(62,133,96,.30);--accent-line:rgba(62,133,96,.55);
  --warm-line:rgba(138,106,52,.55);--warm-soft:rgba(138,106,52,.14);
  --loss-line:rgba(174,81,72,.5);--loss-soft:rgba(174,81,72,.08);--loss-bd:rgba(174,81,72,.4);--gain-bd:rgba(62,122,89,.4);
  --seg-div:rgba(255,255,255,.7);
- --seg-a:#C6CBD2;--seg-b:#59626E;--segw-a:#A8C6D8;--segw-b:#2C5872;
+ --seg-a:#C6CBD2;--seg-b:#59626E;--segw-a:#A6D6BE;--segw-b:#21402E;
  --traj1:#565E6A;--traj2:#7B828E;--traj3:#9BA1AB;--traj4:#BDC1C8;
- --winface1:#D3E2EC;--winface2:#B7D0DD;--shadow:rgba(70,64,52,.16);
+ --winface1:#D2ECDF;--winface2:#B4DDC7;--shadow:rgba(70,64,52,.16);
  --glass-fill:rgba(255,255,255,.5);--glass-bd:rgba(30,35,45,.12);--glass-hi:rgba(255,255,255,.75);
 }
 html{transition:background .4s ease}
@@ -88,20 +88,32 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--
 .hbtn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .hbtn-primary:hover{background:var(--accent2);border-color:var(--accent2);color:var(--on-accent);box-shadow:0 4px 14px -4px var(--accent-glow)}
 .hbtn.copied{border-color:var(--gain);color:var(--gain)}
+.hbtn-primary.copied,.hbtn.dl-busy{opacity:.7}
+.shieldbtn{position:relative;display:grid;place-items:center;width:34px;height:30px;border:1px solid var(--border2);border-radius:8px;background:var(--glass2);-webkit-backdrop-filter:blur(7px) saturate(1.2);backdrop-filter:blur(7px) saturate(1.2);cursor:pointer;transition:.2s;color:var(--accent2);margin-left:2px}
+.shieldbtn:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.shieldbtn svg{width:16px;height:17px;display:block}
+.shieldbtn .vdot{position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--gain);border:1.5px solid var(--panel)}
 #skip{color:var(--bg);background:var(--ink);border-color:var(--ink)}
 #skip:hover{background:var(--ink2);border-color:var(--ink2);color:var(--bg)}
 body.settled #skip{display:none}
 .vbadge{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--gain);border:1px solid var(--gain-bd);padding:5px 9px;display:inline-flex;align-items:center;gap:6px;text-transform:uppercase;border-radius:3px}
 .vbadge i{width:5px;height:5px;border-radius:50%;background:var(--gain)}
 .vbadge{cursor:pointer;transition:.2s}.vbadge:hover{border-color:var(--gain);box-shadow:0 0 0 3px var(--gain-bd)}
-/* audit drawer list */
-.av-list{margin-top:16px;border-top:1px solid var(--border)}
-.av-row{display:grid;grid-template-columns:18px 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--border)}
-.av-ck{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;background:var(--gain);color:var(--on-accent)}
-.av-row.bad .av-ck{background:var(--loss)}
-.av-t{font-size:12px;color:var(--ink2)}.av-t b{color:var(--ink);font-weight:600}
-.av-v{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-left:4px}
-.av-src{font-family:var(--mono);font-size:8px;letter-spacing:.04em;color:var(--dim2);text-transform:uppercase;white-space:nowrap}
+/* audit drawer — grouped verification list */
+.av-head{display:flex;align-items:center;gap:14px}
+.av-shield{width:46px;height:46px;flex:none;display:grid;place-items:center;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent-dim)}
+.av-shield svg{width:24px;height:26px}
+.av-group{margin-top:20px}
+.av-fund{display:flex;align-items:baseline;justify-content:space-between;font-weight:600;font-size:13.5px;color:var(--ink);padding-bottom:9px;border-bottom:1px solid var(--border2)}
+.av-fund .av-n{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
+.av-item{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)}
+.av-ck{width:18px;height:18px;flex:none;margin-top:1px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:700;background:var(--gain);color:var(--on-accent)}
+.av-item.bad .av-ck{background:var(--loss)}
+.av-body{flex:1;min-width:0}
+.av-line{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.av-met{font-family:var(--mono);font-size:11px;color:var(--ink2);text-transform:capitalize;letter-spacing:.01em}
+.av-val{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--accent2);white-space:nowrap}
+.av-src{font-family:var(--mono);font-size:8px;letter-spacing:.03em;color:var(--dim2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
 
 /* body grid */
 .mid{display:grid;grid-template-columns:1fr 380px;min-height:0}
@@ -384,9 +396,9 @@ body.scoring .stage::after{opacity:1}
  #printdoc{display:block!important;font-family:var(--sans);color:#20242b;max-width:180mm;margin:0 auto}
  .pd-top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #20242b;padding-bottom:12px}
  .pd-brand{display:flex;align-items:center;gap:9px}.pd-brand span{font-weight:700;letter-spacing:.16em;font-size:16px}
- .pd-logo{width:24px;height:24px;border:1.5px solid #20242b;border-radius:3px;position:relative}.pd-logo::after{content:"";position:absolute;inset:6px;border:1.5px solid #3E6E8C;border-radius:50%}
+ .pd-logo{width:24px;height:24px;border:1.5px solid #20242b;border-radius:3px;position:relative}.pd-logo::after{content:"";position:absolute;inset:6px;border:1.5px solid #3E8560;border-radius:50%}
  .pd-meta{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#6b7079;text-align:right;line-height:1.7}.pd-meta b{color:#20242b}
- .pd-verdict{font-size:20px;font-weight:600;letter-spacing:-.01em;margin:18px 0 4px;color:#20242b}.pd-verdict b{color:#2C5872}
+ .pd-verdict{font-size:20px;font-weight:600;letter-spacing:-.01em;margin:18px 0 4px;color:#20242b}.pd-verdict b{color:#21402E}
  .pd-hero{display:flex;gap:18px;align-items:stretch;margin:14px 0 6px}
  .pd-rec{flex:none;width:52mm;border:1px solid #d8d3c8;border-radius:9px;padding:14px 16px;background:#faf9f6}
  .pd-lbl{font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#8a6a34}
@@ -394,7 +406,7 @@ body.scoring .stage::after{opacity:1}
  .pd-kpis{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e6e1d7;border:1px solid #e6e1d7;border-radius:9px;overflow:hidden}
  .pd-kpi{background:#fff;padding:11px 12px;text-align:center}.pd-kpi b{display:block;font-family:var(--mono);font-size:16px;color:#20242b}.pd-kpi i{font-style:normal;font-family:var(--mono);font-size:7.5px;letter-spacing:.09em;text-transform:uppercase;color:#8a8f98;margin-top:5px;display:block}
  .pd-two{display:flex;gap:12px;margin:14px 0}.pd-card{flex:1;border:1px solid #e6e1d7;border-radius:9px;padding:12px 14px}
- .pd-sec{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#2C5872;margin:20px 0 9px;padding-bottom:6px;border-bottom:1px solid #e6e1d7}
+ .pd-sec{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#21402E;margin:20px 0 9px;padding-bottom:6px;border-bottom:1px solid #e6e1d7}
  .pd-card .pd-sec{margin-top:0}
  .pd-sec2{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:#8a8f98;margin:12px 0 5px}
  .pd-body{font-size:11px;line-height:1.55;color:#3a3f47}
@@ -403,8 +415,8 @@ body.scoring .stage::after{opacity:1}
  .pd-tbl th.nm,.pd-tbl th.st,.pd-tbl th.r{text-align:left}
  .pd-tbl td{padding:7px 7px;border-bottom:1px solid #efece5;text-align:right;font-family:var(--mono);color:#20242b}
  .pd-tbl td.nm{text-align:left;font-family:var(--sans);font-weight:600}.pd-tbl td.st{text-align:left;font-family:var(--mono);font-size:8.5px;text-transform:uppercase;color:#6b7079;letter-spacing:.04em}
- .pd-tbl td.r{text-align:left;color:#8a8f98}.pd-tbl td.sc{font-weight:600;color:#2C5872}
- .pd-tbl tr.win td{background:#f1f5f8}.pd-tbl tr.win td.nm{color:#2C5872}.pd-tbl tr.win td.r{color:#2C5872}
+ .pd-tbl td.r{text-align:left;color:#8a8f98}.pd-tbl td.sc{font-weight:600;color:#21402E}
+ .pd-tbl tr.win td{background:#eef6f0}.pd-tbl tr.win td.nm{color:#21402E}.pd-tbl tr.win td.r{color:#21402E}
  .pd-ex td.ex{text-align:left;font-family:var(--mono);font-size:9px;color:#ae5148}
  .pd-foot{margin-top:22px;padding-top:12px;border-top:1px solid #d8d3c8;font-family:var(--mono);font-size:8.5px;letter-spacing:.04em;color:#6b7079;line-height:1.6}.pd-ck{color:#3e7a59;font-weight:700;margin-right:5px}
 }
@@ -717,8 +729,12 @@ function wire(){
   document.addEventListener('click',function(e){var pop=$('#pop');if(pop&&pop.classList.contains('on')&&!e.target.closest('#pop')&&!e.target.closest('#dlBtn'))pop.classList.remove('on')});
 }
 function toast(html){var t=$('#toast');if(!t)return;t.innerHTML=html;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on')},2600)}
-function auditDrawer(){var A2=A.audit||[];var rows=A2.map(function(c){return "<div class='av-row"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-t'><b>"+c.fund+"</b> · "+c.metric+" <span class='av-v'>"+(c.value==null?'':c.value)+"</span></div><span class='av-src'>"+((c.sources||[]).join(', ')||'—')+"</span></div>"}).join('');
-  openDrawer("<div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+A.verified+" / "+A.total+" claims verified</div><div class='d-strat'>every figure re-checked against the deterministic metrics engine</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each numeric claim below was recomputed from the source return series and matched exactly — nothing reaches the page unverified.</p><div class='av-list'>"+rows+"</div>")}
+function auditDrawer(){var A2=A.audit||[];
+  var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
+  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+g.fund+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+c.metric+"</span><span class='av-val'>"+(c.value==null?'—':c.value)+"</span></div><div class='av-src' title=\""+src.replace(/"/g,'')+"\">"+src+"</div></div></div>"}).join('')+"</div>"}).join('');
+  if(!A2.length)body="<p class='d-p'>This view is running on re-uploaded data — metrics were recomputed live from your CSV, so the memo's original claim ledger isn't attached. Load the bundled sample to see the full audit trail.</p>";
+  var shield="<svg viewBox='0 0 24 24' fill='none'><path d='M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z' fill='var(--accent-soft)' stroke='var(--accent2)' stroke-width='1.3' stroke-linejoin='round'/><path d='M8.6 12.2l2.3 2.3 4.5-4.6' stroke='var(--accent2)' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+  openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+A.verified+" / "+A.total+" verified</div></div></div><div class='d-strat' style='margin-top:12px'>every figure re-checked against the deterministic metrics engine</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each numeric claim below was recomputed from the source return series and matched exactly — nothing reaches the page unverified.</p>"+body)}
 function openExportPop(anchor){var pop=$('#pop');if(!pop)return;var r=anchor.getBoundingClientRect();
   pop.innerHTML="<div class='pop-card'><div class='pop-hd'><b>Export memo</b><i>a clean, no-nonsense PDF of the recommendation</i></div>"
     +"<div class='pop-opt' data-a='pdf'><span class='pi'>⤓</span><div class='pt'><b>Download PDF</b><i>saves the memo straight to your device</i></div></div>"
@@ -730,7 +746,7 @@ function _pesc(s){return String(s).replace(/[—–]/g,'-').replace(/·/g,'|').r
 function _cw(s,sz,mono){return mono?String(s).length*sz*0.6:String(s).length*sz*0.5}
 function downloadPDF(){
   var W=595,H=842,M=46,IW=W-2*M,ns=[],y=H-M;
-  var CI='0.13 0.15 0.17',CD='0.42 0.44 0.47',CA='0.17 0.35 0.45',CW='0.54 0.42 0.20',CL='0.85 0.83 0.78',CF='0.965 0.955 0.94',CLo='0.68 0.32 0.28';
+  var CI='0.13 0.15 0.17',CD='0.42 0.44 0.47',CA='0.13 0.34 0.24',CW='0.54 0.42 0.20',CL='0.85 0.83 0.78',CF='0.965 0.955 0.94',CLo='0.68 0.32 0.28';
   function T(x,yy,s,sz,f,c){ns.push('BT /'+f+' '+sz+' Tf '+(c||CI)+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' Td ('+_pesc(s)+') Tj ET')}
   function TR(xr,yy,s,sz,f,c){T(xr-_cw(s,sz,f==='F3'),yy,s,sz,f,c)}
   function LN(x1,y1,x2,y2,c,w){ns.push((c||CL)+' RG '+(w||0.7).toFixed(2)+' w '+x1.toFixed(1)+' '+y1.toFixed(1)+' m '+x2.toFixed(1)+' '+y2.toFixed(1)+' l S')}
@@ -758,7 +774,7 @@ function downloadPDF(){
   sec('SHORTLIST - RANKED BY WEIGHTED RISK-ADJUSTED SCORE');
   var cols=[{x:M,a:'l',w:'#'},{x:M+22,a:'l',w:'FUND'}];var rx=[M+150];['RETURN','VOL','SHARPE','SORTINO','CALMAR','MAX DD','SCORE'].forEach(function(h,i){var xr=M+150+ (i+1)*((W-M-(M+150))/7);rx.push(xr)});
   T(M,y,'#',7.5,'F3',CD);T(M+22,y,'FUND',7.5,'F3',CD);['RETURN','VOL','SHARPE','SORTINO','CALMAR','MAX DD','SCORE'].forEach(function(h,i){TR(rx[i+1]-4,y,h,7.5,'F3',CD)});y-=6;LN(M,y,W-M,y,CL,0.7);y-=15;
-  shortlisted().forEach(function(d){if(d.rank==1){RE(M-2,y-4,IW+4,17,'0.94 0.965 0.98')}
+  shortlisted().forEach(function(d){if(d.rank==1){RE(M-2,y-4,IW+4,17,'0.93 0.965 0.94')}
     T(M,y,String(d.rank).padStart(2,'0'),9,'F3',d.rank==1?CA:CD);T(M+22,y,d.name,10,'F2',d.rank==1?CA:CI);
     var vals=[pct(d.ret),pct(d.vol),num(d.sharpe),num(d.sortino),num(d.calmar),pct(d.maxdd),(d.score>=0?'+':'')+d.score.toFixed(2)];
     vals.forEach(function(v,i){TR(rx[i+1]-4,y,v,9.5,'F3',i===6?CA:CI)});y-=18});
@@ -1059,9 +1075,11 @@ def render_html(memo, ctx=None):
             f'<button class="hbtn" id="upBtn" title="Load a fund-universe CSV (funds + returns) and re-run the analysis in place">load csv</button>'
             f'<input type="file" id="upInput" accept=".csv" multiple style="display:none">'
             f'<button class="hbtn" id="skip">skip intro ▸</button>'
-            f'<span class="vbadge" id="vbadge" role="button" tabindex="0" title="Click to see the audit trail — {a.get("verified_count",0)}/{a.get("claim_count",0)} claims re-checked against the metrics engine"><i></i>{a.get("verified_count",0)}/{a.get("claim_count",0)} verified</span>'
-            f'<button class="hbtn" id="shareBtn" title="Copy a shareable link to this memo">share</button>'
-            f'<button class="hbtn hbtn-primary" id="dlBtn" title="Save this memo as a PDF">download</button>'
+            f'<button class="hbtn" id="shareBtn" title="Share the recommendation summary">share</button>'
+            f'<button class="hbtn hbtn-primary" id="dlBtn" title="Download the memo as a PDF">download</button>'
+            f'<button class="shieldbtn" id="vbadge" role="button" tabindex="0" title="{a.get("verified_count",0)}/{a.get("claim_count",0)} claims verified against the metrics engine — click for the audit trail">'
+            f'<svg viewBox="0 0 24 24" fill="none"><path d="M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z" fill="var(--accent-soft)" stroke="var(--accent2)" stroke-width="1.4" stroke-linejoin="round"/><path d="M8.6 12.2l2.3 2.3 4.5-4.6" stroke="var(--accent2)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+            f'<i class="vdot"></i></button>'
             f'</div></div>')
 
     stage=('<div class="stage"><div id="field"><div id="fieldwash"></div><div class="sweetz"><span>sweet spot · high return / low risk</span></div>'
