@@ -56,7 +56,7 @@ def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
     if mode not in _ALLOWED_MODES:  # defence-in-depth: never trust an unexpected mode
         mode = "live"
     s = get_settings()
-    bench = resolve_benchmark("SP500", mode=mode, data_dir=data_dir)
+    bench = resolve_benchmark("SP500", mode=mode, data_dir=data_dir, api_key=s.fred_api_key)
     if bench is None:
         return {"ok": False, "error": "no benchmark source available"}
     # align to the fund window so the live curve overlays the fund curves
@@ -69,7 +69,7 @@ def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
         win = bench.points
     vals = [p.value for p in win]
     ret, vol, wealth = _annualize(vals)
-    rf = fetch_risk_free_annual() if bench.source_kind == "live" else None
+    rf = fetch_risk_free_annual(api_key=s.fred_api_key) if bench.source_kind == "live" else None
     return {
         "ok": True,
         "live": bench.source_kind == "live",

@@ -22,7 +22,6 @@ from typing import Optional
 import pandas as pd
 
 from .coercion import normalize_return, parse_date
-from .config import get_settings
 from .models import Benchmark, ReturnPoint
 
 log = logging.getLogger("amb.marketdata")
@@ -98,12 +97,13 @@ def _read_fred_api(series_id: str, api_key: str, timeout: float = 12.0) -> pd.Da
     return out
 
 
-def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
+def _read_fred(series_id: str, timeout: float = 12.0, api_key: str = "") -> pd.DataFrame:
     """Fetch a FRED series as a tidy (date, value) frame. Raises on failure.
 
-    Uses the keyed official API when a key is configured (proper integration,
-    full history), else the keyless fredgraph.csv endpoint."""
-    key = get_settings().fred_api_key.strip()
+    Uses the keyed official API when a key is supplied (proper integration, full
+    history), else the keyless fredgraph.csv endpoint. The key is passed in by the
+    caller (composition root) — never read from global config here."""
+    key = (api_key or "").strip()
     if key:
         return _read_fred_api(series_id, key, timeout)
     url = _FRED_URL.format(sid=series_id)
@@ -122,7 +122,7 @@ def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
     return out
 
 
-def fetch_risk_free_annual(timeout: float = 12.0) -> Optional[float]:
+def fetch_risk_free_annual(timeout: float = 12.0, api_key: str = "") -> Optional[float]:
     """Latest 3M T-bill rate as an annual decimal (0.0366 for 3.66%).
 
     Returns None (caller falls back to the mandate default) only for *expected*
@@ -130,7 +130,7 @@ def fetch_risk_free_annual(timeout: float = 12.0) -> Optional[float]:
     swallowed as a valid "no data" fallback.
     """
     try:
-        df = _read_fred(_FRED_RISK_FREE, timeout)
+        df = _read_fred(_FRED_RISK_FREE, timeout, api_key)
         return round(float(df["value"].iloc[-1]) / 100.0, 6)
     except (RuntimeError, ValueError, KeyError, IndexError, OSError, pd.errors.ParserError) as e:
         log.warning("risk-free fetch failed, using mandate default: %s", e)
@@ -146,13 +146,13 @@ def _index_to_monthly_returns(df: pd.DataFrame) -> list[ReturnPoint]:
     return pts
 
 
-def fetch_benchmark(benchmark_id: str, timeout: float = 12.0) -> Benchmark:
+def fetch_benchmark(benchmark_id: str, timeout: float = 12.0, api_key: str = "") -> Benchmark:
     """Live benchmark from FRED. Raises if the id is unknown or the fetch fails."""
     key = benchmark_id.upper()
     if key not in _FRED_INDEX:
         raise ValueError(f"no live FRED mapping for benchmark '{benchmark_id}'")
     sid, name = _FRED_INDEX[key]
-    df = _read_fred(sid, timeout)
+    df = _read_fred(sid, timeout, api_key)
     pts = _index_to_monthly_returns(df)
     if len(pts) < 2:
         raise ValueError(f"benchmark {benchmark_id} produced too few monthly returns")
@@ -230,11 +230,13 @@ def resolve_benchmark(
     benchmark_id: str = "SP500",
     mode: str = "snapshot",
     data_dir: str | Path = "data",
+    api_key: str = "",
 ) -> Optional[Benchmark]:
     """The single entry point pipeline uses. `mode` is one of:
       snapshot  — committed fixture only (deterministic; default for tests)
       live/auto — try FRED, then cache, then snapshot (graceful degradation)
-    Returns None only if every source is missing.
+    Returns None only if every source is missing. `api_key` (the FRED key) is
+    supplied by the caller — this module never reads global config.
     """
     data_dir = Path(data_dir)
     snap_dir = data_dir / "benchmarks"
@@ -242,7 +244,7 @@ def resolve_benchmark(
 
     if mode in ("live", "auto"):
         try:
-            bench = fetch_benchmark(benchmark_id)
+            bench = fetch_benchmark(benchmark_id, api_key=api_key)
             _write_cache(bench, cache_dir)
             print(f"✓ live benchmark: {bench.name} via FRED · {len(bench.points)} monthly obs · as-of {bench.as_of}", file=sys.stderr)
             return bench

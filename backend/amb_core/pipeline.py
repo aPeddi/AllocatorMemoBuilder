@@ -11,7 +11,7 @@ from typing import Optional
 
 import yaml
 
-from .config import get_settings
+from .config import Settings, get_settings
 from .ingest import load_funds, load_returns
 from .marketdata import fetch_risk_free_annual, resolve_benchmark
 from .memo import ClaimsProvider, generate, template_claims_provider
@@ -33,18 +33,23 @@ def run(
     claims_provider: Optional[ClaimsProvider] = None,
     data_dir: str | Path = "data",
     benchmark_mode: Optional[str] = None,
+    settings: Optional[Settings] = None,
 ) -> tuple[Memo, AnalysisContext]:
+    # composition root: read config ONCE here and inject the values downstream,
+    # rather than have deep modules reach into a global settings singleton.
+    settings = settings or get_settings()
     funds = load_funds(funds_csv)
     series, quarantined = load_returns(returns_csv)
 
-    mode = benchmark_mode or get_settings().benchmark_mode
-    benchmark = resolve_benchmark(mandate.benchmark_id, mode=mode, data_dir=data_dir)
+    mode = benchmark_mode or settings.benchmark_mode
+    fred_key = settings.fred_api_key
+    benchmark = resolve_benchmark(mandate.benchmark_id, mode=mode, data_dir=data_dir, api_key=fred_key)
 
     # risk-free: mandate default, overridden by a live pull only in live/auto mode
     rf_used = mandate.risk_free_annual
     rf_source = "mandate"
     if mode in ("live", "auto"):
-        live_rf = fetch_risk_free_annual()
+        live_rf = fetch_risk_free_annual(api_key=fred_key)
         if live_rf is not None:
             rf_used, rf_source = live_rf, "FRED · 3M T-bill"
 
