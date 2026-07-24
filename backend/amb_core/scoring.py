@@ -38,13 +38,14 @@ DEFAULT_WEIGHTS = {
 }
 
 
-def _resolve(fund: Fund, metrics: dict[str, Optional[float]], field: str):
+def resolve_field(fund: Fund, metrics: dict[str, Optional[float]], field: str):
+    """A constraint field names either a Fund attribute or a metric — resolve it."""
     if hasattr(fund, field):
         return getattr(fund, field)
     return metrics.get(field)
 
 
-def _test(val, op: str, target) -> bool:
+def test_constraint(val, op: str, target) -> bool:
     if val is None:
         return op in {"!=", "not_in"}  # unknown fails positive constraints
     try:
@@ -69,13 +70,59 @@ def _test(val, op: str, target) -> bool:
     return False
 
 
+# backwards-compatible private aliases (kept so nothing importing the old names breaks)
+_resolve = resolve_field
+_test = test_constraint
+
+
+def resolve_weights(mandate: Optional[Mandate]) -> dict[str, float]:
+    """The scoring weights actually in force — the mandate's, else the house default."""
+    return (mandate.weights if (mandate and mandate.weights) else DEFAULT_WEIGHTS)
+
+
+def eligible_stats(
+    eligible_ids, metrics_by_fund: dict[str, dict], weights: dict[str, float]
+) -> dict[str, tuple[float, float]]:
+    """Per-metric (mean, population-stdev) across the eligible set — the z-score basis.
+
+    This is the ONE definition of the scoring basis; both build_shortlist (ranking)
+    and the exporter (the on-screen weighing bars) read it, so the bar a fund shows
+    is provably the score it was ranked on.
+    """
+    stats: dict[str, tuple[float, float]] = {}
+    for k in weights:
+        present = [metrics_by_fund[fid].get(k) for fid in eligible_ids
+                   if metrics_by_fund.get(fid, {}).get(k) is not None]
+        if len(present) >= 2:
+            stats[k] = (statistics.fmean(present), statistics.pstdev(present))
+    return stats
+
+
+def score_components(
+    fid: str, metrics_by_fund: dict[str, dict], weights: dict[str, float],
+    stats: dict[str, tuple[float, float]], round_to: int = 3,
+) -> list[dict]:
+    """Signed, weighted z contribution of each metric to a fund's score."""
+    out = []
+    m = metrics_by_fund.get(fid, {})
+    for k, w in weights.items():
+        v = m.get(k)
+        if v is None or k not in stats:
+            continue
+        mu, sd = stats[k]
+        if sd == 0:
+            continue
+        out.append({"k": k, "c": round(w * ((v - mu) / sd) * DIRECTION.get(k, 0), round_to)})
+    return out
+
+
 def apply_constraints(
     funds: list[Fund], metrics_by_fund: dict[str, dict], mandate: Mandate
 ) -> list[str]:
     eligible = []
     for f in funds:
         m = metrics_by_fund.get(f.fund_id, {})
-        if all(_test(_resolve(f, m, c.field), c.op, c.value) for c in mandate.constraints):
+        if all(test_constraint(resolve_field(f, m, c.field), c.op, c.value) for c in mandate.constraints):
             eligible.append(f.fund_id)
     return eligible
 
@@ -85,18 +132,10 @@ def build_shortlist(
 ) -> list[ShortlistEntry]:
     by_id = {f.fund_id: f for f in funds}
     eligible = apply_constraints(funds, metrics_by_fund, mandate)
-    weights = mandate.weights or DEFAULT_WEIGHTS
+    weights = resolve_weights(mandate)
+    stats = eligible_stats(eligible, metrics_by_fund, weights)
 
-    # per-metric mean/stdev across the eligible universe
-    stats: dict[str, tuple[float, float]] = {}
-    for k in weights:
-        vals = [metrics_by_fund[fid].get(k) for fid in eligible]
-        present = [v for v in vals if v is not None]
-        if len(present) >= 2:
-            mu = statistics.fmean(present)
-            sd = statistics.pstdev(present)
-            stats[k] = (mu, sd)
-
+    # ranking score: sum of the *unrounded* weighted-z contributions
     scores: dict[str, float] = {}
     for fid in eligible:
         s = 0.0
@@ -107,8 +146,7 @@ def build_shortlist(
             mu, sd = stats[k]
             if sd == 0:
                 continue
-            z = (v - mu) / sd
-            s += w * z * DIRECTION.get(k, 0)
+            s += w * ((v - mu) / sd) * DIRECTION.get(k, 0)
         scores[fid] = s
 
     ranked = sorted(eligible, key=lambda fid: scores.get(fid, 0.0), reverse=True)
@@ -126,6 +164,7 @@ def build_shortlist(
                 strategy=f.strategy,
                 score=round(scores.get(fid, 0.0), 4),
                 metrics={k: m.get(k) for k in ["ann_return", "sharpe", "sortino", "calmar", "max_drawdown", "ann_vol"]},
+                components=score_components(fid, metrics_by_fund, weights, stats),
             )
         )
     return shortlist

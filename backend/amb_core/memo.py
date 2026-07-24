@@ -211,8 +211,9 @@ def generate(ctx: AnalysisContext, claims_provider: ClaimsProvider) -> Memo:
         sections=sections,
         shortlist=ctx.shortlist,
     )
-    memo.audit = build_audit_map(memo)
-    return memo
+    # Memo is frozen; derive the audit map and return a fully-formed copy rather
+    # than mutating after construction.
+    return memo.model_copy(update={"audit": build_audit_map(memo)})
 
 
 def template_claims_provider(ctx: AnalysisContext) -> dict:

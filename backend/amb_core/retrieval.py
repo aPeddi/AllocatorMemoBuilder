@@ -13,6 +13,7 @@ from .models import Benchmark, Fund, Mandate, MetricResult, ShortlistEntry
 class AnalysisContext:
     def __init__(
         self,
+        *,  # keyword-only: a 12-field context is too easy to mis-order positionally
         funds: list[Fund],
         benchmark: Optional[Benchmark],
         metrics_by_fund: dict[str, dict[str, Optional[float]]],
