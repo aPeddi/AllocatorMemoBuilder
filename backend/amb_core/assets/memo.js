@@ -28,6 +28,11 @@ function rejects(){return A.funds.filter(function(d){return d.reason})} // faile
 function survivors(){return contenders()} // scoring scene operates on the eligible set
 function byId(id){return A.funds.filter(function(d){return d.id==id})[0]}
 function weightFactors(){return Object.keys(A.weights).sort(function(a,b){return A.weights[b]-A.weights[a]})}
+// large-universe threshold: at or below this the view is byte-identical to the sample; above it the
+// scatter scales its marks down, thins always-on labels (hover still shows every fund) and the weighing
+// list scrolls. 12 keeps the bundled 9-fund sample fully unaffected.
+var NBIG=12;
+function bigN(){return A.funds.length>NBIG}
 function hx(n){n=Math.max(0,Math.min(255,Math.round(n)));return ('0'+n.toString(16)).slice(-2)}
 function mix(a,b,t){function p(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}var P=p(a),Q=p(b);return '#'+hx(P[0]+(Q[0]-P[0])*t)+hx(P[1]+(Q[1]-P[1])*t)+hx(P[2]+(Q[2]-P[2])*t)}
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888888'}
@@ -49,11 +54,17 @@ function layoutRows(){var sb=$('#scorebars');if(!sb)return;var n=survivors().len
   Object.keys(rows).forEach(function(id){var tr=$('.wtrack',rows[id]);if(tr)tr.style.height=th+'px'});
   var order=survivors().slice().sort(function(a,b){return (segState[b.id]?segState[b.id].cum:b.score)-(segState[a.id]?segState[a.id].cum:a.score)});
   order.forEach(function(d,rk){if(rows[d.id])rows[d.id].style.top=(rk*ROWH)+'px'});
-  var cl=$('.wcut',sb);if(cl)cl.style.top=(A.nShort*ROWH-2)+'px';}
+  var cl=$('.wcut',sb);if(cl)cl.style.top=(A.nShort*ROWH-2)+'px';
+  var tk=$('#scoretrack',sb);if(tk)tk.style.height=(n*ROWH)+'px';}
 
 function stratShort(s){return (s||'').replace(/\b(Strategy|Fund|Global|Structured)\b/g,'').replace(/\s+/g,' ').trim()||s}
 function buildField(){
   var f=$('#field');
+  // auto-scale the mark size to the universe count so a large upload stays legible (SOTA scatter practice).
+  // <=NBIG keeps --dscale at 1 → the sample is untouched; above it, dots shrink on a gentle clamped ramp.
+  var N=A.funds.length;
+  var dscale=N<=NBIG?1:Math.max(0.55,1-(N-NBIG)*0.018);
+  f.style.setProperty('--dscale',dscale.toFixed(3));
   A.funds.forEach(function(d,i){
     var n=el('div','node cand');
     n.dataset.fid=d.id;n.__d=d;n.__i=i;
@@ -111,10 +122,16 @@ function buildDataReadiness(){var dp=$('#ip-data');if(!dp)return;var r=A.readine
 }
 function updateTally(){var t=$('#ip-tally');if(!t)return;var gone=A.funds.filter(function(d){return nodes[d.id].classList.contains('gone')}).length;var uni=A.funds.length;var rem=uni-gone;
   t.innerHTML="<div class='tc'><b>"+uni+"</b><i>universe</i></div><div class='tc red'><b>"+gone+"</b><i>excluded</i></div><div class='tc hot'><b>"+rem+"</b><i>advancing</i></div>";}
-function universePos(i){var cols=3;var r=Math.floor(i/cols),c=i%cols;
-  var L=[26,50,74][c],B=[77,50,23][r];
-  var jx=(((i*37)%7)-3)*1.5,jy=(((i*29)%7)-3)*1.3;
-  return {x:L+jx,y:B+jy};}
+function universePos(i){var N=A.funds.length;
+  if(N<=9){var cols=3;var r=Math.floor(i/cols),c=i%cols;   // sample layout — unchanged three-row band
+    var L=[26,50,74][c],B=[77,50,23][r];
+    var jx=(((i*37)%7)-3)*1.5,jy=(((i*29)%7)-3)*1.3;
+    return {x:L+jx,y:B+jy};}
+  // large universe: even ceil(sqrt) grid spread across the field so nothing stacks off-canvas
+  var cols=Math.ceil(Math.sqrt(N)),rowsN=Math.ceil(N/cols),r=Math.floor(i/cols),c=i%cols;
+  var x=16+(cols>1?c/(cols-1):0.5)*68,y=84-(rowsN>1?r/(rowsN-1):0.5)*70;
+  var jx=(((i*37)%5)-2)*1.1,jy=(((i*29)%5)-2)*1.0;
+  return {x:x+jx,y:y+jy};}
 function frontier(){buildGuides();
   A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible){n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}});}
 function chapter(numv,ttl,sub){var c=$('#chapter');var old=$('.c',c);
@@ -123,16 +140,18 @@ function chapter(numv,ttl,sub){var c=$('#chapter');var old=$('.c',c);
 
 function buildWeigh(){
   var host=$('#scorebars');host.innerHTML='';rows={};segState={};computeScale();buildLegend();
+  var track=el('div');track.id='scoretrack';host.appendChild(track);
   var sl=survivors();
   ROWH=Math.max(26,Math.min(58,Math.floor(((host.clientHeight||190)-6)/(sl.length||1))));
   var th=Math.max(16,Math.min(30,ROWH-12));
   sl.forEach(function(d,i){
     var row=el('div','wrow'+(d.rank==1?' win':'')+(i===0?' rk1':''));row.style.top=(i*ROWH)+'px';
     row.innerHTML="<div class='wrk'>"+(i+1)+"</div><div class='wn'>"+first(d.name)+"</div><div class='wtrack' style='height:"+th+"px'><div class='wzero' style='left:"+ZERO+"%'></div></div><div class='wsc'>0.00</div>";
-    host.appendChild(row);rows[d.id]=row;segState[d.id]={pos:ZERO,neg:ZERO,cum:0};
+    track.appendChild(row);rows[d.id]=row;segState[d.id]={pos:ZERO,neg:ZERO,cum:0};
     setTimeout(function(){row.classList.add('in')},70*i);
   });
-  if(A.nShort&&sl.length>A.nShort){var cl=el('div','wcut');cl.style.top=(A.nShort*ROWH-2)+'px';cl.innerHTML="<span>cut line · top "+A.nShort+" advance</span>";host.appendChild(cl);}
+  if(A.nShort&&sl.length>A.nShort){var cl=el('div','wcut');cl.style.top=(A.nShort*ROWH-2)+'px';cl.innerHTML="<span>cut line · top "+A.nShort+" advance</span>";track.appendChild(cl);}
+  track.style.height=(sl.length*ROWH)+'px';   // full list height; #scorebars scrolls only when this exceeds the viewport
 }
 function setRanks(order){order.forEach(function(d,rk){var r=rows[d.id];if(!r)return;r.style.top=(rk*ROWH)+'px';var b=$('.wrk',r);if(b)b.textContent=(rk+1);r.classList.toggle('rk1',rk===0)})}
 function addSeg(d,k,idx,animate){
@@ -259,6 +278,7 @@ function paintSettledGraph(){var sl=shortlisted();var win=sl[0];
       if(win&&d.id==win.id){n.classList.add('focus','win','locked');n.classList.remove('dimmed');if(crn)crn.lastChild.textContent='recommended'}
       else{n.classList.add('dimmed');n.classList.remove('win','locked');if(crn)crn.lastChild.textContent='leader'}}});
   if(win)setLeaderNode(win.id);
+  if(bigN())A.funds.forEach(function(d){var n=nodes[d.id];if(n)n.classList.toggle('labeled',d.rank!=null)});   // keep always-on labels to the shortlist at scale
   var rc=$('.rail .chips');if(rc){rc.innerHTML=sl.map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+s.id+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+s.name+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
   redrawTraj();
   if(win){A.verdict=win.name+" leads on risk-adjusted return.";A.verdictHtml="<b>"+win.name+"</b> leads on risk-adjusted return.";
@@ -589,12 +609,15 @@ async function story(){
   var total=A.funds.length;
   await actZero();if(aborted)return;
   // ── ACT 1 · Universe — show every candidate, big and legible ──
-  chapter('01 · Universe',cap(NUM[total]||total)+' candidates','the full fund universe enters the screen');
+  var big=bigN();
+  chapter('01 · Universe',(big?total:cap(NUM[total]||total))+' candidates','the full fund universe enters the screen');
   A.funds.forEach(function(d,i){var n=nodes[d.id];var p=universePos(i);n.style.left=p.x+'%';n.style.bottom=p.y+'%'});
-  for(var i=0;i<total;i++){if(aborted)return;nodes[A.funds[i].id].classList.add('shown');await wait(170)}
+  var showStep=big?Math.max(20,Math.floor(1600/total)):170;   // quicker reveal for a big universe; unchanged at sample
+  for(var i=0;i<total;i++){if(aborted)return;nodes[A.funds[i].id].classList.add('shown');await wait(showStep)}
   await wait(350);
-  for(var i2=0;i2<total;i2++){if(aborted)return;nodes[A.funds[i2].id].classList.add('labeled');await wait(120)}
-  await wait(2000);
+  if(!big){for(var i2=0;i2<total;i2++){if(aborted)return;nodes[A.funds[i2].id].classList.add('labeled');await wait(120)}}
+  // else: too many funds to label at once — hover tooltips carry per-fund detail; the shortlist is labeled at settle
+  await wait(big?1400:2000);
   // ── ACT 2 · Screening — cut the mandate failures one at a time, slowly ──
   chapter('02 · Screening','Apply the mandate',(A.gates||[]).map(function(g){return g.label.toLowerCase()}).join(' · '));
   $('#gates').classList.add('on');document.body.classList.add('screening');
@@ -641,6 +664,7 @@ async function cutLowest(){var c=A.funds.filter(function(d){return d.cut})[0];if
 function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
   setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
 function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
+  if(bigN())shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});   // big universe: only the shortlist keeps an always-on label
   setTimeout(function(){layoutRows();redrawTraj()},680);}
 
 function reset(){aborted=true;paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();
@@ -672,7 +696,9 @@ function wire(){
   document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
   var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
-    A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown','labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
+    var _big=bigN();
+    A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(!_big)n.classList.add('labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
+    if(_big)shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});
     frontier();document.body.classList.add('scoring');$('#scorepane').classList.add('in');buildWeigh();renderFinal();
     var win=shortlisted()[0];nodes[win.id].classList.add('focus','win','locked');var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';nodes[win.id].classList.add('leader');
     $('#weighticker').innerHTML='Final · weighted risk-adjusted score';var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');updateCounter('Shortlist');settle()});

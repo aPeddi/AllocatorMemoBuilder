@@ -161,7 +161,7 @@ body.az-run #srcchip{display:none}
 /* nodes — larger, information-bearing tokens */
 .node{position:absolute;transform:translate(-50%,50%) scale(0);z-index:3;transition:left 1.15s cubic-bezier(.3,.85,.3,1),bottom 1.15s cubic-bezier(.3,.85,.3,1),transform .6s cubic-bezier(.3,1.2,.4,1),opacity .6s,filter .6s}
 .node.shown{transform:translate(-50%,50%) scale(1)}
-.node .dot{width:20px;height:20px;border-radius:50%;background:var(--panel2);border:1.5px solid var(--ink2);display:grid;place-items:center;transition:width .5s cubic-bezier(.3,1.2,.4,1),height .5s cubic-bezier(.3,1.2,.4,1),border-color .5s,box-shadow .5s,background .5s;position:relative}
+.node .dot{width:calc(20px * var(--dscale,1));height:calc(20px * var(--dscale,1));border-radius:50%;background:var(--panel2);border:1.5px solid var(--ink2);display:grid;place-items:center;transition:width .5s cubic-bezier(.3,1.2,.4,1),height .5s cubic-bezier(.3,1.2,.4,1),border-color .5s,box-shadow .5s,background .5s;position:relative}
 .node.cand{cursor:pointer}.node.cand:hover .dot{border-color:var(--accent2)}
 .node.win .dot,.node.locked .dot{border-color:var(--accent);background:radial-gradient(circle at 38% 34%,var(--winface1),var(--winface2));box-shadow:0 0 0 1px var(--accent-soft),0 0 24px -3px var(--accent-glow)}
 /* focus — bring the active item forward inside a glass hero panel */
@@ -239,8 +239,11 @@ body.screening .node.cand.gone{opacity:0}
 .rail{display:flex;align-items:center;gap:10px;padding:10px 22px;border-top:1px solid var(--border);flex:none;background:var(--glass);opacity:0;transition:opacity .6s}
 .rail.in{opacity:1}
 .rail .rl{font-family:var(--mono);font-size:8.5px;letter-spacing:.2em;color:var(--dim2);text-transform:uppercase}
-.chips{display:flex;gap:7px;flex:1;overflow:hidden}
-.chip{display:flex;align-items:center;gap:8px;padding:6px 11px 6px 9px;border:1px solid var(--border);background:var(--panel);cursor:pointer;transition:.2s;border-radius:4px}
+.chips{display:flex;gap:7px;flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.chips::-webkit-scrollbar{height:6px}
+.chips::-webkit-scrollbar-thumb{background:var(--border2);border-radius:20px}
+.chips::-webkit-scrollbar-track{background:transparent}
+.chip{flex:none;display:flex;align-items:center;gap:8px;padding:6px 11px 6px 9px;border:1px solid var(--border);background:var(--panel);cursor:pointer;transition:.2s;border-radius:4px}
 .chip:hover{border-color:var(--accent);background:var(--accent);transform:translateY(-1px);box-shadow:0 6px 16px -6px var(--accent-glow)}
 .chip:hover .n,.chip:hover .nm,.chip:hover .rt,.chip:hover .cx{color:var(--on-accent)}
 .chip.r1{border-color:var(--accent-dim)}
@@ -465,7 +468,12 @@ body.settled #weighticker.adj .weigh-reset{display:inline}
 #weighlegend.in{opacity:1}
 #weighticker .fdot{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:baseline;margin-right:6px}
 #weighticker .fw{color:var(--dim)}
-#scorebars{position:relative;flex:1;min-height:150px}
+#scorebars{position:relative;flex:1;min-height:150px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+#scorebars::-webkit-scrollbar{width:7px}
+#scorebars::-webkit-scrollbar-thumb{background:var(--border2);border-radius:20px}
+#scorebars::-webkit-scrollbar-track{background:transparent}
+/* inner track sized to the full row list — the scroll viewport (#scorebars) clips it only when the eligible set is large */
+#scoretrack{position:relative;width:100%}
 .wrow{position:absolute;left:0;right:0;height:26px;display:grid;grid-template-columns:20px 52px 1fr 44px;gap:7px;align-items:center;transition:top .55s cubic-bezier(.3,.85,.3,1);opacity:0}
 .wrow.in{opacity:1}
 .wrk{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--dim2);text-align:center;transition:color .4s,transform .4s cubic-bezier(.3,1.3,.4,1)}
