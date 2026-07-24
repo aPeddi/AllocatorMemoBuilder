@@ -21,15 +21,69 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Protocol
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings, get_settings
 from .retrieval import AnalysisContext
 
 log = logging.getLogger("amb.llm")
 
-# A claims provider: context in, structured memo payload out.
-ClaimsProvider = Callable[[AnalysisContext], dict]
+
+class ClaimsProvider(Protocol):
+    """Structural contract for a claims provider: an AnalysisContext in, a structured
+    memo payload out. Anthropic/OpenAI/template all satisfy it — the pipeline depends
+    on this Protocol, never on a concrete provider."""
+
+    def __call__(self, ctx: AnalysisContext) -> dict: ...
+
+
+# ── typed payload contract (parse the model's JSON into a known shape) ──
+class _Claimlet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    text: str = ""
+    metric: Optional[str] = None
+    fund_id: Optional[str] = None
+    value: Optional[float] = None
+
+
+class _KeyRisks(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    body: str = ""
+    claims: list[_Claimlet] = Field(default_factory=list)
+
+
+class _FundNote(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    fund_id: str = ""
+    paragraph: str = ""
+    claims: list[_Claimlet] = Field(default_factory=list)
+
+
+class MemoPayload(BaseModel):
+    """The structured memo a provider must return. Lenient (extra allowed, everything
+    defaulted) so a partial model response degrades gracefully rather than crashing;
+    downstream still re-verifies every numeric claim against the metrics engine."""
+
+    model_config = ConfigDict(extra="allow")
+    summary: str = ""
+    recommendation: str = ""
+    funds: list[_FundNote] = Field(default_factory=list)
+    key_risks: _KeyRisks = Field(default_factory=_KeyRisks)
+
+
+def _normalize_payload(raw: dict, model: str) -> dict:
+    """Validate the provider's raw dict into the MemoPayload shape, then hand the
+    existing dict-consuming assembler a normalized dict. Never raises — a garbled
+    response degrades to the defaulted shape."""
+    try:
+        out = MemoPayload.model_validate(raw or {}).model_dump()
+    except Exception as e:  # noqa: BLE001 — never break generation on a schema hiccup
+        log.warning("memo payload did not validate; using defaulted shape: %s", e)
+        out = MemoPayload().model_dump()
+    out["_model"] = model
+    return out
 
 _MAX_FACTS_CHARS = 20_000  # cap the untrusted block; the shortlist is tiny in practice
 
@@ -155,6 +209,29 @@ def _log_call(log_path: str | Path, rec: dict) -> None:
 
 
 # ── providers ────────────────────────────────────────────────────────────────
+def _complete(
+    ctx: AnalysisContext, *, provider: str, model: str, log_path: str,
+    call_fn: Callable[[str, str], Any], extract_fn: Callable[[Any], Optional[dict]],
+    usage_fn: Callable[[Any], tuple],
+) -> dict:
+    """Template method for the shared provider skeleton — prompt, timed call, payload
+    extraction, normalization, logging. Each provider supplies only the three
+    SDK-specific closures (call / extract / usage), so the two are ~10 lines each and
+    can never drift on the common path."""
+    prompt = _build_prompt(ctx)
+    t0 = time.time()
+    resp = call_fn(prompt, model)
+    dt = time.time() - t0
+    payload = _normalize_payload(extract_fn(resp) or {}, model)
+    cid, itok, otok = usage_fn(resp)
+    _log_call(log_path, {
+        "provider": provider, "model": model, "latency_s": round(dt, 3),
+        "correlation_id": cid, "input_tokens": itok, "output_tokens": otok,
+        "mandate": ctx.mandate.name, "funds": ctx.shortlist_ids(),
+    })
+    return payload
+
+
 def anthropic_claims_provider(
     ctx: AnalysisContext, *, api_key: str = "", model: Optional[str] = None,
     log_path: str = "exports/llm_calls.jsonl",
@@ -164,30 +241,34 @@ def anthropic_claims_provider(
     if not (api_key or "").strip():
         raise RuntimeError("ANTHROPIC_API_KEY not set")
     import anthropic  # lazy: the deterministic path needs no SDK
-
     client = anthropic.Anthropic(api_key=api_key)
-    model = model or "claude-sonnet-4-6"
-    t0 = time.time()
-    resp = client.messages.create(
-        model=model,
-        max_tokens=4096,
-        system=_SYSTEM,
-        tools=[_MEMO_TOOL],
-        tool_choice={"type": "tool", "name": "submit_memo"},
-        messages=[{"role": "user", "content": _build_prompt(ctx)}],
+
+    def call(prompt: str, model: str):
+        return client.messages.create(
+            model=model, max_tokens=4096, system=_SYSTEM, tools=[_MEMO_TOOL],
+            tool_choice={"type": "tool", "name": "submit_memo"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+    def usage(resp):
+        u = getattr(resp, "usage", None)
+        return getattr(resp, "id", None), getattr(u, "input_tokens", None), getattr(u, "output_tokens", None)
+
+    return _complete(
+        ctx, provider="anthropic", model=model or "claude-sonnet-4-6", log_path=log_path,
+        call_fn=call, extract_fn=lambda r: _extract_tool_input(r, "submit_memo"), usage_fn=usage,
     )
-    dt = time.time() - t0
-    payload = _extract_tool_input(resp, "submit_memo") or {"recommendation": "", "funds": []}
-    payload["_model"] = model
-    usage = getattr(resp, "usage", None)
-    _log_call(log_path, {
-        "provider": "anthropic", "model": model, "latency_s": round(dt, 3),
-        "correlation_id": getattr(resp, "id", None),
-        "input_tokens": getattr(usage, "input_tokens", None),
-        "output_tokens": getattr(usage, "output_tokens", None),
-        "mandate": ctx.mandate.name, "funds": ctx.shortlist_ids(),
-    })
-    return payload
+
+
+def _openai_tool_args(resp) -> Optional[dict]:
+    calls = resp.choices[0].message.tool_calls if resp.choices else None
+    if not calls:
+        return None
+    try:
+        return json.loads(calls[0].function.arguments)
+    except (json.JSONDecodeError, TypeError) as e:
+        log.warning("OpenAI returned unparseable tool arguments; using empty payload: %s", e)
+        return None
 
 
 def openai_claims_provider(
@@ -197,39 +278,27 @@ def openai_claims_provider(
     if not (api_key or "").strip():
         raise RuntimeError("OPENAI_API_KEY not set")
     from openai import OpenAI  # lazy
-
     client = OpenAI(api_key=api_key)
-    model = model or "gpt-4o-2024-11-20"
-    t0 = time.time()
-    resp = client.chat.completions.create(
-        model=model,
-        max_tokens=4096,
-        messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": _build_prompt(ctx)}],
-        tools=[{"type": "function", "function": {
-            "name": _MEMO_TOOL["name"],
-            "description": _MEMO_TOOL["description"],
-            "parameters": _MEMO_TOOL["input_schema"],
-        }}],
-        tool_choice={"type": "function", "function": {"name": "submit_memo"}},
+
+    def call(prompt: str, model: str):
+        return client.chat.completions.create(
+            model=model, max_tokens=4096,
+            messages=[{"role": "system", "content": _SYSTEM}, {"role": "user", "content": prompt}],
+            tools=[{"type": "function", "function": {
+                "name": _MEMO_TOOL["name"], "description": _MEMO_TOOL["description"],
+                "parameters": _MEMO_TOOL["input_schema"],
+            }}],
+            tool_choice={"type": "function", "function": {"name": "submit_memo"}},
+        )
+
+    def usage(resp):
+        u = getattr(resp, "usage", None)
+        return getattr(resp, "id", None), getattr(u, "prompt_tokens", None), getattr(u, "completion_tokens", None)
+
+    return _complete(
+        ctx, provider="openai", model=model or "gpt-4o-2024-11-20", log_path=log_path,
+        call_fn=call, extract_fn=_openai_tool_args, usage_fn=usage,
     )
-    dt = time.time() - t0
-    payload: dict[str, Any] = {"recommendation": "", "funds": []}
-    calls = resp.choices[0].message.tool_calls if resp.choices else None
-    if calls:
-        try:
-            payload = json.loads(calls[0].function.arguments)
-        except (json.JSONDecodeError, TypeError) as e:
-            log.warning("OpenAI returned unparseable tool arguments; using empty payload: %s", e)
-    payload["_model"] = model
-    usage = getattr(resp, "usage", None)
-    _log_call(log_path, {
-        "provider": "openai", "model": model, "latency_s": round(dt, 3),
-        "correlation_id": getattr(resp, "id", None),
-        "input_tokens": getattr(usage, "prompt_tokens", None),
-        "output_tokens": getattr(usage, "completion_tokens", None),
-        "mandate": ctx.mandate.name, "funds": ctx.shortlist_ids(),
-    })
-    return payload
 
 
 _PROVIDERS: dict[str, ClaimsProvider] = {
