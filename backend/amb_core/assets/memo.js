@@ -5,6 +5,12 @@ if(A){A.weights0=A.weights0||Object.assign({},A.weights);if(!A.activeMetrics)A.a
 function $(s,r){return (r||document).querySelector(s)}
 function $$(s,r){return [].slice.call((r||document).querySelectorAll(s))}
 function el(t,c){var e=document.createElement(t);if(c)e.className=c;return e}
+// HTML output-encoder — every user-derived string (fund name/strategy/reason, benchmark name,
+// mandate label) is escaped at the point it enters an innerHTML sink, so a fund named
+// "<img onerror=…>" (via the DATA payload OR a user CSV upload) can never execute. Numbers/
+// fixed metric keys don't need it; the PDF writer has its own _pesc and is not an HTML sink.
+var _ESC={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return _ESC[c]})}
 var paused=false,_waits=[];
 function wait(ms){return new Promise(function(resolve){
   var rec={remaining:ms,started:0,tid:null,done:false};
@@ -68,7 +74,7 @@ function buildField(){
   A.funds.forEach(function(d,i){
     var n=el('div','node cand');
     n.dataset.fid=d.id;n.__d=d;n.__i=i;
-    n.dataset.tip="<div class='tn'>"+d.name+"</div><div class='ts'>"+d.strategy+"</div>return <b>"+pct(d.ret)+"</b> · vol <b>"+pct(d.vol)+"</b> · sharpe <b>"+num(d.sharpe)+"</b>";
+    n.dataset.tip="<div class='tn'>"+esc(d.name)+"</div><div class='ts'>"+esc(d.strategy)+"</div>return <b>"+pct(d.ret)+"</b> · vol <b>"+pct(d.vol)+"</b> · sharpe <b>"+num(d.sharpe)+"</b>";
     var glass=el('div','glass');
     var halo=el('div','halo');
     var lock=el('div','lock');['a','b','c','d'].forEach(function(k){lock.appendChild(el('i',k))});
@@ -77,7 +83,7 @@ function buildField(){
     var rtag=el('div','rtag');
     var dot=el('div','dot');
     var card=el('div','card');
-    card.innerHTML="<div class='nm'><span class='nfull'>"+d.name+"</span><span class='nshort'>"+first(d.name)+"</span></div><div class='sub'>"+stratShort(d.strategy)+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
+    card.innerHTML="<div class='nm'><span class='nfull'>"+esc(d.name)+"</span><span class='nshort'>"+esc(first(d.name))+"</span></div><div class='sub'>"+esc(stratShort(d.strategy))+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
     n.appendChild(glass);n.appendChild(halo);n.appendChild(lock);n.appendChild(stamp);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(card);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
@@ -94,13 +100,13 @@ function buildIntro(){
     var cuts={};A.funds.forEach(function(d){(d.reasons||[]).forEach(function(rr){cuts[rr.kind]=(cuts[rr.kind]||0)+1})});
     A.gates.forEach(function(gt,i){var r=el('div','ipg');r.dataset.k=gt.label;var n=cuts[gt.label]||0;
       var ct=n>0?"<span class='gc'>−"+n+"</span>":"<span class='gc gc0'>0</span>";
-      r.innerHTML="<span class='k'>"+gt.label+"</span><span class='d'>"+gt.detail+"</span>"+ct;g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
+      r.innerHTML="<span class='k'>"+esc(gt.label)+"</span><span class='d'>"+esc(gt.detail)+"</span>"+ct;g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
   var w=$('#ip-weights');if(w){w.innerHTML='';var fs=weightFactors();var mx=Math.max.apply(null,fs.map(function(k){return A.weights[k]}));
     fs.forEach(function(k,i){var pctv=Math.round(A.weights[k]*100);var r=el('div','ipw');
       r.innerHTML="<span class='wl'>"+k.replace(/_/g,' ')+"</span><span class='wb'><i></i></span><span class='wp'>"+pctv+"%</span>";
       w.appendChild(r);var bar=$('.wb i',r);
       setTimeout(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
-  var bp=$('#ip-bench');if(bp){if(A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>";}else{bp.innerHTML="<div class='ipb'><div class='bt'><div class='bm'>no benchmark</div></div></div>";}}
+  var bp=$('#ip-bench');if(bp){if(A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>";}else{bp.innerHTML="<div class='ipb'><div class='bt'><div class='bm'>no benchmark</div></div></div>";}}
   updateTally();
 }
 function buildDataReadiness(){var dp=$('#ip-data');if(!dp)return;var r=A.readiness||{};var b=A.bench;
@@ -118,7 +124,7 @@ function buildDataReadiness(){var dp=$('#ip-data');if(!dp)return;var r=A.readine
   var mm=(r.missing_returns||[]),om=(r.orphan_returns||[]);
   if(mm.length)rows.push(['id check',mm.length+' listed w/o returns',mm.slice(0,4).join(', '),'warn']);
   if(om.length)rows.push(['id check',om.length+' returns w/o metadata',om.slice(0,4).join(', '),'warn']);
-  dp.innerHTML=rows.map(function(x){return "<div class='ipd "+x[3]+"'><span class='dk'>"+x[0]+"</span><div class='dvv'><span class='dv'>"+x[1]+"</span><span class='dd'>"+x[2]+"</span></div><span class='dck'></span></div>"}).join('');
+  dp.innerHTML=rows.map(function(x){return "<div class='ipd "+x[3]+"'><span class='dk'>"+x[0]+"</span><div class='dvv'><span class='dv'>"+esc(x[1])+"</span><span class='dd'>"+esc(x[2])+"</span></div><span class='dck'></span></div>"}).join('');
 }
 function updateTally(){var t=$('#ip-tally');if(!t)return;var gone=A.funds.filter(function(d){return nodes[d.id].classList.contains('gone')}).length;var uni=A.funds.length;var rem=uni-gone;
   t.innerHTML="<div class='tc'><b>"+uni+"</b><i>universe</i></div><div class='tc red'><b>"+gone+"</b><i>excluded</i></div><div class='tc hot'><b>"+rem+"</b><i>advancing</i></div>";}
@@ -146,7 +152,7 @@ function buildWeigh(){
   var th=Math.max(16,Math.min(30,ROWH-12));
   sl.forEach(function(d,i){
     var row=el('div','wrow'+(d.rank==1?' win':'')+(i===0?' rk1':''));row.style.top=(i*ROWH)+'px';
-    row.innerHTML="<div class='wrk'>"+(i+1)+"</div><div class='wn'>"+first(d.name)+"</div><div class='wtrack' style='height:"+th+"px'><div class='wzero' style='left:"+ZERO+"%'></div></div><div class='wsc'>0.00</div>";
+    row.innerHTML="<div class='wrk'>"+(i+1)+"</div><div class='wn'>"+esc(first(d.name))+"</div><div class='wtrack' style='height:"+th+"px'><div class='wzero' style='left:"+ZERO+"%'></div></div><div class='wsc'>0.00</div>";
     track.appendChild(row);rows[d.id]=row;segState[d.id]={pos:ZERO,neg:ZERO,cum:0};
     setTimeout(function(){row.classList.add('in')},70*i);
   });
@@ -201,7 +207,7 @@ async function runWeigh(){
     Object.keys(rows).forEach(function(id){rows[id].classList.toggle('lead',id==leadId)});
     var flipped=(prevLead!==null&&leadId!==prevLead);
     if(flipped){showRtag(leadId,"<b>"+k.replace(/_/g,' ')+"</b> ▸ takes the lead",false);rows[leadId].classList.add('flip');
-      $('#weighticker').innerHTML="<b>"+k.replace(/_/g,' ')+"</b> tips <b>"+first(byId(leadId).name)+"</b> ahead";}
+      $('#weighticker').innerHTML="<b>"+k.replace(/_/g,' ')+"</b> tips <b>"+esc(first(byId(leadId).name))+"</b> ahead";}
     else if(fi===0){showRtag(leadId,"strongest on <b>"+k.replace(/_/g,' ')+"</b>",false);}
     await wait(flipped?1400:760);
     if(flipped)rows[leadId].classList.remove('flip');
@@ -214,7 +220,7 @@ async function runWeigh(){
   $$('.wseg.pulse').forEach(function(s){s.classList.remove('pulse')});
   var win=survivors()[0];if(win){var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
     $('#weighticker').innerHTML="Final · weighted risk-adjusted score";
-    $('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
+    $('#whynote').innerHTML="<b>"+esc(first(win.name))+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
 }
 function renderFinal(){var sl=survivors();var factors=weightFactors();
   sl.forEach(function(d){factors.forEach(function(k,idx){addSeg(d,k,idx,false)});rows[d.id].classList.add('in')});
@@ -252,10 +258,10 @@ function fetchLiveMarket(manual){
     synthAlphaOverBench();screenAndScore();  // demo: managers earn alpha over the live reference, recomputed consistently
     if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
     relayoutScatter();  // keep the main risk/return graph consistent with the (live) benchmark
-    var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+A.bench.name+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
+    var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
     if(document.body.classList.contains('settled')){rerender();}
-    if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+b.name+" · as-of "+b.asOf);
-    else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+b.name+" ("+b.kind+")");
+    if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+esc(b.name)+" · as-of "+esc(b.asOf));
+    else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+esc(b.name)+" ("+esc(b.kind)+")");
   }).catch(function(e){
     clearTimeout(tmo);if(chip){chip.classList.remove('busy')}sourceChip();
     if(manual)toast("<span class='tk' style='color:var(--loss)'>!</span>Live fetch needs the server — run <b>./amb serve</b>");
@@ -279,11 +285,11 @@ function paintSettledGraph(){var sl=shortlisted();var win=sl[0];
       else{n.classList.add('dimmed');n.classList.remove('win','locked');if(crn)crn.lastChild.textContent='leader'}}});
   if(win)setLeaderNode(win.id);
   if(bigN())A.funds.forEach(function(d){var n=nodes[d.id];if(n)n.classList.toggle('labeled',d.rank!=null)});   // keep always-on labels to the shortlist at scale
-  var rc=$('.rail .chips');if(rc){rc.innerHTML=sl.map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+s.id+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+s.name+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
+  var rc=$('.rail .chips');if(rc){rc.innerHTML=sl.map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+esc(s.id)+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+esc(s.name)+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
   redrawTraj();
   if(win){A.verdict=win.name+" leads on risk-adjusted return.";A.verdictHtml="<b>"+win.name+"</b> leads on risk-adjusted return.";
     var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});
-    $('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
+    $('#whynote').innerHTML="<b>"+esc(first(win.name))+"</b> wins on "+comps.join(', ')+" — the deciding factors.";}
   typeVerdict();}
 function updateAdjNote(active){var full=weightFactors();var adj=active.length<full.length;var t=$('#weighticker');if(!t)return;
   t.classList.toggle('adj',adj);
@@ -319,7 +325,7 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
   A.nShort=shortIds.length;A.nEligible=elig.length;A.nReject=A.funds.filter(function(d){return d.reason}).length;A.nTotal=A.funds.length;
   var win=A.funds.filter(function(d){return d.rank==1})[0];
   A.verdict=(win?first(win.name)+" leads on risk-adjusted return.":"No fund met the mandate.");
-  A.verdictHtml=(win?"<b>"+first(win.name)+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
+  A.verdictHtml=(win?"<b>"+esc(first(win.name))+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
   A._snap=null;rebuildGates();}
 function applyMandate(){screenAndScore();var d=$('#drawer');if(d)d.classList.remove('open');rerender();}
 var HOUSE=null;
@@ -328,7 +334,7 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
   var liq=ms.liqCap==null?400:ms.liqCap, vol=ms.volCap==null?0.5:ms.volCap, mdd=ms.maxddFloor==null?-0.5:ms.maxddFloor;
   var fs=weightFactors();
   function sld(id,lbl,val,min,max,step,fmt){return "<div class='mf-row'><label>"+lbl+"<b id='"+id+"v'>"+fmt(val)+"</b></label><input type='range' id='"+id+"' min='"+min+"' max='"+max+"' step='"+step+"' value='"+val+"'></div>"}
-  var chips=str016.map(function(s){var on=(ms.exclStrats||[]).indexOf(s)<0;return "<span class='mf-chip"+(on?'':' off')+"' data-s=\""+s+"\">"+s+"</span>"}).join('');
+  var chips=str016.map(function(s){var on=(ms.exclStrats||[]).indexOf(s)<0;return "<span class='mf-chip"+(on?'':' off')+"' data-s=\""+esc(s)+"\">"+esc(s)+"</span>"}).join('');
   var wsl=fs.map(function(k,i){var pv=Math.round((A.weights[k]||0)*100);return "<div class='mf-row'><label><span class='wdot' style='background:"+segColor(i,false)+"'></span>"+k.replace(/_/g,' ')+"<b id='w_"+k+"v'>"+pv+"%</b></label><input type='range' class='mf-w' data-k='"+k+"' min='0' max='50' step='1' value='"+pv+"'></div>"}).join('');
   var h="<div class='d-pre'>Mandate · investable constraints</div><div class='d-name'>Edit the house view</div>"
    +"<p class='mm-p'>Re-screen and re-score the loaded universe live. Changes are stamped against the default mandate.</p>"
@@ -415,7 +421,7 @@ function relayoutScatter(){  // recompute the risk/return frontier so it include
   A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});}
 function buildGuides(){var g=$('#guides');
   if(!A.bench){if(g)g.classList.remove('on');return}
-  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).innerHTML=A.bench.name.split(' (')[0]+' · reference'}
+  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).innerHTML=esc(A.bench.name.split(' (')[0])+' · reference'}
   var bl=$('#beatlbl');if(bl){bl.innerHTML='reference index ·<br>passive beta ·<br>out of mandate';}
   drawBenchLine();if(g)g.classList.add('on');
 }
@@ -469,7 +475,7 @@ function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
     var li=d.wealth.length-1,lv=d.wealth[li];
     var dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',X(li));dot.setAttribute('cy',Y(lv));dot.setAttribute('r',win?'3.4':'2.2');dot.setAttribute('fill',col);dot.style.opacity='0';dot.style.transition='opacity .4s';svg.appendChild(dot);setTimeout(function(){dot.style.opacity='1'},120+idx*80+1150);
     var gain=isFinite(lv)?((lv-1)*100).toFixed(0):'—';
-    var t=el('div','tt'+(win?' twin':''));t.style.color=col;t.style.right='2px';t.style.top=d.__tp+'%';t.innerHTML=first(d.name)+" <b>+"+gain+"%</b>";host.appendChild(t);
+    var t=el('div','tt'+(win?' twin':''));t.style.color=col;t.style.right='2px';t.style.top=d.__tp+'%';t.innerHTML=esc(first(d.name))+" <b>+"+gain+"%</b>";host.appendChild(t);
   });
   if(bench){var b=lab.filter(function(x){return x.__bench})[0];var bt=el('div','tt tbench');bt.style.color=WARM;bt.style.right='2px';bt.style.top=b.__tp+'%';bt.innerHTML="S&P 500 <b>+"+((bench[n-1]-1)*100).toFixed(0)+"%</b> <span style='opacity:.55'>· ref</span>";host.appendChild(bt)}
 }
@@ -536,12 +542,12 @@ async function actZero(){
     log('opening https://'+(A._keyed?'api':'fred')+'.stlouisfed.org …');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · live fetch · "+(b.n||36)+" monthly obs";
     $('#srcB',az).classList.add('active');$('#srcA',az).classList.add('standby');
-    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+(b.name||'S&amp;P 500')+" · as-of "+(b.asOf||'—');
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+esc(b.name||'S&P 500')+" · as-of "+esc(b.asOf||'—');
   }else{
     log('FRED endpoint available · this run uses the committed local snapshot');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='muted'>○</span> "+(b.kind==='cache'?'served from cache':'not called · snapshot mode');
     $('#srcA',az).classList.add('active');$('#srcB',az).classList.add('standby');
-    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+(b.name||'S&amp;P 500')+", as-of "+(b.asOf||'—')+") · FRED live available";
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+esc(b.name||'S&P 500')+", as-of "+esc(b.asOf||'—')+") · FRED live available";
   }
   $('#beamB',az).classList.add('on');
   await wait(1100);if(aborted)return;$('#hub',az).classList.add('live');await wait(800);if(aborted)return;
@@ -598,7 +604,7 @@ async function actZero(){
   // ══ 5 · READY ══
   phase(5,'UNIVERSE READY');
   stage.innerHTML="<div class='az-ready'><div class='az-ready-big'>UNIVERSE READY</div>"
-   +"<div class='az-ready-sub'>"+UNIV+" funds · benchmark bound ("+(b.name||'index')+") · risk-free "+(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'—')+"</div>"
+   +"<div class='az-ready-sub'>"+UNIV+" funds · benchmark bound ("+esc(b.name||'index')+") · risk-free "+(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'—')+"</div>"
    +"<div class='az-ready-line'></div></div>";
   log('handoff → screening');await wait(1250);if(aborted)return;
   az.classList.remove('on');await wait(560);
@@ -633,7 +639,7 @@ async function story(){
     gates.forEach(lit);$$('#ip-gates .ipg').forEach(lit);
     // stamp: the breached limit tags + the readable reasons
     var tg=$('.stags',en);if(tg)tg.innerHTML=rs.map(function(r){return "<span class='stag "+r.kind+"'>"+r.kind.toLowerCase()+"</span>"}).join('');
-    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" hard limits"):rs[0].text);
+    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" hard limits"):esc(rs[0].text));
     en.classList.add('reject');await wait(1150+rs.length*950);   // hold longer when more limits break
     gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
     en.classList.remove('focus');en.classList.add('gone');updateCounter();await wait(720);
@@ -652,7 +658,7 @@ async function story(){
   $('.sweetz').classList.add('on');await wait(650);
   // ── ACT 4 · Recommendation — one fund resolves ──
   var win=shortlisted()[0];if(aborted||!win)return;
-  chapter('04 · Recommendation',first(win.name),win.name);
+  chapter('04 · Recommendation',esc(first(win.name)),esc(win.name));
   focusWinner(win);
   $('#trajpane').classList.add('in');buildTraj();
   await wait(2100);settle();
@@ -687,8 +693,8 @@ function fundTerms(d){var cells=[];
   if(d.netret!=null)cells.push(["net return",pct(d.netret)]);
   if(d.beta!=null)cells.push(["beta",num(d.beta)]);
   if(!cells.length)return "";
-  return "<div class='fd-terms'>"+cells.map(function(c){return "<span><i>"+c[0]+"</i><b>"+c[1]+"</b></span>"}).join('')+"</div>";}
-function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+d.name+"</div><div class='d-strat'>"+d.strategy+"</div>"+fundTerms(d)+d.detail)}
+  return "<div class='fd-terms'>"+cells.map(function(c){return "<span><i>"+c[0]+"</i><b>"+esc(c[1])+"</b></span>"}).join('')+"</div>";}
+function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+esc(d.name)+"</div><div class='d-strat'>"+esc(d.strategy)+"</div>"+fundTerms(d)+d.detail)}
 
 function wire(){
   var tip=$('#tip');
@@ -701,7 +707,7 @@ function wire(){
     if(_big)shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});
     frontier();document.body.classList.add('scoring');$('#scorepane').classList.add('in');buildWeigh();renderFinal();
     var win=shortlisted()[0];nodes[win.id].classList.add('focus','win','locked');var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';nodes[win.id].classList.add('leader');
-    $('#weighticker').innerHTML='Final · weighted risk-adjusted score';var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+first(win.name)+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');updateCounter('Shortlist');settle()});
+    $('#weighticker').innerHTML='Final · weighted risk-adjusted score';var comps=(win.components||[]).slice().sort(function(a,b){return b.c-a.c}).slice(0,3).map(function(c){return c.k.replace(/_/g,' ')});$('#whynote').innerHTML="<b>"+esc(first(win.name))+"</b> wins on "+comps.join(', ')+" — the deciding factors.";$('#trajpane').classList.add('in');buildTraj();$('.sweetz').classList.add('on');updateCounter('Shortlist');settle()});
   window.addEventListener('resize',function(){if($('#guides')&&$('#guides').classList.contains('on'))drawBenchLine()});
   var tb=$('#themebtn');if(tb){var tog=function(){applyTheme(document.documentElement.dataset.theme!=='light')};tb.addEventListener('click',tog);tb.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();tog()}});}
   var dl=$('#dlBtn');if(dl)dl.addEventListener('click',function(e){e.stopPropagation();openExportPop(dl)});
@@ -727,22 +733,22 @@ function liveMemo(){var sl=shortlisted();var w=sl[0];
   if(dd)claims.push({text:'Deepest drawdown: '+pct(dd.maxdd),fund:first(dd.name),verified:true});
   if(bb&&bb.beta!=null)claims.push({text:'Highest beta: '+num(bb.beta),fund:first(bb.name),verified:true});
   if(vv)claims.push({text:'Highest volatility: '+pct(vv.vol),fund:first(vv.name),verified:true});
-  var body=(dd?first(dd.name)+' carries the deepest drawdown at '+pct(dd.maxdd)+'. ':'')+(vv?first(vv.name)+' is the most volatile ('+pct(vv.vol)+'). ':'')+'Recomputed live against the current mandate.';
-  var sum=w?('Recomputed live: '+A.nTotal+' funds screened, '+A.nEligible+' eligible, '+A.nShort+' shortlisted. '+first(w.name)+' leads on risk-adjusted return ('+pct(w.ret)+' at '+pct(w.vol)+' vol, Sharpe '+num(w.sharpe)+').'):'No fund met the mandate.';
-  return {summary:sum,recommendation:(w?'<b>'+first(w.name)+'</b> leads on risk-adjusted return across the '+A.nShort+' shortlisted funds. The S&P benchmark is passive equity beta shown for reference — outside this mandate\'s strategy and risk limits.':'No fund met the mandate.'),keyRisks:{body:body,claims:claims},appendix:'Metrics recomputed client-side with the same deterministic engine (vol = sample-std annualized; Sharpe/Sortino excess over the mandate risk-free; beta/alpha OLS vs benchmark). Figures reflect the current mandate and inputs.'};}
+  var body=(dd?esc(first(dd.name))+' carries the deepest drawdown at '+pct(dd.maxdd)+'. ':'')+(vv?esc(first(vv.name))+' is the most volatile ('+pct(vv.vol)+'). ':'')+'Recomputed live against the current mandate.';
+  var sum=w?('Recomputed live: '+A.nTotal+' funds screened, '+A.nEligible+' eligible, '+A.nShort+' shortlisted. '+esc(first(w.name))+' leads on risk-adjusted return ('+pct(w.ret)+' at '+pct(w.vol)+' vol, Sharpe '+num(w.sharpe)+').'):'No fund met the mandate.';
+  return {summary:sum,recommendation:(w?'<b>'+esc(first(w.name))+'</b> leads on risk-adjusted return across the '+A.nShort+' shortlisted funds. The S&P benchmark is passive equity beta shown for reference — outside this mandate\'s strategy and risk limits.':'No fund met the mandate.'),keyRisks:{body:body,claims:claims},appendix:'Metrics recomputed client-side with the same deterministic engine (vol = sample-std annualized; Sharpe/Sortino excess over the mandate risk-free; beta/alpha OLS vs benchmark). Figures reflect the current mandate and inputs.'};}
 function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisks||{};var w=shortlisted()[0]||{};
   var WARN="<svg viewBox='0 0 24 24' fill='none'><path d='M12 3l9 16H3l9-16z' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round'/><path d='M12 10v4' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/><circle cx='12' cy='16.6' r='.6' fill='currentColor' stroke='currentColor'/></svg>";
   var kpis=[['Ann. return',pct(w.ret)],['Volatility',pct(w.vol)],['Sharpe',num(w.sharpe)],['Sortino',num(w.sortino)],['Max DD',pct(w.maxdd)],['Net of fee',(w.netret!=null?pct(w.netret):'—')]];
   var kpiH=kpis.map(function(k){return "<div class='mvk'><b>"+k[1]+"</b><i>"+k[0]+"</i></div>"}).join('');
-  var rows=shortlisted().map(function(s){return "<tr"+(s.rank==1?" class='mwin'":"")+"><td class='mr'>"+String(s.rank).padStart(2,'0')+"</td><td class='mnm'>"+first(s.name)+"</td><td>"+pct(s.ret)+"</td><td>"+num(s.sharpe)+"</td><td>"+num(s.sortino)+"</td><td>"+pct(s.maxdd)+"</td><td class='msc'>"+(s.score>=0?'+':'')+s.score.toFixed(2)+"</td></tr>"}).join('');
+  var rows=shortlisted().map(function(s){return "<tr"+(s.rank==1?" class='mwin'":"")+"><td class='mr'>"+String(s.rank).padStart(2,'0')+"</td><td class='mnm'>"+esc(first(s.name))+"</td><td>"+pct(s.ret)+"</td><td>"+num(s.sharpe)+"</td><td>"+num(s.sortino)+"</td><td>"+pct(s.maxdd)+"</td><td class='msc'>"+(s.score>=0?'+':'')+s.score.toFixed(2)+"</td></tr>"}).join('');
   var claims=(risks.claims||[]).map(function(c){var mt=(c.metric||'');var sev=/drawdown/.test(mt)?' hi':/vol|beta/.test(mt)?' md':'';var parts=String(c.text).split(':');var lab=parts[0],val=parts.slice(1).join(':').trim();
-    return "<div class='mvr"+sev+"'><span class='mvr-ic'>"+WARN+"</span><div class='mvr-b'><div class='mvr-t'>"+lab+(val?" <b>"+val+"</b>":"")+"</div><div class='mvr-f'>"+(c.fund||'')+"</div></div></div>"}).join('');
+    return "<div class='mvr"+sev+"'><span class='mvr-ic'>"+WARN+"</span><div class='mvr-b'><div class='mvr-t'>"+esc(lab)+(val?" <b>"+esc(val)+"</b>":"")+"</div><div class='mvr-f'>"+esc(c.fund||'')+"</div></div></div>"}).join('');
   var reco=m.recommendation||A.verdictHtml||'';
   var h="<div class='mv'>"
-   +"<div class='mv-eyebrow'>Investment Committee memo · "+A.mandate+"</div>"
+   +"<div class='mv-eyebrow'>Investment Committee memo · "+esc(A.mandate)+"</div>"
    +"<div class='mv-hero'>"+reco+"</div>"
    +"<div class='mv-pills'><span class='mvp'>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mvp ok' title='Every numeric claim in this memo was recomputed from the source series and matched within tolerance'>&#10003; "+A.verified+"/"+A.total+" claims verified</span></div>"
-   +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+first(w.name)+"</span><span class='mv-ws'>"+(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
+   +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+esc(first(w.name))+"</span><span class='mv-ws'>"+esc(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
    +(m.summary?("<p class='mv-lead'>"+m.summary+"</p>"):"")
    +"<div class='mv-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>Max DD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
    +"<div class='mv-h'>Key risks</div>"+(risks.body?("<p class='mv-lead sm'>"+risks.body+"</p>"):"")+"<div class='mvr-list'>"+claims+"</div>"
@@ -751,7 +757,7 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
   openDrawer(h);var d=$('#drawer');if(d)d.classList.add('wide');}
 function auditDrawer(){var A2=A.audit||[];
   var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
-  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+g.fund+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+c.metric+"</span><span class='av-val'>"+(c.value==null?'—':c.value)+"</span></div><div class='av-src' title=\""+src.replace(/"/g,'')+"\">"+src+"</div></div></div>"}).join('')+"</div>"}).join('');
+  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+esc(c.metric)+"</span><span class='av-val'>"+(c.value==null?'—':esc(c.value))+"</span></div><div class='av-src' title=\""+esc(src)+"\">"+esc(src)+"</div></div></div>"}).join('')+"</div>"}).join('');
   if(!A2.length)body="<p class='d-p'>This view is running on re-uploaded data — metrics were recomputed live from your CSV, so the memo's original claim ledger isn't attached. Load the bundled sample to see the full audit trail.</p>";
   var shield="<svg viewBox='0 0 24 24' fill='none'><path d='M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z' fill='var(--accent-soft)' stroke='var(--accent2)' stroke-width='1.3' stroke-linejoin='round'/><path d='M8.6 12.2l2.3 2.3 4.5-4.6' stroke='var(--accent2)' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
   openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+A.verified+" / "+A.total+" verified</div></div></div><div class='d-strat' style='margin-top:12px'>every figure re-checked against the deterministic metrics engine</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each numeric claim below was recomputed from the source return series and matched exactly — nothing reaches the page unverified.</p>"+body)}
@@ -899,12 +905,12 @@ function recompute(funds,ret,order,quar){ try{
   fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // detail html for the drawer
   fd.forEach(function(d){var cells=[['ann return',pct(d.ret)],['ann vol',pct(d.vol)],['sharpe',num(d.sharpe)],['sortino',num(d.sortino)],['calmar',num(d.calmar)],['max drawdown',pct(d.maxdd)]].map(function(c){return "<div class='cell'><b>"+c[1]+"</b><i>"+c[0]+"</i></div>"}).join('');
-    var lead=d.rank?("ranks #"+d.rank+" for this mandate"):(d.reason?("was excluded — "+d.reason):"was outscored below the shortlist");
-    d.detail="<p class='d-p'>"+d.name+" "+lead+". It returned "+pct(d.ret)+" annualized against "+pct(d.vol)+" volatility, a Sharpe of "+num(d.sharpe)+" and a Sortino of "+num(d.sortino)+".</p><div class='mgrid'>"+cells+"</div><div class='src-lbl'>Recomputed from your uploaded returns</div>";});
+    var lead=d.rank?("ranks #"+d.rank+" for this mandate"):(d.reason?("was excluded — "+esc(d.reason)):"was outscored below the shortlist");
+    d.detail="<p class='d-p'>"+esc(d.name)+" "+lead+". It returned "+pct(d.ret)+" annualized against "+pct(d.vol)+" volatility, a Sharpe of "+num(d.sharpe)+" and a Sortino of "+num(d.sortino)+".</p><div class='mgrid'>"+cells+"</div><div class='src-lbl'>Recomputed from your uploaded returns</div>";});
   var win=fd.filter(function(d){return d.rank==1})[0];
   A.funds=fd;A.bench=bench;A.benchLine=benchLine;A.gateX=gateX;A.volcap=(ms.volCap!=null?Math.round(ms.volCap*100)+'%':null);
   A.nTotal=fd.length;A.nEligible=fd.filter(function(d){return d.eligible}).length;A.nShort=shortIds.length;A.nReject=fd.filter(function(d){return d.reason}).length;
-  A.verdict=(win?win.name+" leads on risk-adjusted return.":"No fund met the mandate.");A.verdictHtml=(win?"<b>"+win.name+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
+  A.verdict=(win?win.name+" leads on risk-adjusted return.":"No fund met the mandate.");A.verdictHtml=(win?"<b>"+esc(win.name)+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
   A.audit=[];A.shareText=(win?win.name+" — recommended (risk-adjusted). "+A.nShort+" shortlisted from "+A.nTotal+".":"No fund met the mandate.");
   rerender();
   toast("<span class='tk'>&#10003;</span>Re-ran the analysis · "+A.nTotal+" funds → "+A.nShort+" shortlisted"+(quar?" · "+quar+" bad rows quarantined":""));
@@ -913,7 +919,7 @@ function rerender(){aborted=true;A.weights0=Object.assign({},A.weights);A.active
   document.body.classList.remove('settled','scoring','screening');$('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('#weighlegend').innerHTML='';$('#weighlegend').classList.remove('in');$('#traj').innerHTML='';$$('.tt,.tx,.ty').forEach(function(t){t.remove()});
   $('.rail').classList.remove('in');$('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');$('.sweetz').classList.remove('on');clearCue();
   // rebuild the shortlist rail
-  var rc=$('.rail .chips');if(rc){rc.innerHTML=shortlisted().map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+s.id+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+s.name+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
+  var rc=$('.rail .chips');if(rc){rc.innerHTML=shortlisted().map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+esc(s.id)+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+esc(s.name)+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
   buildField();buildIntro();setPrintDate();_lastLive=null;setTimeout(function(){aborted=false;story()},60);}
 function doShare(){var txt=A.shareText||document.title;
   var ok=function(){toast("<span class='tk'>✓</span>Recommendation summary copied to clipboard")};
