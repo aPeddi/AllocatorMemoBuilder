@@ -66,6 +66,29 @@ def ann_vol(r: np.ndarray, ppy: int) -> Optional[float]:
     return _f(float(np.std(r, ddof=1)) * math.sqrt(ppy))
 
 
+def wealth_curve(returns, round_to: Optional[int] = 4) -> list[float]:
+    """Compounded growth-of-$1 curve from periodic returns."""
+    out, c = [], 1.0
+    for v in returns:
+        c *= 1.0 + float(v)
+        out.append(round(c, round_to) if round_to is not None else c)
+    return out
+
+
+def annualize(returns, ppy: int = 12):
+    """(ann_return, ann_vol, wealth_curve) for a list of periodic returns.
+
+    The one convenience wrapper the live-market proxy (serve.py) and the exporter
+    both call, so annualization/vol/wealth is defined once, here, on the canonical
+    engine — never re-implemented downstream.
+    """
+    vals = [float(v) for v in returns]
+    if len(vals) < 2:
+        return None, None, []
+    arr = np.asarray(vals, dtype=float)
+    return ann_return(arr, ppy), ann_vol(arr, ppy), wealth_curve(vals)
+
+
 def sharpe(r: np.ndarray, ppy: int, rf_annual: float) -> Optional[float]:
     if len(r) < 2:
         return None
