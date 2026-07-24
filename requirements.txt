@@ -18,8 +18,11 @@ numpy
 requests
 certifi
 
-# LLM — Anthropic direct (ADR-0008)
+# LLM — provider-agnostic (pick via AMB_LLM_PROVIDER=anthropic|openai|none).
+# Both SDKs are lazy-imported; only the selected provider loads at runtime, and
+# with no key the memo falls back to the deterministic offline template.
 anthropic
+openai
 
 # Memo rendering / export
 jinja2

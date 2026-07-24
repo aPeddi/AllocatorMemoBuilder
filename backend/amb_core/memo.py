@@ -310,11 +310,11 @@ def _cli(argv=None) -> int:
     mandate = load_mandate("data/mandates/default.yaml")
     s = get_settings()
     provider = None
-    if s.has_llm and "--template" not in args:
+    if "--template" not in args:
         try:
-            from .llm import anthropic_claims_provider
+            from .llm import select_claims_provider
 
-            provider = anthropic_claims_provider
+            provider = select_claims_provider()  # None -> deterministic template
         except Exception:  # noqa: BLE001
             provider = None
     memo, ctx = run(funds_csv, returns_csv, mandate, provider)

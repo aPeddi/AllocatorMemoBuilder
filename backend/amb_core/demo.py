@@ -35,12 +35,14 @@ def main(argv=None) -> int:
 
     provider = None
     label = "deterministic template (offline)"
-    if s.has_llm and "--template" not in argv:
+    if "--template" not in argv:
         try:
-            from .llm import anthropic_claims_provider
+            from .llm import select_claims_provider
 
-            provider = anthropic_claims_provider
-            label = f"Anthropic · {s.strong_model}"
+            provider = select_claims_provider()  # None -> deterministic template
+            if provider is not None:
+                model = s.strong_model if s.llm_provider == "anthropic" else s.openai_model
+                label = f"{s.llm_provider} · {model}"
         except Exception as e:  # noqa: BLE001
             print(f"! LLM unavailable ({e}); falling back to template.")
 
