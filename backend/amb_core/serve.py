@@ -27,6 +27,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from .config import get_settings
 from .ingest import load_returns
 from .marketdata import fetch_risk_free_annual, resolve_benchmark
+from .metrics import annualize as _annualize  # shared engine helper (ret, vol, wealth)
 
 log = logging.getLogger("amb.serve")
 
@@ -47,24 +48,6 @@ async def _security_headers(request: Request, call_next):
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     return resp
-
-
-def _annualize(vals: list[float], ppy: int = 12):
-    n = len(vals)
-    if n < 2:
-        return None, None, []
-    g = 1.0
-    for v in vals:
-        g *= 1.0 + v
-    ret = g ** (ppy / n) - 1.0 if g > 0 else g - 1.0
-    mean = sum(vals) / n
-    var = sum((v - mean) ** 2 for v in vals) / (n - 1)
-    vol = var ** 0.5 * ppy ** 0.5
-    wealth, c = [], 1.0
-    for v in vals:
-        c *= 1.0 + v
-        wealth.append(round(c, 4))
-    return ret, vol, wealth
 
 
 def market_payload(data_dir: str = "data", mode: str = "live") -> dict:

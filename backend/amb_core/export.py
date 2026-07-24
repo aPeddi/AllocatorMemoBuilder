@@ -2,7 +2,7 @@ from __future__ import annotations
 import html, json, math
 from pathlib import Path
 from .memo import render_markdown
-from .metrics import METRIC_KEYS
+from .metrics import METRIC_KEYS, annualize
 from .scoring import DIRECTION, DEFAULT_WEIGHTS, _resolve, _test
 from .models import Memo
 
@@ -95,20 +95,13 @@ def render_html(memo, ctx=None):
             out.append({"k":k,"c":round(w*((v-mu)/sd)*DIRECTION.get(k,0),3)})
         return out
 
-    # benchmark point (same conventions as the metrics engine: CAGR + sample-std annualized vol)
+    # benchmark point — annualized on the canonical engine (CAGR + sample-std vol)
     bench=None
     bmk=getattr(ctx,"benchmark",None) if ctx else None
     if bmk and getattr(bmk,"points",None):
         bvals=bmk.values; nb=len(bvals); bppy=bmk.periods_per_year or 12
         if nb>=2:
-            growth=1.0
-            for v in bvals: growth*=(1.0+v)
-            bret=(growth**(bppy/nb)-1.0) if growth>0 else growth-1.0
-            bmean=sum(bvals)/nb
-            bvar=sum((v-bmean)**2 for v in bvals)/(nb-1)
-            bvol=(bvar**0.5)*(bppy**0.5)
-            bwealth=[];bc=1.0
-            for v in bvals: bc*=(1.0+v);bwealth.append(round(bc,4))
+            bret,bvol,bwealth=annualize(bvals,bppy)
             bench={"name":bmk.name,"vol":bvol,"ret":bret,"wealth":bwealth,
                    "kind":getattr(bmk,"source_kind","snapshot"),"srcName":getattr(bmk,"source_name","snapshot"),
                    "asOf":str(getattr(bmk,"as_of","")),"n":nb}
