@@ -58,10 +58,10 @@ def main(argv=None) -> int:
         print(f"Quarantined rows: {len(ctx.quarantined)}")
     print(f"Universe: {len(ctx.metrics_by_fund)} funds  →  shortlist {len(memo.shortlist)}\n")
     print(f"  {'#':>2}  {'fund':<26} {'ret':>8} {'sharpe':>7} {'sortino':>7} {'calmar':>7} {'maxDD':>8}")
-    for e in memo.shortlist:
-        m = e.metrics
+    for ent in memo.shortlist:
+        m = ent.metrics
         print(
-            f"  {e.rank:>2}  {e.name[:26]:<26} {_fmt_pct(m.get('ann_return'))} "
+            f"  {ent.rank:>2}  {ent.name[:26]:<26} {_fmt_pct(m.get('ann_return'))} "
             f"{_fmt_num(m.get('sharpe'))} {_fmt_num(m.get('sortino'))} {_fmt_num(m.get('calmar'))} "
             f"{_fmt_pct(m.get('max_drawdown'))}"
         )

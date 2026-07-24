@@ -7,9 +7,9 @@ summed. No LLM involved.
 from __future__ import annotations
 
 import statistics
-from typing import Optional
+from typing import Any, Iterable, Optional
 
-from .models import Fund, Mandate, ShortlistEntry
+from .models import Fund, Mandate, Metrics, ShortlistEntry
 
 # +1 higher-is-better, -1 lower-is-better, 0 neutral (not scored directionally).
 # max_drawdown is stored as <= 0, so "closer to zero" = larger = better -> +1.
@@ -38,14 +38,14 @@ DEFAULT_WEIGHTS = {
 }
 
 
-def resolve_field(fund: Fund, metrics: dict[str, Optional[float]], field: str):
+def resolve_field(fund: Fund, metrics: Metrics, field: str) -> Any:
     """A constraint field names either a Fund attribute or a metric — resolve it."""
     if hasattr(fund, field):
         return getattr(fund, field)
     return metrics.get(field)
 
 
-def test_constraint(val, op: str, target) -> bool:
+def test_constraint(val: Any, op: str, target: Any) -> bool:
     if val is None:
         return op in {"!=", "not_in"}  # unknown fails positive constraints
     try:
@@ -81,7 +81,7 @@ def resolve_weights(mandate: Optional[Mandate]) -> dict[str, float]:
 
 
 def eligible_stats(
-    eligible_ids, metrics_by_fund: dict[str, dict], weights: dict[str, float]
+    eligible_ids: Iterable[str], metrics_by_fund: dict[str, Metrics], weights: dict[str, float]
 ) -> dict[str, tuple[float, float]]:
     """Per-metric (mean, population-stdev) across the eligible set — the z-score basis.
 
@@ -89,17 +89,20 @@ def eligible_stats(
     and the exporter (the on-screen weighing bars) read it, so the bar a fund shows
     is provably the score it was ranked on.
     """
+    ids = list(eligible_ids)
     stats: dict[str, tuple[float, float]] = {}
     for k in weights:
-        present = [metrics_by_fund[fid].get(k) for fid in eligible_ids
-                   if metrics_by_fund.get(fid, {}).get(k) is not None]
+        present: list[float] = [
+            float(v) for fid in ids
+            if (v := metrics_by_fund.get(fid, {}).get(k)) is not None
+        ]
         if len(present) >= 2:
             stats[k] = (statistics.fmean(present), statistics.pstdev(present))
     return stats
 
 
 def score_components(
-    fid: str, metrics_by_fund: dict[str, dict], weights: dict[str, float],
+    fid: str, metrics_by_fund: dict[str, Metrics], weights: dict[str, float],
     stats: dict[str, tuple[float, float]], round_to: int = 3,
 ) -> list[dict]:
     """Signed, weighted z contribution of each metric to a fund's score."""
@@ -117,7 +120,7 @@ def score_components(
 
 
 def apply_constraints(
-    funds: list[Fund], metrics_by_fund: dict[str, dict], mandate: Mandate
+    funds: list[Fund], metrics_by_fund: dict[str, Metrics], mandate: Mandate
 ) -> list[str]:
     eligible = []
     for f in funds:
@@ -128,7 +131,7 @@ def apply_constraints(
 
 
 def build_shortlist(
-    funds: list[Fund], metrics_by_fund: dict[str, dict], mandate: Mandate
+    funds: list[Fund], metrics_by_fund: dict[str, Metrics], mandate: Mandate
 ) -> list[ShortlistEntry]:
     by_id = {f.fund_id: f for f in funds}
     eligible = apply_constraints(funds, metrics_by_fund, mandate)

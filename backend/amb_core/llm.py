@@ -243,8 +243,8 @@ def anthropic_claims_provider(
     import anthropic  # lazy: the deterministic path needs no SDK
     client = anthropic.Anthropic(api_key=api_key)
 
-    def call(prompt: str, model: str):
-        return client.messages.create(
+    def call(prompt: str, model: str) -> Any:
+        return client.messages.create(  # type: ignore[call-overload]  # dict tool schema, not the SDK's TypedDicts
             model=model, max_tokens=4096, system=_SYSTEM, tools=[_MEMO_TOOL],
             tool_choice={"type": "tool", "name": "submit_memo"},
             messages=[{"role": "user", "content": prompt}],
@@ -301,7 +301,9 @@ def openai_claims_provider(
     )
 
 
-_PROVIDERS: dict[str, ClaimsProvider] = {
+# the raw (unbound) provider functions — take api_key/model kwargs the bound
+# ClaimsProvider does not, so they're typed as general callables.
+_PROVIDERS: dict[str, Callable[..., dict]] = {
     "anthropic": anthropic_claims_provider,
     "openai": openai_claims_provider,
 }

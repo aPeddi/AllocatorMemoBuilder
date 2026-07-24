@@ -4,9 +4,16 @@ and each carries enough provenance to trace it back to a source row + formula.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# the constraint operators the screener understands — a closed set, so a typo in a
+# mandate YAML (op: "=>") is rejected at load time instead of silently never matching.
+Op = Literal[">=", "<=", ">", "<", "==", "!=", "in", "not_in"]
+
+# a fund's computed metrics, keyed by the stable METRIC_KEYS names (metrics.py).
+Metrics = dict[str, Optional[float]]
 
 
 class _Model(BaseModel):
@@ -69,7 +76,7 @@ class Benchmark(_Model):
 
 class MandateConstraint(_Model):
     field: str                     # a Fund attribute or a metric name
-    op: str                        # >= <= == != in not_in
+    op: Op                         # validated against the closed operator set
     value: Any
 
 

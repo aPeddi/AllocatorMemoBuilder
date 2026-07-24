@@ -111,9 +111,11 @@ def _default_key_risks(ctx: AnalysisContext) -> dict:
     vol = pick("ann_vol", worst=False)         # highest volatility
 
     # liquidity: least-liquid shortlisted fund
-    liq = None
-    liq_days = [(fid, ctx.funds[fid].redemption_days) for fid in ids
-                if ctx.funds.get(fid) and ctx.funds[fid].redemption_days is not None]
+    liq: Optional[tuple[str, float]] = None
+    liq_days: list[tuple[str, float]] = [
+        (fid, rd) for fid in ids
+        if (fu := ctx.funds.get(fid)) is not None and (rd := fu.redemption_days) is not None
+    ]
     if liq_days:
         liq = max(liq_days, key=lambda t: t[1])
 
@@ -229,7 +231,7 @@ def template_claims_provider(ctx: AnalysisContext) -> dict:
     funds = []
     for s in ctx.shortlist:
         m = ctx.metrics_by_fund[s.fund_id]
-        f = ctx.get_fund(s.fund_id)
+        f = ctx.funds[s.fund_id]  # shortlisted ids always resolve
         para = (
             f"{f.name} ranks #{s.rank} for this mandate. It returned {pct(m.get('ann_return'))} "
             f"annualized against {pct(m.get('ann_vol'))} volatility, producing a Sharpe of "

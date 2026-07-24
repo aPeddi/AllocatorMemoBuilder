@@ -16,6 +16,37 @@ dependencies = [
   "anthropic",
 ]
 
+[project.optional-dependencies]
+dev = ["mypy>=1.8", "pytest"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["amb_core*"]
+
+# ── static type checking ──────────────────────────────────────────────────────
+# Gradual-typing gate: meaningful checks everywhere, full strictness on the pure
+# domain core (the source of truth). The dict-/string-assembly edge modules
+# (export/memo/llm/…) are checked where annotated and tightened incrementally —
+# standard mypy per-module strictness.
+[tool.mypy]
+python_version = "3.10"
+files = ["amb_core"]
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+  "amb_core.metrics",
+  "amb_core.scoring",
+  "amb_core.models",
+  "amb_core.coercion",
+  "amb_core.errors",
+  "amb_core.config",
+  "amb_core.retrieval",
+]
+disallow_untyped_defs = true
+check_untyped_defs = true
