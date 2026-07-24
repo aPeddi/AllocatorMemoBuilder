@@ -23,6 +23,24 @@ def _read_asset(name):
     return (_ASSETS / name).read_text(encoding="utf-8")
 
 
+def _json_for_script(obj) -> str:
+    """Serialize `obj` for safe embedding inside a <script> tag.
+
+    Fund names, strategies and LLM prose flow into this payload, so neutralize
+    any sequence that could break out of the script element ("</script>", "<!--")
+    or the JSON-in-HTML context. The escaped code points parse back to the exact
+    same characters in the browser, so the data the page sees is unchanged.
+    """
+    return (
+        json.dumps(obj, ensure_ascii=False)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+
+
 _CSS = _read_asset("memo.css")
 
 _JS = _read_asset("memo.js")
@@ -310,7 +328,7 @@ def render_html(memo, ctx=None):
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
             f'{printdoc}'
             '<div id="drawer"></div><div id="play">Replay decision</div><div id="pop"></div><div id="toast"></div>'
-            f'<script>window.AMB={json.dumps(DATA)};</script><script>{_JS}</script></body></html>')
+            f'<script>window.AMB={_json_for_script(DATA)};</script><script>{_JS}</script></body></html>')
 
 def write_html(memo, path, ctx=None):
     p=Path(path);p.parent.mkdir(parents=True,exist_ok=True);p.write_text(render_html(memo,ctx));return p

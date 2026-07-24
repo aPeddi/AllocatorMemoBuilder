@@ -127,3 +127,14 @@ def test_net_return_reflects_fee(sample_run):
     fee = ctx.get_fund(fid).mgmt_fee_pct
     if gross is not None and fee is not None:
         assert net == pytest.approx(gross - fee / 100.0, abs=1e-6)
+
+
+def test_script_embedding_is_xss_safe():
+    """Data embedded in the <script> tag must not be able to break out of it."""
+    import json as _json
+    from amb_core.export import _json_for_script
+    payload = {"name": "</script><script>alert(1)</script>", "amp": "a & b"}
+    s = _json_for_script(payload)
+    assert "</script>" not in s and "<script>" not in s  # cannot terminate/open a tag
+    assert "\\u003c" in s                                  # '<' is escaped
+    assert _json.loads(s) == payload                       # …and still round-trips exactly
