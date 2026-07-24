@@ -5,23 +5,48 @@ must never ship in client code. So this process holds the key server-side, expos
 `/api/market`, and the page fetches that: browser → localhost → FRED. The secret
 stays on the server; the reviewer sees a real market-data API call in the network
 tab and the server log. Falls back to the committed snapshot if the live call fails.
+
+Security posture (local, single-user tool):
+  * The FRED / LLM keys are read server-side only; responses expose booleans
+    (`has_fred_key`) never the secret itself.
+  * Endpoints take no client-supplied input, so there is no injection surface;
+    `mode` is validated against a whitelist as defence-in-depth.
+  * Only the built memo file is ever served — no arbitrary path is exposed.
+  * Bound to 127.0.0.1 by default (see config.serve_host) — not the network.
+  * Same-origin by default (no permissive CORS); errors return generic text
+    and the detail is logged server-side, never leaked to the client.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from .config import get_settings
 from .ingest import load_returns
 from .marketdata import fetch_risk_free_annual, resolve_benchmark
 
+log = logging.getLogger("amb.serve")
+
 ROOT = Path(".")
 EXPORTS = ROOT / "exports"
 SAMPLES = ROOT / "data" / "samples"
 
+_ALLOWED_MODES = {"live", "snapshot", "cache"}
+
 app = FastAPI(title="AllocatorMemoBuilder · live market data")
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    """Conservative headers for a local tool that renders untrusted CSV-derived data."""
+    resp = await call_next(request)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    return resp
 
 
 def _annualize(vals: list[float], ppy: int = 12):
@@ -45,6 +70,8 @@ def _annualize(vals: list[float], ppy: int = 12):
 def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
     """Live benchmark + risk-free, aligned to the sample fund window. The one place
     the FRED key is used — server-side only."""
+    if mode not in _ALLOWED_MODES:  # defence-in-depth: never trust an unexpected mode
+        mode = "live"
     s = get_settings()
     bench = resolve_benchmark("SP500", mode=mode, data_dir=data_dir)
     if bench is None:
@@ -63,7 +90,7 @@ def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
     return {
         "ok": True,
         "live": bench.source_kind == "live",
-        "keyed": s.has_fred_key,
+        "keyed": s.has_fred_key,  # boolean only — the key itself never leaves the server
         "benchmark": {
             "name": bench.name, "ret": ret, "vol": vol, "wealth": wealth,
             "kind": bench.source_kind, "srcName": bench.source_name,
@@ -77,8 +104,9 @@ def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
 def api_market():
     try:
         return JSONResponse(market_payload())
-    except Exception as e:  # noqa: BLE001
-        return JSONResponse({"ok": False, "error": str(e)})
+    except Exception as e:  # noqa: BLE001 — log detail server-side, return a generic message
+        log.warning("market_payload failed: %s", e)
+        return JSONResponse({"ok": False, "error": "market data temporarily unavailable"}, status_code=502)
 
 
 @app.get("/api/health")
@@ -89,6 +117,7 @@ def api_health():
 
 @app.get("/")
 def index():
+    # Only ever the one built artifact is served; no client-supplied path is honoured.
     f = EXPORTS / "memo.html"
     if not f.exists():
         return JSONResponse({"error": "run `./amb` once to build the memo, then `./amb serve`"}, status_code=404)
