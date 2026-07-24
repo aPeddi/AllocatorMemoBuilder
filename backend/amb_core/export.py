@@ -83,6 +83,8 @@ def _json_for_script(obj) -> str:
 
 _THEME = _read_asset("theme.css")  # single branding source: palette, typography, hues
 
+_FONTS = _read_asset("fonts.css")  # inlined base64 woff2 (Inter + JetBrains Mono) → truly offline
+
 _CSS = _read_asset("memo.css")
 
 _JS = _read_asset("memo.js")
@@ -345,9 +347,7 @@ def render_html(memo, ctx=None):
 
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<title>{e(memo.title)}</title>'
-            '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
-            '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">'
-            f'<style>{_THEME}{_CSS}</style></head><body>'
+            f'<style>{_FONTS}{_THEME}{_CSS}</style></head><body>'
             '<div class="atmo"><div class="grid"></div></div><div id="tip"></div>'
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
             f'{printdoc}'

@@ -26,6 +26,12 @@ function flushWaits(){_waits.slice().forEach(function(r){r.flush()})}
 function setPaused(v){if(paused===v)return;paused=v;_waits.slice().forEach(function(r){v?r.pause():r.resume()});
   document.body.classList.toggle('paused',v);var pb=$('#pausebtn');if(pb){pb.innerHTML=v?'▶&nbsp;resume':'❚❚&nbsp;pause';pb.classList.toggle('on',v)}}
 function togglePause(){if(!document.body.classList.contains('playing'))return;setPaused(!paused)}
+// generation token: every reset/replay/rerender/skip bumps GEN, so any animation
+// timer scheduled by the previous run no-ops instead of mutating the rebuilt DOM
+// (the old race where a stale setTimeout fired onto freshly-rebuilt nodes).
+var GEN=0;
+function bumpGen(){GEN++}
+function schedule(fn,ms){var g=GEN;return setTimeout(function(){if(g===GEN)fn()},ms)}
 function pct(x){return x==null?'—':(x*100).toFixed(1)+'%'} function num(x){return x==null?'—':x.toFixed(2)}
 function first(n){return n.split(' ')[0]}
 function contenders(){return A.funds.filter(function(d){return d.eligible}).sort(function(a,b){return a.srank-b.srank})} // cleared the mandate (scored)
@@ -100,12 +106,12 @@ function buildIntro(){
     var cuts={};A.funds.forEach(function(d){(d.reasons||[]).forEach(function(rr){cuts[rr.kind]=(cuts[rr.kind]||0)+1})});
     A.gates.forEach(function(gt,i){var r=el('div','ipg');r.dataset.k=gt.label;var n=cuts[gt.label]||0;
       var ct=n>0?"<span class='gc'>−"+n+"</span>":"<span class='gc gc0'>0</span>";
-      r.innerHTML="<span class='k'>"+esc(gt.label)+"</span><span class='d'>"+esc(gt.detail)+"</span>"+ct;g.appendChild(r);setTimeout(function(){r.classList.add('in')},260+i*150)})}
+      r.innerHTML="<span class='k'>"+esc(gt.label)+"</span><span class='d'>"+esc(gt.detail)+"</span>"+ct;g.appendChild(r);schedule(function(){r.classList.add('in')},260+i*150)})}
   var w=$('#ip-weights');if(w){w.innerHTML='';var fs=weightFactors();var mx=Math.max.apply(null,fs.map(function(k){return A.weights[k]}));
     fs.forEach(function(k,i){var pctv=Math.round(A.weights[k]*100);var r=el('div','ipw');
       r.innerHTML="<span class='wl'>"+k.replace(/_/g,' ')+"</span><span class='wb'><i></i></span><span class='wp'>"+pctv+"%</span>";
       w.appendChild(r);var bar=$('.wb i',r);
-      setTimeout(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
+      schedule(function(){r.classList.add('in');bar.style.background=segColor(i,false);bar.style.width=(A.weights[k]/mx*100).toFixed(0)+'%'},560+i*120)})}
   var bp=$('#ip-bench');if(bp){if(A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>";}else{bp.innerHTML="<div class='ipb'><div class='bt'><div class='bm'>no benchmark</div></div></div>";}}
   updateTally();
 }
@@ -142,7 +148,7 @@ function frontier(){buildGuides();
   A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible){n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}});}
 function chapter(numv,ttl,sub){var c=$('#chapter');var old=$('.c',c);
   var set=function(){c.innerHTML="<div class='c'><div class='n'>"+numv+"</div><div class='t'>"+ttl+"</div><div class='s'>"+sub+"</div></div>";var card=$('.c',c);void card.offsetWidth;card.classList.add('in')};
-  if(old){old.classList.add('out');setTimeout(set,240)}else set();}
+  if(old){old.classList.add('out');schedule(set,240)}else set();}
 
 function buildWeigh(){
   var host=$('#scorebars');host.innerHTML='';rows={};segState={};computeScale();buildLegend();
@@ -154,7 +160,7 @@ function buildWeigh(){
     var row=el('div','wrow'+(d.rank==1?' win':'')+(i===0?' rk1':''));row.style.top=(i*ROWH)+'px';
     row.innerHTML="<div class='wrk'>"+(i+1)+"</div><div class='wn'>"+esc(first(d.name))+"</div><div class='wtrack' style='height:"+th+"px'><div class='wzero' style='left:"+ZERO+"%'></div></div><div class='wsc'>0.00</div>";
     track.appendChild(row);rows[d.id]=row;segState[d.id]={pos:ZERO,neg:ZERO,cum:0};
-    setTimeout(function(){row.classList.add('in')},70*i);
+    schedule(function(){row.classList.add('in')},70*i);
   });
   if(A.nShort&&sl.length>A.nShort){var cl=el('div','wcut');cl.style.top=(A.nShort*ROWH-2)+'px';cl.innerHTML="<span>cut line · top "+A.nShort+" advance</span>";track.appendChild(cl);}
   track.style.height=(sl.length*ROWH)+'px';   // full list height; #scorebars scrolls only when this exceeds the viewport
@@ -236,9 +242,9 @@ function reweigh(active){
   var DIR=A.dir||{};var eff=effWeights(active);if(!eff)return;
   var elig=A.funds.filter(function(d){return d.eligible});
   // one basis for rank AND for the displayed bars: z across the eligible set, so the score a fund shows IS the score it's ranked on
-  var stE={};active.forEach(function(k){var f=metricField(k);var vals=elig.map(function(d){return d[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
-  elig.forEach(function(d){var cp=[];active.forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;cp.push({k:k,c:Math.round(eff[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)*1000)/1000})});
-    var cm={};cp.forEach(function(x){cm[x.k]=x.c});d._cp=cp;d._cm=cm;d._sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000});
+  var stE=_zStats(elig,_accFund,active);
+  elig.forEach(function(d){var cp=_zComps(d,_accFund,eff,DIR,stE);
+    var cm={};cp.forEach(function(x){cm[x.k]=x.c});d._cp=cp;d._cm=cm;d._sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000});  // reweigh ranks on the rounded-component sum
   var ranked=elig.slice().sort(function(a,b){return b._sc-a._sc});var nShort=A.nShort||Math.min(elig.length,5);
   ranked.forEach(function(d,i){var rk=i<nShort?i+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));d.components=d._cp;d.comp=d._cm;d.score=d._sc;delete d._cp;delete d._cm;delete d._sc});
   A.activeMetrics=active.slice();}
@@ -313,14 +319,14 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
     if((ms.exclStrats||[]).indexOf(d.strategy)>=0)rs.push({text:"off-strategy · "+d.strategy,kind:"STRATEGY"});
     d.reasons=rs;d.reason=(rs.length?rs[0].text:null);d.rkind=(rs.length?rs[0].kind:null);d.eligible=(rs.length===0);d.excluded=(rs.length>0);});
   var elig=A.funds.filter(function(d){return d.eligible});
-  var stE={};Object.keys(W).forEach(function(k){var f=metricField(k);var vals=elig.map(function(d){return d[f]}).filter(function(v){return v!=null&&isFinite(v)});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
-  elig.forEach(function(d){var s=0;Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});d._rs=s});
+  var stE=_zStats(elig,_accFund,Object.keys(W));
+  elig.forEach(function(d){d._rs=_zRaw(d,_accFund,W,DIR,stE)});   // rank on the raw (unrounded) weighted-z sum
   var ranked=elig.slice().sort(function(a,b){return b._rs-a._rs});var nS=ms.topN||5;var shortIds=ranked.slice(0,nS).map(function(d){return d.id});
   A.funds.forEach(function(d){
     if(!d.eligible){d.rank=null;d.cut=false;d.srank=99;d.components=[];d.comp={};d.score=0;if(d._rs!=null)delete d._rs;return}
     var si=shortIds.indexOf(d.id);var rk=si>=0?si+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));
     // components on the SAME eligible-z basis as the ranking, so bars == rank order
-    var cp=[];Object.keys(W).forEach(function(k){var f=metricField(k),v=d[f];if(v==null||!stE[k]||stE[k][1]===0)return;cp.push({k:k,c:Math.round(W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)*1000)/1000})});
+    var cp=_zComps(d,_accFund,W,DIR,stE);
     var cm={};cp.forEach(function(x){cm[x.k]=x.c});d.components=cp;d.comp=cm;d.score=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;delete d._rs;});
   A.nShort=shortIds.length;A.nEligible=elig.length;A.nReject=A.funds.filter(function(d){return d.reason}).length;A.nTotal=A.funds.length;
   var win=A.funds.filter(function(d){return d.rank==1})[0];
@@ -461,9 +467,9 @@ function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
   [[0,'.24'],[1,'0']].forEach(function(s){var st=document.createElementNS(ns,'stop');st.setAttribute('offset',s[0]);st.setAttribute('stop-color',WINC);st.setAttribute('stop-opacity',s[1]);g.appendChild(st)});
   defs.appendChild(g);svg.appendChild(defs);
   var wf=funds.filter(function(d){return d.rank==1})[0];
-  if(wf){var ap=X(0)+','+Y(lo)+' ';wf.wealth.forEach(function(w,i){ap+=X(i)+','+Y(w)+' '});ap+=X(n-1)+','+Y(lo);var ar=document.createElementNS(ns,'polygon');ar.setAttribute('points',ap);ar.setAttribute('fill','url(#wgrad)');ar.style.opacity='0';ar.style.transition='opacity 1s';svg.appendChild(ar);setTimeout(function(){ar.style.opacity='1'},700)}
+  if(wf){var ap=X(0)+','+Y(lo)+' ';wf.wealth.forEach(function(w,i){ap+=X(i)+','+Y(w)+' '});ap+=X(n-1)+','+Y(lo);var ar=document.createElementNS(ns,'polygon');ar.setAttribute('points',ap);ar.setAttribute('fill','url(#wgrad)');ar.style.opacity='0';ar.style.transition='opacity 1s';svg.appendChild(ar);schedule(function(){ar.style.opacity='1'},700)}
   // benchmark dashed line
-  if(bench){var bl=poly(bench.map(function(w,i){return X(i)+','+Y(w)}).join(' '),WARM,'1.3','4 3');bl.style.opacity='0';bl.style.transition='opacity .8s';svg.appendChild(bl);setTimeout(function(){bl.style.opacity='.7'},900)}
+  if(bench){var bl=poly(bench.map(function(w,i){return X(i)+','+Y(w)}).join(' '),WARM,'1.3','4 3');bl.style.opacity='0';bl.style.transition='opacity .8s';svg.appendChild(bl);schedule(function(){bl.style.opacity='.7'},900)}
   // label positions
   var lab=funds.slice();if(bench)lab.push({__bench:true,wealth:bench});
   var used=[];lab.slice().sort(function(a,b){return Y(a.wealth[n-1])-Y(b.wealth[n-1])}).forEach(function(d){var tp=Y(d.wealth[n-1])/H*100;while(used.some(function(u){return Math.abs(u-tp)<7.5})){tp+=7.5}used.push(tp);d.__tp=tp});
@@ -471,9 +477,9 @@ function buildTraj(){ if(trajBuilt)return;trajBuilt=true;
     var pl=poly(d.wealth.map(function(w,i){return X(i)+','+Y(w)}).join(' '),col,win?'2.4':'1.3');
     if(win)pl.style.filter='drop-shadow(0 0 5px '+cssv('--accent-glow')+')';
     pl.style.strokeDasharray='1600';pl.style.strokeDashoffset='1600';svg.appendChild(pl);
-    setTimeout(function(){pl.style.transition='stroke-dashoffset 1.3s ease';pl.style.strokeDashoffset='0'},120+idx*80);
+    schedule(function(){pl.style.transition='stroke-dashoffset 1.3s ease';pl.style.strokeDashoffset='0'},120+idx*80);
     var li=d.wealth.length-1,lv=d.wealth[li];
-    var dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',X(li));dot.setAttribute('cy',Y(lv));dot.setAttribute('r',win?'3.4':'2.2');dot.setAttribute('fill',col);dot.style.opacity='0';dot.style.transition='opacity .4s';svg.appendChild(dot);setTimeout(function(){dot.style.opacity='1'},120+idx*80+1150);
+    var dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',X(li));dot.setAttribute('cy',Y(lv));dot.setAttribute('r',win?'3.4':'2.2');dot.setAttribute('fill',col);dot.style.opacity='0';dot.style.transition='opacity .4s';svg.appendChild(dot);schedule(function(){dot.style.opacity='1'},120+idx*80+1150);
     var gain=isFinite(lv)?((lv-1)*100).toFixed(0):'—';
     var t=el('div','tt'+(win?' twin':''));t.style.color=col;t.style.right='2px';t.style.top=d.__tp+'%';t.innerHTML=esc(first(d.name))+" <b>+"+gain+"%</b>";host.appendChild(t);
   });
@@ -569,14 +575,14 @@ async function actZero(){
     var vcell=(stt==='norm')?"<span>"+sr[2]+" <b class='normv'>&rarr; "+sr[4]+"</b></span>":"<span>"+sr[2]+"</span>";
     var stat=baddate?"<span class='mstat'></span>":(stt==='norm'?"<span class='mstat'><span class='okc'>✓</span> cleaned</span>":"<span class='mstat'><span class='okc'>✓</span></span>");
     row.innerHTML=(baddate?"<span class='badc'>":"<span>")+sr[0]+"</span><span>"+sr[1]+"</span>"+vcell+stat;
-    mtx.appendChild(row);setTimeout(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
+    mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
   await wait(360);if(aborted)return;
   var maps=[['date','→ period'],['fund_id','→ id'],['monthly_return','→ return']];var cm=$('#cmap',az);
-  for(var mi=0;mi<maps.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+maps[mi][0]+"</b><span>"+maps[mi][1]+"</span>";cm.appendChild(mr);setTimeout(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
+  for(var mi=0;mi<maps.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+maps[mi][0]+"</b><span>"+maps[mi][1]+"</span>";cm.appendChild(mr);schedule(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
   var norms=['% → decimal','strip 1,000s','ISO-8601 dates','coerce n/a → null'];var cn=$('#cnorm',az);
-  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+norms[ni];cn.appendChild(nr);setTimeout(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
+  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+norms[ni];cn.appendChild(nr);schedule(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
   var opt=$('#copt',az);opt.innerHTML="<span class='optt'>redemption_freq</span><span class='optt'>lockup_months</span><span class='optt'>notice_days</span><span class='optt'>mgmt_fee</span><div class='opt-note'>→ liquidity + fee model</div>";
-  setTimeout(function(){$$('.optt',az).forEach(function(t,i){setTimeout(function(){t.classList.add('in')},i*120)})},20);
+  schedule(function(){$$('.optt',az).forEach(function(t,i){schedule(function(){t.classList.add('in')},i*120)})},20);
   log('normalizing types · mapping optional liquidity & fee fields');
   await wait(1500);if(aborted)return;
 
@@ -596,8 +602,8 @@ async function actZero(){
    +"<div class='az-tl-dates'><span>"+(ov.start||'')+"</span><span>"+(ov.end||'')+"</span></div>"
    +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+WR+"/"+UNIV+" funds matched · quarantine was row-level, so every fund keeps its valid months</div></div></div>";
   var rc=$('#rchips',az);
-  for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);setTimeout(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
-  setTimeout(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);
+  for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);schedule(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
+  schedule(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);
   log('reconciled '+WR+' identifiers · aligned '+(ov.start||'')+' → '+(ov.end||''));
   await wait(1600);if(aborted)return;
 
@@ -671,9 +677,9 @@ function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id=
   setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
 function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
   if(bigN())shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});   // big universe: only the shortlist keeps an always-on label
-  setTimeout(function(){layoutRows();redrawTraj()},680);}
+  schedule(function(){layoutRows();redrawTraj()},680);}
 
-function reset(){aborted=true;paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();
+function reset(){aborted=true;bumpGen();paused=false;flushWaits();document.body.classList.remove('settled');document.body.classList.remove('scoring');document.body.classList.remove('screening');document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();
   clearHalos();clearRtags();setLeaderNode(null);clearCue();_lastLive=null;
   A.funds.forEach(function(d){var n=nodes[d.id];n.className='node cand';n.style.left='50%';n.style.bottom='50%';n.style.opacity='';n.style.transform='';var cr=$('.crown',n);if(cr)cr.lastChild.textContent='leader';var sr=$('.stamp .sr',n);if(sr)sr.textContent='';var tg=$('.stamp .stags',n);if(tg)tg.innerHTML=''});$('#gateline').classList.remove('on');$('#danger').classList.remove('on');$('#counter').classList.remove('on');$('#guides').classList.remove('on');$('#weighlegend').classList.remove('in');
   $('#gates').classList.remove('on');$$('.gate').forEach(function(g){g.classList.remove('act')});$('.sweetz').classList.remove('on');
@@ -701,7 +707,7 @@ function wire(){
   document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
   document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
-  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
+  var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;bumpGen();paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
     var _big=bigN();
     A.funds.forEach(function(d){var n=nodes[d.id];n.classList.add('shown');if(!_big)n.classList.add('labeled');if(d.reason){n.classList.add('gone')}else{n.classList.add('ranked','showstat');n.style.left=d.xz+'%';n.style.bottom=d.yz+'%';if(d.cut)n.classList.add('cutout','dimmed');else if(d.rank!=1)n.classList.add('dimmed')}});
     if(_big)shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});
@@ -837,6 +843,14 @@ function downloadPDF(){
 function _pmean(a){return a.reduce(function(s,x){return s+x},0)/a.length}
 function _ppstd(a){var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/a.length)}
 function _psstd(a){if(a.length<2)return 0;var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/(a.length-1))}
+/* ── one client-side scoring core, shared by screenAndScore, reweigh and the CSV
+   recompute so the z-score basis can't drift between them. acc(item,key) reads a
+   metric off whatever the caller holds (a fund object or a metrics dict); callers
+   keep their own ranking basis (raw sum vs rounded-component sum) via _zRaw/_zComps. */
+function _accFund(d,k){return d[metricField(k)]}                 // metric off a fund node
+function _zStats(items,acc,keys){var st={};keys.forEach(function(k){var vals=[];items.forEach(function(it){var v=acc(it,k);if(v!=null&&isFinite(v))vals.push(v)});if(vals.length>=2)st[k]=[_pmean(vals),_ppstd(vals)]});return st}
+function _zComps(it,acc,weights,DIR,st){var cp=[];Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;cp.push({k:k,c:Math.round(weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)*1000)/1000})});return cp}
+function _zRaw(it,acc,weights,DIR,st){var s=0;Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;s+=weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)});return s}
 function fundMetrics(r){var ppy=12,rf=(A.mandateSpec&&A.mandateSpec.rf)||0.02,n=r.length;if(n<2)return null;
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
@@ -875,11 +889,12 @@ function recompute(funds,ret,order,quar){ try{
   function eligibleOf(id){var okS=ms.exclStrats.indexOf(strat[id])<0;var okV=(ms.volCap==null)||(mbf[id].ann_vol==null)||(mbf[id].ann_vol<=ms.volCap);return okS&&okV}
   var elig=ids.filter(eligibleOf);
   // rank eligible: z across eligible
-  var stE={};Object.keys(W).forEach(function(k){var vals=elig.map(function(id){return mbf[id][k]}).filter(function(v){return v!=null});if(vals.length>=2)stE[k]=[_pmean(vals),_ppstd(vals)]});
-  var scoreE={};elig.forEach(function(id){var s=0;Object.keys(W).forEach(function(k){var v=mbf[id][k];if(v==null||!stE[k]||stE[k][1]===0)return;s+=W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)});scoreE[id]=s});
+  var _accMbf=function(id,k){return mbf[id][k]};
+  var stE=_zStats(elig,_accMbf,Object.keys(W));
+  var scoreE={};elig.forEach(function(id){scoreE[id]=_zRaw(id,_accMbf,W,DIR,stE)});   // rank on the raw (unrounded) sum
   var ranked=elig.slice().sort(function(a,b){return scoreE[b]-scoreE[a]});var shortIds=ranked.slice(0,ms.topN);var rankOf={};shortIds.forEach(function(id,i){rankOf[id]=i+1});
   // visual components on the SAME eligible-z basis as the ranking, so bars == rank order
-  function comps(id){var out=[];Object.keys(W).forEach(function(k){var v=mbf[id][k];if(v==null||!stE[k]||stE[k][1]===0)return;out.push({k:k,c:Math.round(W[k]*((v-stE[k][0])/stE[k][1])*(DIR[k]||0)*1000)/1000})});return out}
+  function comps(id){return _zComps(id,_accMbf,W,DIR,stE)}
   // universe scatter range (all funds with metrics)
   var vols=ids.map(function(id){return mbf[id].ann_vol}),rets=ids.map(function(id){return mbf[id].ann_return});
   var vmin=Math.min.apply(null,vols),vmax=Math.max.apply(null,vols),rmin=Math.min.apply(null,rets),rmax=Math.max.apply(null,rets);var vr=(vmax-vmin)||1,rr=(rmax-rmin)||1;
@@ -915,7 +930,7 @@ function recompute(funds,ret,order,quar){ try{
   rerender();
   toast("<span class='tk'>&#10003;</span>Re-ran the analysis · "+A.nTotal+" funds → "+A.nShort+" shortlisted"+(quar?" · "+quar+" bad rows quarantined":""));
  }catch(err){toast("<span class='tk' style='color:var(--loss)'>!</span>Analysis failed on that data")}}
-function rerender(){aborted=true;A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
+function rerender(){aborted=true;bumpGen();A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
   document.body.classList.remove('settled','scoring','screening');$('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('#weighlegend').innerHTML='';$('#weighlegend').classList.remove('in');$('#traj').innerHTML='';$$('.tt,.tx,.ty').forEach(function(t){t.remove()});
   $('.rail').classList.remove('in');$('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');$('.sweetz').classList.remove('on');clearCue();
   // rebuild the shortlist rail
@@ -930,4 +945,8 @@ window.addEventListener('DOMContentLoaded',function(){document.documentElement.d
   // when served by `./amb serve`, pull live market data (browser -> localhost -> FRED)
   // BEFORE the story so Act 0 shows the real live fetch; else play immediately.
   if(servedLive()){fetchLiveMarket(false).then(function(){rerender()})}else{story()}});
+// pure, side-effect-free core exposed for testing (and cross-language golden checks
+// against the Python metrics engine). Rendering/animation stay closure-private.
+A.core={fundMetrics:fundMetrics,zStats:_zStats,zComps:_zComps,zRaw:_zRaw,accFund:_accFund,
+        pmean:_pmean,ppstd:_ppstd,psstd:_psstd,mix:mix,esc:esc,metricField:metricField,effWeights:effWeights};
 })();
