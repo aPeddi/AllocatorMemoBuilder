@@ -6,10 +6,18 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class Fund(BaseModel):
+class _Model(BaseModel):
+    """Immutable value-object base. Frozen so a domain object is constructed once
+    and never silently mutated downstream (parse-don't-mutate); attribute writes
+    raise instead of corrupting shared state."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class Fund(_Model):
     fund_id: str
     name: str
     strategy: str
@@ -25,12 +33,12 @@ class Fund(BaseModel):
     source_ref: Optional[str] = None  # e.g. "funds.csv:row=3"
 
 
-class ReturnPoint(BaseModel):
+class ReturnPoint(_Model):
     period: date
     value: float
 
 
-class ReturnSeries(BaseModel):
+class ReturnSeries(_Model):
     fund_id: str
     frequency: str                 # monthly | quarterly | daily | annual
     periods_per_year: int
@@ -42,7 +50,7 @@ class ReturnSeries(BaseModel):
         return [p.value for p in self.points]
 
 
-class Benchmark(BaseModel):
+class Benchmark(_Model):
     benchmark_id: str
     name: str
     as_of: date
@@ -59,13 +67,13 @@ class Benchmark(BaseModel):
         return [p.value for p in self.points]
 
 
-class MandateConstraint(BaseModel):
+class MandateConstraint(_Model):
     field: str                     # a Fund attribute or a metric name
     op: str                        # >= <= == != in not_in
     value: Any
 
 
-class Mandate(BaseModel):
+class Mandate(_Model):
     name: str
     constraints: list[MandateConstraint] = Field(default_factory=list)
     weights: dict[str, float] = Field(default_factory=dict)   # metric -> weight
@@ -74,7 +82,7 @@ class Mandate(BaseModel):
     top_n: int = 5
 
 
-class MetricResult(BaseModel):
+class MetricResult(_Model):
     fund_id: str
     metric: str
     value: Optional[float]
@@ -82,7 +90,7 @@ class MetricResult(BaseModel):
     inputs_ref: str                # e.g. "returns:<hash>|bench:SP500@2026-06"
 
 
-class Claim(BaseModel):
+class Claim(_Model):
     text: str
     metric: Optional[str] = None
     fund_id: Optional[str] = None
@@ -92,22 +100,25 @@ class Claim(BaseModel):
     verified: Optional[bool] = None   # value re-checked against MetricResult
 
 
-class ShortlistEntry(BaseModel):
+class ShortlistEntry(_Model):
     rank: int
     fund_id: str
     name: str
     strategy: str
     score: float
     metrics: dict[str, Optional[float]] = Field(default_factory=dict)
+    # signed weighted-z contribution of each metric to `score` — the ranking's own
+    # explanation, so the view never has to recompute the scoring math.
+    components: list[dict] = Field(default_factory=list)
 
 
-class MemoSection(BaseModel):
+class MemoSection(_Model):
     heading: str
     body: str
     claims: list[Claim] = Field(default_factory=list)
 
 
-class Memo(BaseModel):
+class Memo(_Model):
     title: str
     mandate: str
     generated_by: str              # model id or "template"

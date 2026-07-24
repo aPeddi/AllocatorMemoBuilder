@@ -3,7 +3,10 @@ import html, json, math
 from pathlib import Path
 from .memo import render_markdown
 from .metrics import METRIC_KEYS, annualize
-from .scoring import DIRECTION, DEFAULT_WEIGHTS, _resolve, _test
+from .scoring import (
+    DIRECTION, DEFAULT_WEIGHTS, apply_constraints, eligible_stats,
+    resolve_field, resolve_weights, score_components, test_constraint,
+)
 from .models import Memo
 
 _PCT={"ann_return","ann_vol","max_drawdown","downside_dev","alpha","tracking_error","hit_rate"}
@@ -74,26 +77,15 @@ def render_html(memo, ctx=None):
     secs={}
     for i,s in enumerate(sl): secs[s.fund_id]=memo.sections[1+i] if 1+i<len(memo.sections) else None
 
-    # score components — z across the ELIGIBLE set, the SAME basis build_shortlist
-    # ranks on, so the displayed bar score a fund shows is the score it's ranked on.
-    weights=(mandate.weights if (mandate and mandate.weights) else DEFAULT_WEIGHTS)
-    import statistics
-    from .scoring import apply_constraints
+    # score components come straight from the scoring engine — no re-implementation.
+    # The z-score basis is the eligible set (the SAME basis build_shortlist ranks on),
+    # so the on-screen weighing bar a fund shows is provably the score it was ranked on.
+    weights=resolve_weights(mandate)
     _usable=[f for f in ctx.funds.values() if f.fund_id in mbf] if ctx else []
     _elig=(set(apply_constraints(_usable, mbf, mandate)) if (ctx and mandate) else set(ranks)) or set(ranks)
-    stats={}
-    for k in weights:
-        vals=[mbf[fid].get(k) for fid in _elig if mbf.get(fid,{}).get(k) is not None]
-        if len(vals)>=2: stats[k]=(statistics.fmean(vals),statistics.pstdev(vals))
+    stats=eligible_stats(_elig, mbf, weights)
     def components(fid):
-        out=[]
-        for k,w in weights.items():
-            v=mbf[fid].get(k)
-            if v is None or k not in stats: continue
-            mu,sd=stats[k]
-            if sd==0: continue
-            out.append({"k":k,"c":round(w*((v-mu)/sd)*DIRECTION.get(k,0),3)})
-        return out
+        return score_components(fid, mbf, weights, stats)
 
     # benchmark point — annualized on the canonical engine (CAGR + sample-std vol)
     bench=None
@@ -123,7 +115,7 @@ def render_html(memo, ctx=None):
 
     def _one_reason(f,m,c):
         g=_gate_meta(c)
-        val=_resolve(f,m,c.field)
+        val=resolve_field(f,m,c.field)
         if c.field=="strategy":
             return {"text":f"off-strategy · {f.strategy}","kind":g["kind"]}
         if c.field=="redemption_days":
@@ -145,8 +137,8 @@ def render_html(memo, ctx=None):
             return []
         out=[]
         for c in mandate.constraints:
-            val=_resolve(f,m,c.field)
-            if not _test(val,c.op,c.value):
+            val=resolve_field(f,m,c.field)
+            if not test_constraint(val,c.op,c.value):
                 out.append(_one_reason(f,m,c))
         return out
 

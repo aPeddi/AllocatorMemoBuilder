@@ -62,8 +62,10 @@ def run(
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)
     readiness = build_readiness(funds, series, benchmark, quarantined, rf_used, rf_source)
     ctx = AnalysisContext(
-        funds, benchmark, metrics_by_fund, metric_results, shortlist, mandate,
-        quarantined, series, readiness=readiness, rf_used=rf_used, rf_source=rf_source,
+        funds=funds, benchmark=benchmark, metrics_by_fund=metrics_by_fund,
+        metric_results=metric_results, shortlist=shortlist, mandate=mandate,
+        quarantined=quarantined, series_by_fund=series,
+        readiness=readiness, rf_used=rf_used, rf_source=rf_source,
     )
     memo = generate(ctx, claims_provider or template_claims_provider)
     return memo, ctx
