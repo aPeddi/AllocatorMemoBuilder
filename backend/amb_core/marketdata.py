@@ -180,33 +180,13 @@ def _write_cache(bench: Benchmark, cache_dir: Path) -> None:
         log.debug("benchmark cache write skipped (best-effort): %s", e)  # never break a build over caching
 
 
-def _load_cache(benchmark_id: str, cache_dir: Path) -> Optional[Benchmark]:
-    path = cache_dir / f"{benchmark_id.lower()}_monthly.csv"
-    if not path.exists():
-        return None
-    try:
-        df = pd.read_csv(path)
-        pts = []
-        for _, r in df.iterrows():
-            d, v = parse_date(r["date"]), normalize_return(r["return"])
-            if d is not None and v is not None:
-                pts.append(ReturnPoint(period=d, value=v))
-        pts.sort(key=lambda p: p.period)
-        if len(pts) < 2:
-            return None
-        name = _FRED_INDEX.get(benchmark_id.upper(), (None, benchmark_id.upper()))[1]
-        return Benchmark(
-            benchmark_id=benchmark_id.upper(), name=name, as_of=pts[-1].period,
-            frequency="monthly", periods_per_year=12, points=pts,
-            source=str(path), source_kind="cache", source_name="FRED (cached)",
-        )
-    except (OSError, ValueError, KeyError, pd.errors.ParserError) as e:
-        log.warning("benchmark cache read failed, ignoring cache: %s", e)
-        return None
-
-
-def _load_snapshot(benchmark_id: str, snapshot_dir: Path) -> Optional[Benchmark]:
-    path = snapshot_dir / f"{benchmark_id.lower()}_monthly.csv"
+def _benchmark_from_csv(
+    path: Path, benchmark_id: str, name: str, source_kind: str, source_name: str,
+    min_points: int = 1,
+) -> Optional[Benchmark]:
+    """The ONE monthly-CSV -> Benchmark loader, shared by every disk-backed source
+    (cache, snapshot; formerly a third copy in benchmarks.py). Returns None if the
+    file is absent or has too few usable rows."""
     if not path.exists():
         return None
     df = pd.read_csv(path)
@@ -216,14 +196,38 @@ def _load_snapshot(benchmark_id: str, snapshot_dir: Path) -> Optional[Benchmark]
         if d is not None and v is not None:
             pts.append(ReturnPoint(period=d, value=v))
     pts.sort(key=lambda p: p.period)
-    if not pts:
+    if len(pts) < min_points:
         return None
     return Benchmark(
-        benchmark_id=benchmark_id.upper(),
-        name=_SNAP_NAMES.get(benchmark_id.lower(), benchmark_id.upper()),
-        as_of=pts[-1].period, frequency="monthly", periods_per_year=12, points=pts,
-        source=str(path), source_kind="snapshot", source_name="bundled snapshot",
+        benchmark_id=benchmark_id.upper(), name=name, as_of=pts[-1].period,
+        frequency="monthly", periods_per_year=12, points=pts,
+        source=str(path), source_kind=source_kind, source_name=source_name,
     )
+
+
+def _load_cache(benchmark_id: str, cache_dir: Path) -> Optional[Benchmark]:
+    name = _FRED_INDEX.get(benchmark_id.upper(), (None, benchmark_id.upper()))[1]
+    try:
+        return _benchmark_from_csv(
+            cache_dir / f"{benchmark_id.lower()}_monthly.csv",
+            benchmark_id, name, "cache", "FRED (cached)", min_points=2,
+        )
+    except (OSError, ValueError, KeyError, pd.errors.ParserError) as e:
+        log.warning("benchmark cache read failed, ignoring cache: %s", e)
+        return None
+
+
+def load_snapshot(benchmark_id: str, snapshot_dir: Path) -> Optional[Benchmark]:
+    """Load a committed benchmark snapshot (the deterministic, offline source)."""
+    return _benchmark_from_csv(
+        snapshot_dir / f"{benchmark_id.lower()}_monthly.csv",
+        benchmark_id, _SNAP_NAMES.get(benchmark_id.lower(), benchmark_id.upper()),
+        "snapshot", "bundled snapshot", min_points=1,
+    )
+
+
+# backwards-compatible private alias
+_load_snapshot = load_snapshot
 
 
 def resolve_benchmark(
