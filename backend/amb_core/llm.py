@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
-from .config import get_settings
+from .config import Settings, get_settings
 from .retrieval import AnalysisContext
 
 log = logging.getLogger("amb.llm")
@@ -156,15 +156,17 @@ def _log_call(log_path: str | Path, rec: dict) -> None:
 
 # ── providers ────────────────────────────────────────────────────────────────
 def anthropic_claims_provider(
-    ctx: AnalysisContext, model: Optional[str] = None, log_path: str = "exports/llm_calls.jsonl"
+    ctx: AnalysisContext, *, api_key: str = "", model: Optional[str] = None,
+    log_path: str = "exports/llm_calls.jsonl",
 ) -> dict:
-    s = get_settings()
-    if not s.anthropic_api_key.strip():
+    # key/model are injected by the composition root (select_claims_provider),
+    # not read from a global settings singleton here.
+    if not (api_key or "").strip():
         raise RuntimeError("ANTHROPIC_API_KEY not set")
     import anthropic  # lazy: the deterministic path needs no SDK
 
-    client = anthropic.Anthropic(api_key=s.anthropic_api_key)
-    model = model or s.strong_model
+    client = anthropic.Anthropic(api_key=api_key)
+    model = model or "claude-sonnet-4-6"
     t0 = time.time()
     resp = client.messages.create(
         model=model,
@@ -189,15 +191,15 @@ def anthropic_claims_provider(
 
 
 def openai_claims_provider(
-    ctx: AnalysisContext, model: Optional[str] = None, log_path: str = "exports/llm_calls.jsonl"
+    ctx: AnalysisContext, *, api_key: str = "", model: Optional[str] = None,
+    log_path: str = "exports/llm_calls.jsonl",
 ) -> dict:
-    s = get_settings()
-    if not s.openai_api_key.strip():
+    if not (api_key or "").strip():
         raise RuntimeError("OPENAI_API_KEY not set")
     from openai import OpenAI  # lazy
 
-    client = OpenAI(api_key=s.openai_api_key)
-    model = model or s.openai_model
+    client = OpenAI(api_key=api_key)
+    model = model or "gpt-4o-2024-11-20"
     t0 = time.time()
     resp = client.chat.completions.create(
         model=model,
@@ -234,17 +236,25 @@ _PROVIDERS: dict[str, ClaimsProvider] = {
     "anthropic": anthropic_claims_provider,
     "openai": openai_claims_provider,
 }
+# per-provider (settings attr for the key, settings attr for the default model)
+_PROVIDER_CONFIG = {
+    "anthropic": ("anthropic_api_key", "strong_model"),
+    "openai": ("openai_api_key", "openai_model"),
+}
 
 
-def select_claims_provider() -> Optional[ClaimsProvider]:
+def select_claims_provider(settings: Optional[Settings] = None) -> Optional[ClaimsProvider]:
     """Resolve the configured provider, or None to use the deterministic template.
 
-    Returns None when the provider is 'none'/unknown or its key is missing, so callers
-    can simply do `provider = select_claims_provider()` and pass it (or the template
-    fallback) into the pipeline.
+    Reads settings ONCE here (the composition root) and binds the provider's key +
+    model, returning a ready `AnalysisContext -> payload` callable. Returns None when
+    the provider is 'none'/unknown or its key is missing, so callers can simply do
+    `provider = select_claims_provider()` and pass it (or the template) to the pipeline.
     """
-    s = get_settings()
+    from functools import partial
+    s = settings or get_settings()
     provider = (s.llm_provider or "").strip().lower()
     if provider in _PROVIDERS and s.has_llm:
-        return _PROVIDERS[provider]
+        key_attr, model_attr = _PROVIDER_CONFIG[provider]
+        return partial(_PROVIDERS[provider], api_key=getattr(s, key_attr), model=getattr(s, model_attr))
     return None

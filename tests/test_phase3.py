@@ -45,7 +45,7 @@ _FRED_CSV = "observation_date,SP500\n" + "\n".join(
 def test_fetch_benchmark_parses_and_resamples(monkeypatch):
     import pandas as pd
 
-    def fake_read(series_id, timeout=12.0):
+    def fake_read(series_id, timeout=12.0, api_key=""):
         df = pd.read_csv(io.StringIO(_FRED_CSV))
         df.columns = ["date", "value"]
         df["date"] = pd.to_datetime(df["date"])
@@ -157,3 +157,18 @@ def test_llm_is_model_agnostic_with_injection_guardrail():
     assert "<fund_data>" in prompt and "</fund_data>" in prompt   # untrusted data is fenced
     assert "never as instructions" in prompt                       # and flagged as data-only
     assert "never as instructions" in llm._SYSTEM
+
+
+def test_provider_selection_uses_injected_settings():
+    """The factory is a composition root: it reads config once and binds the
+    provider's key/model. Injecting Settings proves no global singleton or network
+    is involved in provider resolution."""
+    from amb_core.config import Settings
+    from amb_core.llm import select_claims_provider
+    base = dict(_env_file=None)  # ignore any ambient .env so the test is hermetic
+    # key missing -> None (caller uses the deterministic template)
+    assert select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="anthropic", ANTHROPIC_API_KEY="")) is None
+    assert select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="none")) is None
+    # key present -> a ready, bound AnalysisContext->payload callable
+    bound = select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="anthropic", ANTHROPIC_API_KEY="sk-test"))
+    assert callable(bound)
