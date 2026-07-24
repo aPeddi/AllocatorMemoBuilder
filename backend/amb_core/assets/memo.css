@@ -1,42 +1,5 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
- --bg:#0D0F13;--panel:#141821;--panel2:#191E28;--border:#232A36;--border2:#2E3745;
- --ink:#D7DCE4;--ink2:#AEB6C2;--ink-hi:#FFFFFF;--dim:#788393;--dim2:#4A5464;--on-accent:#F6F9FB;
- --accent:#4E9E77;--accent2:#7AC6A0;--accent-dim:#2C5240;
- --accent-warm:#B79363;--accent-warm2:#CDAD7C;
- --gain:#6E9E82;--loss:#C0736A;
- --g2:#98A1AE;--g3:#6E7889;--g4:#525C6B;
- --glass:rgba(13,15,19,.6);--glass2:rgba(13,15,19,.92);--tipbg:rgba(13,15,19,.97);
- --grid:rgba(35,42,54,.5);--atmo:rgba(78,158,119,.05);--sweet:rgba(78,158,119,.07);
- --accent-soft:rgba(78,158,119,.18);--accent-glow:rgba(78,158,119,.52);--accent-line:rgba(78,158,119,.5);
- --warm-line:rgba(183,147,99,.6);--warm-soft:rgba(183,147,99,.16);
- --loss-line:rgba(192,115,106,.55);--loss-soft:rgba(192,115,106,.08);--loss-bd:rgba(192,115,106,.4);--gain-bd:rgba(110,158,130,.4);
- --seg-div:rgba(13,15,19,.55);
- --seg-a:#39414D;--seg-b:#9BA5B2;--segw-a:#2E5844;--segw-b:#8FD3B0;
- --traj1:#C2CAD4;--traj2:#98A1AE;--traj3:#6E7889;--traj4:#525C6B;
- --winface1:#284A39;--winface2:#193024;--shadow:rgba(0,0,0,.5);
- --glass-fill:rgba(24,29,39,.5);--glass-bd:rgba(255,255,255,.10);--glass-hi:rgba(255,255,255,.07);
- --sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;
-}
-:root[data-theme=light]{
- --bg:#EAE7DF;--panel:#F6F4EF;--panel2:#FCFBF7;--border:#DBD6CB;--border2:#C8C2B4;
- --ink:#24272C;--ink2:#4B515A;--ink-hi:#16191E;--dim:#6E727A;--dim2:#A49E90;--on-accent:#F6F9FB;
- --accent:#3E8560;--accent2:#21402E;--accent-dim:#B6D4C2;
- --accent-warm:#8A6A34;--accent-warm2:#6F5326;
- --gain:#3E7A59;--loss:#AE5148;
- --g2:#8A93A0;--g3:#6E7889;--g4:#525C6B;
- --glass:rgba(246,244,239,.78);--glass2:rgba(255,255,255,.94);--tipbg:rgba(255,255,255,.97);
- --grid:rgba(90,86,74,.10);--atmo:rgba(62,133,96,.06);--sweet:rgba(62,133,96,.08);
- --accent-soft:rgba(62,133,96,.16);--accent-glow:rgba(62,133,96,.30);--accent-line:rgba(62,133,96,.55);
- --warm-line:rgba(138,106,52,.55);--warm-soft:rgba(138,106,52,.14);
- --loss-line:rgba(174,81,72,.5);--loss-soft:rgba(174,81,72,.08);--loss-bd:rgba(174,81,72,.4);--gain-bd:rgba(62,122,89,.4);
- --seg-div:rgba(255,255,255,.7);
- --seg-a:#C6CBD2;--seg-b:#59626E;--segw-a:#A6D6BE;--segw-b:#21402E;
- --traj1:#565E6A;--traj2:#7B828E;--traj3:#9BA1AB;--traj4:#BDC1C8;
- --winface1:#D2ECDF;--winface2:#B4DDC7;--shadow:rgba(70,64,52,.16);
- --glass-fill:rgba(255,255,255,.5);--glass-bd:rgba(30,35,45,.12);--glass-hi:rgba(255,255,255,.75);
-}
 html{transition:background .4s ease}
 .hdr,.rail,.pane,.side,.node .dot,.wtrack,.chip,#drawer,.gate,.tag,.vbadge{transition:background .4s ease,border-color .4s ease,color .4s ease}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}

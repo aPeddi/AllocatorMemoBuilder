@@ -31,9 +31,7 @@ function weightFactors(){return Object.keys(A.weights).sort(function(a,b){return
 function hx(n){n=Math.max(0,Math.min(255,Math.round(n)));return ('0'+n.toString(16)).slice(-2)}
 function mix(a,b,t){function p(c){return [parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}var P=p(a),Q=p(b);return '#'+hx(P[0]+(Q[0]-P[0])*t)+hx(P[1]+(Q[1]-P[1])*t)+hx(P[2]+(Q[2]-P[2])*t)}
 function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888888'}
-var FHUE_DARK={sharpe:'#6E9BC6',sortino:'#5FA7A0',calmar:'#8E96CC',ann_return:'#6FA986',max_drawdown:'#C6A566',ann_vol:'#B58AB2'};
-var FHUE_LIGHT={sharpe:'#3E6E8C',sortino:'#2F7D74',calmar:'#5A5FA0',ann_return:'#3E7A59',max_drawdown:'#8A6A34',ann_vol:'#8A5A86'};
-function factorColor(k){var m=(document.documentElement.dataset.theme==='light')?FHUE_LIGHT:FHUE_DARK;return m[k]||cssv('--accent')}
+function factorColor(k){return cssv('--f-'+k)||cssv('--accent')}  // metric hues live in theme.css (theme-aware, single source)
 function segColor(i,win){var k=weightFactors()[i];return factorColor(k)} // each metric keeps its own hue everywhere
 function trajGrays(){return [cssv('--traj1'),cssv('--traj2'),cssv('--traj3'),cssv('--traj4')]}
 var nodes={}, rows={}, segState={}, aborted=false, trajBuilt=false, ROWH=30, ZERO=30, UNIT=1;
@@ -740,9 +738,13 @@ function openExportPop(anchor){var pop=$('#pop');if(!pop)return;var r=anchor.get
 /* ── minimal vector-PDF writer (crisp, dependency-free, downloads directly) ── */
 function _pesc(s){return String(s).replace(/[—–]/g,'-').replace(/·/g,'|').replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/[→▸]/g,'>').replace(/✓/g,'').replace(/[^\x20-\x7e]/g,'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
 function _cw(s,sz,mono){return mono?String(s).length*sz*0.6:String(s).length*sz*0.5}
+function _pdfrgb(name){var h=(cssv(name)||'#000000').replace('#','');
+  function c(i){return (parseInt(h.substr(i,2),16)/255).toFixed(2)}
+  return c(0)+' '+c(2)+' '+c(4);}                                   // theme.css --pdf-* hex -> PDF "r g b"
 function downloadPDF(){
   var W=595,H=842,M=46,IW=W-2*M,ns=[],y=H-M;
-  var CI='0.13 0.15 0.17',CD='0.42 0.44 0.47',CA='0.13 0.34 0.24',CW='0.54 0.42 0.20',CL='0.85 0.83 0.78',CF='0.965 0.955 0.94',CLo='0.68 0.32 0.28';
+  // brand palette sourced from theme.css (the single branding component) — theme-independent print tones
+  var CI=_pdfrgb('--pdf-ink'),CD=_pdfrgb('--pdf-dim'),CA=_pdfrgb('--pdf-accent'),CW=_pdfrgb('--pdf-warm'),CL=_pdfrgb('--pdf-line'),CF=_pdfrgb('--pdf-fill'),CLo=_pdfrgb('--pdf-loss');
   function T(x,yy,s,sz,f,c){ns.push('BT /'+f+' '+sz+' Tf '+(c||CI)+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' Td ('+_pesc(s)+') Tj ET')}
   function TR(xr,yy,s,sz,f,c){T(xr-_cw(s,sz,f==='F3'),yy,s,sz,f,c)}
   function LN(x1,y1,x2,y2,c,w){ns.push((c||CL)+' RG '+(w||0.7).toFixed(2)+' w '+x1.toFixed(1)+' '+y1.toFixed(1)+' m '+x2.toFixed(1)+' '+y2.toFixed(1)+' l S')}
