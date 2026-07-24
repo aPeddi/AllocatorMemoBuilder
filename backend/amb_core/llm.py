@@ -18,12 +18,15 @@ Guardrails
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .config import get_settings
 from .retrieval import AnalysisContext
+
+log = logging.getLogger("amb.llm")
 
 # A claims provider: context in, structured memo payload out.
 ClaimsProvider = Callable[[AnalysisContext], dict]
@@ -213,8 +216,8 @@ def openai_claims_provider(
     if calls:
         try:
             payload = json.loads(calls[0].function.arguments)
-        except Exception:
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            log.warning("OpenAI returned unparseable tool arguments; using empty payload: %s", e)
     payload["_model"] = model
     usage = getattr(resp, "usage", None)
     _log_call(log_path, {

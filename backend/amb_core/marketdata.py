@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import sys
 import urllib.parse
 import urllib.request
@@ -20,9 +21,11 @@ from typing import Optional
 
 import pandas as pd
 
+from .coercion import normalize_return, parse_date
 from .config import get_settings
-from .ingest import _parse_date, normalize_return
 from .models import Benchmark, ReturnPoint
+
+log = logging.getLogger("amb.marketdata")
 
 # Official FRED API (keyed) — has real history and is the "proper" integration.
 # The key lives server-side (config/.env) and is never shipped to the browser.
@@ -120,11 +123,17 @@ def _read_fred(series_id: str, timeout: float = 12.0) -> pd.DataFrame:
 
 
 def fetch_risk_free_annual(timeout: float = 12.0) -> Optional[float]:
-    """Latest 3M T-bill rate as an annual decimal (0.0366 for 3.66%)."""
+    """Latest 3M T-bill rate as an annual decimal (0.0366 for 3.66%).
+
+    Returns None (caller falls back to the mandate default) only for *expected*
+    fetch/parse failures — which are logged, so a genuine bug isn't silently
+    swallowed as a valid "no data" fallback.
+    """
     try:
         df = _read_fred(_FRED_RISK_FREE, timeout)
         return round(float(df["value"].iloc[-1]) / 100.0, 6)
-    except Exception:
+    except (RuntimeError, ValueError, KeyError, IndexError, OSError, pd.errors.ParserError) as e:
+        log.warning("risk-free fetch failed, using mandate default: %s", e)
         return None
 
 
@@ -167,8 +176,8 @@ def _write_cache(bench: Benchmark, cache_dir: Path) -> None:
         cache_dir.mkdir(parents=True, exist_ok=True)
         rows = [{"date": p.period.isoformat(), "return": p.value} for p in bench.points]
         pd.DataFrame(rows).to_csv(cache_dir / f"{bench.benchmark_id.lower()}_monthly.csv", index=False)
-    except Exception:
-        pass  # caching is best-effort; never break a build over it
+    except OSError as e:
+        log.debug("benchmark cache write skipped (best-effort): %s", e)  # never break a build over caching
 
 
 def _load_cache(benchmark_id: str, cache_dir: Path) -> Optional[Benchmark]:
@@ -179,7 +188,7 @@ def _load_cache(benchmark_id: str, cache_dir: Path) -> Optional[Benchmark]:
         df = pd.read_csv(path)
         pts = []
         for _, r in df.iterrows():
-            d, v = _parse_date(r["date"]), normalize_return(r["return"])
+            d, v = parse_date(r["date"]), normalize_return(r["return"])
             if d is not None and v is not None:
                 pts.append(ReturnPoint(period=d, value=v))
         pts.sort(key=lambda p: p.period)
@@ -191,7 +200,8 @@ def _load_cache(benchmark_id: str, cache_dir: Path) -> Optional[Benchmark]:
             frequency="monthly", periods_per_year=12, points=pts,
             source=str(path), source_kind="cache", source_name="FRED (cached)",
         )
-    except Exception:
+    except (OSError, ValueError, KeyError, pd.errors.ParserError) as e:
+        log.warning("benchmark cache read failed, ignoring cache: %s", e)
         return None
 
 
@@ -202,7 +212,7 @@ def _load_snapshot(benchmark_id: str, snapshot_dir: Path) -> Optional[Benchmark]
     df = pd.read_csv(path)
     pts = []
     for _, r in df.iterrows():
-        d, v = _parse_date(r["date"]), normalize_return(r["return"])
+        d, v = parse_date(r["date"]), normalize_return(r["return"])
         if d is not None and v is not None:
             pts.append(ReturnPoint(period=d, value=v))
     pts.sort(key=lambda p: p.period)

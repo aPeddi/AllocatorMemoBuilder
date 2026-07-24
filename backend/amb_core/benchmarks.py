@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .ingest import _parse_date, normalize_return
+from .coercion import normalize_return, parse_date
 from .models import Benchmark, ReturnPoint
 
 _NAMES = {"sp500": "S&P 500 Total Return", "agg": "US Aggregate Bond"}
@@ -20,7 +20,7 @@ def load_benchmark(benchmark_id: str = "SP500", data_dir: str | Path = "data/ben
     df = pd.read_csv(path)
     pts = []
     for _, r in df.iterrows():
-        d = _parse_date(r["date"])
+        d = parse_date(r["date"])
         v = normalize_return(r["return"])
         if d is not None and v is not None:
             pts.append(ReturnPoint(period=d, value=v))

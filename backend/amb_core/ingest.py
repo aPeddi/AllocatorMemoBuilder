@@ -5,8 +5,6 @@ cleaned series for provenance, and quarantines (never silently drops) bad rows.
 """
 from __future__ import annotations
 
-import math
-import re
 from datetime import date
 from pathlib import Path
 from typing import Optional
@@ -14,46 +12,11 @@ from typing import Optional
 import pandas as pd
 
 from .audit import content_hash
+from .coercion import normalize_return, parse_date
 from .models import Fund, ReturnPoint, ReturnSeries
 
-_NA = {"", "na", "nan", "n/a", "null", "none", "-", "--"}
-
-
-def normalize_return(raw) -> Optional[float]:
-    """Coerce a return cell to a decimal fraction (0.023 == 2.3%).
-
-    Handles '%', thousands commas, European stray spaces, and bare percent
-    points (a value like 2.3 with |v|>1.5 is read as 2.3%, not 230%).
-    """
-    if raw is None:
-        return None
-    if isinstance(raw, (int, float)):
-        v = float(raw)
-        if math.isnan(v) or math.isinf(v):
-            return None
-        pct = False
-    else:
-        s = str(raw).strip()
-        if s.lower() in _NA:
-            return None
-        pct = "%" in s
-        s = s.replace("%", "").replace(",", "").replace(" ", "")
-        try:
-            v = float(s)
-        except ValueError:
-            return None
-    if pct:
-        return v / 100.0
-    # bare number: monthly returns don't exceed ~150%, so |v|>1.5 means percent points
-    return v / 100.0 if abs(v) > 1.5 else v
-
-
-def _parse_date(raw) -> Optional[date]:
-    try:
-        ts = pd.to_datetime(raw, errors="coerce")
-        return None if pd.isna(ts) else ts.date()
-    except Exception:
-        return None
+# re-exported for backwards compatibility with callers that imported the old private name
+_parse_date = parse_date
 
 
 def _find_col(columns: list[str], candidates: list[str]) -> Optional[str]:
