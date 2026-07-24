@@ -16,7 +16,7 @@ values these functions produce. Conventions are explicit and tested:
 from __future__ import annotations
 
 import math
-from typing import Optional
+from typing import Any, Iterable, Optional
 
 import numpy as np
 
@@ -41,7 +41,7 @@ METRIC_KEYS = [
 ]
 
 
-def _f(x) -> Optional[float]:
+def _f(x: Any) -> Optional[float]:
     if x is None:
         return None
     x = float(x)
@@ -66,7 +66,7 @@ def ann_vol(r: np.ndarray, ppy: int) -> Optional[float]:
     return _f(float(np.std(r, ddof=1)) * math.sqrt(ppy))
 
 
-def wealth_curve(returns, round_to: Optional[int] = 4) -> list[float]:
+def wealth_curve(returns: Iterable[float], round_to: Optional[int] = 4) -> list[float]:
     """Compounded growth-of-$1 curve from periodic returns."""
     out, c = [], 1.0
     for v in returns:
@@ -75,7 +75,7 @@ def wealth_curve(returns, round_to: Optional[int] = 4) -> list[float]:
     return out
 
 
-def annualize(returns, ppy: int = 12):
+def annualize(returns: Iterable[float], ppy: int = 12) -> tuple[Optional[float], Optional[float], list[float]]:
     """(ann_return, ann_vol, wealth_curve) for a list of periodic returns.
 
     The one convenience wrapper the live-market proxy (serve.py) and the exporter
@@ -207,7 +207,7 @@ def compute(
     return out
 
 
-def _align(series: ReturnSeries, benchmark: Optional[Benchmark]):
+def _align(series: ReturnSeries, benchmark: Optional[Benchmark]) -> tuple[np.ndarray, Optional[np.ndarray]]:
     """Return (fund_arr, bench_arr|None) aligned on common periods."""
     fund_map = {p.period: p.value for p in series.points}
     if benchmark is None:
@@ -247,7 +247,7 @@ def compute_for_fund(
     return values, results
 
 
-def _cli(argv=None) -> int:
+def _cli(argv: Optional[list[str]] = None) -> int:
     import sys
     from pathlib import Path
 
@@ -267,10 +267,10 @@ def _cli(argv=None) -> int:
             continue
         vals, _ = compute_for_fund(s, bench, 0.02)
 
-        def p(x):
+        def p(x: Optional[float]) -> str:
             return "n/a" if x is None else f"{x * 100:6.1f}%"
 
-        def n(x):
+        def n(x: Optional[float]) -> str:
             return "n/a" if x is None else f"{x:6.2f}"
 
         print(

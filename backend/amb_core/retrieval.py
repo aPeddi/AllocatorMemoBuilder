@@ -70,10 +70,10 @@ class AnalysisContext:
             f = self.funds[s.fund_id]
             m = self.metrics_by_fund[s.fund_id]
 
-            def pct(x):
+            def pct(x: Optional[float]) -> str:
                 return "n/a" if x is None else f"{x * 100:.1f}%"
 
-            def num(x):
+            def num(x: Optional[float]) -> str:
                 return "n/a" if x is None else f"{x:.2f}"
 
             lines.append(

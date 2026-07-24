@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from datetime import date
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ import pandas as pd
 _NA = {"", "na", "nan", "n/a", "null", "none", "-", "--"}
 
 
-def normalize_return(raw) -> Optional[float]:
+def normalize_return(raw: Any) -> Optional[float]:
     """Coerce a return cell to a decimal fraction (0.023 == 2.3%).
 
     Handles '%', thousands commas, European stray spaces, and bare percent
@@ -47,7 +47,7 @@ def normalize_return(raw) -> Optional[float]:
     return v / 100.0 if abs(v) > 1.5 else v
 
 
-def parse_date(raw) -> Optional[date]:
+def parse_date(raw: Any) -> Optional[date]:
     """Parse any spreadsheet date cell to a ``date``; None if unparseable."""
     try:
         ts = pd.to_datetime(raw, errors="coerce")
