@@ -25,6 +25,7 @@ class AnalysisContext:
         readiness: Optional[dict] = None,
         rf_used: Optional[float] = None,
         rf_source: str = "mandate",
+        sources: Optional[list[dict]] = None,
     ):
         self.funds = {f.fund_id: f for f in funds}
         self.benchmark = benchmark
@@ -37,6 +38,7 @@ class AnalysisContext:
         self.readiness = readiness or {}
         self.rf_used = rf_used if rf_used is not None else mandate.risk_free_annual
         self.rf_source = rf_source
+        self.sources = sources or []  # raw source CSVs [{name,text,rows}] — the data source-of-truth
 
     def net_return(self, fund_id: str) -> Optional[float]:
         """Ann. return net of the stated management fee (gross - fee). Labeled,

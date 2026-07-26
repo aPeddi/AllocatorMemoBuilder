@@ -14,6 +14,7 @@ dependencies = [
   "numpy",
   "pyyaml",
   "anthropic",
+  "rich",
 ]
 
 [project.optional-dependencies]

@@ -7,7 +7,7 @@ without a network.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import yaml
 
@@ -34,13 +34,19 @@ def run(
     data_dir: str | Path = "data",
     benchmark_mode: Optional[str] = None,
     settings: Optional[Settings] = None,
+    on_step: Optional[Callable[[str], None]] = None,
 ) -> tuple[Memo, AnalysisContext]:
+    # optional stage reporter so a caller (the CLI) can render live progress
+    # without this module knowing anything about the terminal UI.
+    step = on_step or (lambda _label: None)
     # composition root: read config ONCE here and inject the values downstream,
     # rather than have deep modules reach into a global settings singleton.
     settings = settings or get_settings()
+    step("Ingesting funds & returns")
     funds = load_funds(funds_csv)
     series, quarantined = load_returns(returns_csv)
 
+    step("Resolving benchmark")
     mode = benchmark_mode or settings.benchmark_mode
     fred_key = settings.fred_api_key
     benchmark = resolve_benchmark(mandate.benchmark_id, mode=mode, data_dir=data_dir, api_key=fred_key)
@@ -53,6 +59,7 @@ def run(
         if live_rf is not None:
             rf_used, rf_source = live_rf, "FRED · 3M T-bill"
 
+    step("Computing metrics")
     metrics_by_fund: dict[str, dict] = {}
     metric_results: dict[str, list] = {}
     for f in funds:
@@ -63,6 +70,7 @@ def run(
         metrics_by_fund[f.fund_id] = vals
         metric_results[f.fund_id] = results
 
+    step("Screening & scoring")
     usable = [f for f in funds if f.fund_id in metrics_by_fund]
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)
     readiness = build_readiness(funds, series, benchmark, quarantined, rf_used, rf_source)
@@ -71,6 +79,23 @@ def run(
         metric_results=metric_results, shortlist=shortlist, mandate=mandate,
         quarantined=quarantined, series_by_fund=series,
         readiness=readiness, rf_used=rf_used, rf_source=rf_source,
+        sources=_read_sources(funds_csv, returns_csv),
     )
+    step("Drafting & verifying memo")
     memo = generate(ctx, claims_provider or template_claims_provider)
     return memo, ctx
+
+
+def _read_sources(*paths: str | Path) -> list[dict]:
+    """Capture the raw source CSV text so the memo can show/expose it as the
+    single source of truth for its data (the in-app CSV panel)."""
+    out: list[dict] = []
+    for p in paths:
+        try:
+            pth = Path(p)
+            text = pth.read_text(encoding="utf-8")
+            data_rows = max(0, text.rstrip("\n").count("\n"))  # minus header
+            out.append({"name": pth.name, "text": text, "rows": data_rows})
+        except OSError:
+            continue
+    return out

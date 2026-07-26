@@ -61,6 +61,31 @@ function buildLegend(){var h=$('#weighlegend');if(!h)return;var fs=weightFactors
     return "<span class='lchip"+(on?'':' off')+"' data-k='"+k+"' title='"+k.replace(/_/g,' ')+" · "+w+"% of the score · "+dt+"'><i style='background:"+segColor(i,false)+"'></i><span class='ln'>"+k.replace(/_/g,' ')+"</span><span class='lw'>"+w+"%</span><span class='ldir'>"+arrow+"</span></span>"}).join('')+"<span class='neg'><i></i>detracts</span>";
   h.classList.add('in');}
 function metricField(k){return {ann_return:'ret',ann_vol:'vol',sharpe:'sharpe',sortino:'sortino',calmar:'calmar',max_drawdown:'maxdd'}[k]||k}
+// one glossary for every metric — drives the audit list, the fund-brief tooltips and
+// value formatting (pct vs ratio). label = human name, pct = format as %, def = concise
+// plain-English meaning + how it's used.
+var METRIC_INFO={
+ ann_return:{label:'Annualized return',pct:true,def:'Geometric (CAGR) growth per year — compounds the monthly returns into one annual figure.'},
+ ann_vol:{label:'Annualized volatility',pct:true,def:'How much monthly returns swing, scaled to a yearly figure. Lower = steadier.'},
+ sharpe:{label:'Sharpe ratio',pct:false,def:'Return above the risk-free rate per unit of total volatility. Higher = better risk-adjusted return.'},
+ sortino:{label:'Sortino ratio',pct:false,def:'Like Sharpe but only penalizes downside swings — rewards funds volatile mainly on the upside.'},
+ calmar:{label:'Calmar ratio',pct:false,def:'Annual return divided by the worst peak-to-trough drop — return earned per unit of worst-case loss.'},
+ max_drawdown:{label:'Max drawdown',pct:true,def:'Largest peak-to-trough decline over the window (≤0). Closer to zero = shallower worst loss.'},
+ downside_dev:{label:'Downside deviation',pct:true,def:'Volatility of only the losing months — the risk that actually hurts.'},
+ beta:{label:'Beta vs benchmark',pct:false,def:'Sensitivity to the benchmark: 1.0 moves with it, below 1 dampens, above 1 amplifies.'},
+ alpha:{label:'Alpha',pct:true,def:'Annual return beyond what benchmark exposure (beta) explains — the manager’s edge.'},
+ correlation:{label:'Correlation',pct:false,def:'How closely the fund tracks the benchmark, from -1 to +1.'},
+ tracking_error:{label:'Tracking error',pct:true,def:'Volatility of the fund’s return difference vs the benchmark.'},
+ hit_rate:{label:'Hit rate',pct:true,def:'Share of months that finished positive.'}
+};
+function metricLabel(k){return (METRIC_INFO[k]&&METRIC_INFO[k].label)||String(k).replace(/_/g,' ')}
+function fmtMetricVal(k,v){if(v==null)return '—';return (METRIC_INFO[k]&&METRIC_INFO[k].pct)?pct(v):num(v)}
+// turn provenance refs ("returns:<hash>|bench:SP500@2026-06") into a readable inputs list
+function fmtInputs(srcs){var out=[];(srcs||[]).forEach(function(s){String(s).split('|').forEach(function(t){t=t.trim();
+  if(/^returns:/.test(t)){if(out.indexOf('monthly return series')<0)out.push('monthly return series')}
+  else if(/^bench:/.test(t)){var b=t.replace(/^bench:/,'').split('@')[0];if(b&&out.indexOf(b+' benchmark')<0)out.push(b+' benchmark')}
+  else if(/rf|risk.?free/i.test(t)){if(out.indexOf('risk-free rate')<0)out.push('risk-free rate')}
+});});return out}
 function layoutRows(){var sb=$('#scorebars');if(!sb)return;var n=survivors().length||1;var h=(sb.clientHeight||190)-6;
   ROWH=Math.max(26,Math.min(58,Math.floor(h/n)));var th=Math.max(16,Math.min(30,ROWH-12));
   Object.keys(rows).forEach(function(id){var tr=$('.wtrack',rows[id]);if(tr)tr.style.height=th+'px'});
@@ -704,7 +729,14 @@ function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];
 
 function wire(){
   var tip=$('#tip');
-  document.addEventListener('mousemove',function(e){var n=e.target.closest('.node');if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px'}else tip.style.opacity=0});
+  document.addEventListener('mousemove',function(e){
+    if(!e.target||!e.target.closest){tip.style.opacity=0;return}
+    var n=e.target.closest('.node');
+    if(n&&n.dataset.tip&&document.body.classList.contains('settled')){tip.innerHTML=n.dataset.tip;tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px';return}
+    var cell=e.target.closest('.cell[data-mk]');var mi=cell&&METRIC_INFO[cell.dataset.mk];   // fund-brief metric definitions
+    if(mi){tip.innerHTML="<div class='tn'>"+esc(mi.label)+"</div><div class='ts'>what it means</div><div class='tdef'>"+esc(mi.def)+"</div>";tip.style.opacity=1;tip.style.left=e.clientX+'px';tip.style.top=e.clientY+'px';return}
+    tip.style.opacity=0;
+  });
   document.addEventListener('click',function(e){var n=e.target.closest('.node.cand');if(n&&document.body.classList.contains('settled')){fundDrawer(n.dataset.fid);return}var ch=e.target.closest('.chip');if(ch){fundDrawer(ch.dataset.fid)}});
   var pl=$('#play');if(pl)pl.addEventListener('click',replay);
   var sk=$('#skip');if(sk)sk.addEventListener('click',function(){aborted=true;bumpGen();paused=false;flushWaits();document.body.classList.remove('playing');document.body.classList.remove('paused');document.body.classList.remove('az-run');var azl=$('#az');if(azl)azl.remove();clearRtags();clearHalos();clearCue();setLeaderNode(null);A.funds.forEach(function(d){nodes[d.id].classList.remove('leader','focus','cutfocus','rshow')});document.body.classList.remove('screening');var ip=$('#intropane');if(ip)ip.classList.add('out');
@@ -724,10 +756,11 @@ function wire(){
   var lvb=$('#liveBtn');if(lvb)lvb.addEventListener('click',function(){fetchLiveMarket(true)});
   var mb=$('#memoBtn');if(mb)mb.addEventListener('click',function(){openMemo()});
   var mdb=$('#mandateBtn');if(mdb)mdb.addEventListener('click',function(){openMandate()});
-  var ub=$('#upBtn'),ui=$('#upInput');if(ub&&ui){ub.addEventListener('click',function(){ui.click()});ui.addEventListener('change',function(){ingestFiles(ui.files);ui.value=''})}
+  var ub=$('#upBtn'),ui=$('#upInput');if(ub&&ui){ub.addEventListener('click',function(e){e.stopPropagation();openSourcePop(ub)});ui.addEventListener('change',function(){ingestFiles(ui.files);ui.value=''})}
   var wl=$('#weighlegend');if(wl)wl.addEventListener('click',function(e){if(!document.body.classList.contains('settled'))return;var ch=e.target.closest('.lchip');if(!ch)return;var k=ch.dataset.k;var act=(A.activeMetrics||weightFactors().slice()).slice();var i=act.indexOf(k);if(i>=0){if(act.length<=1){toast("<span class='tk' style='color:var(--loss)'>!</span>Keep at least one metric");return}act.splice(i,1)}else act.push(k);applyReweigh(act)});
   document.addEventListener('click',function(e){if(e.target&&e.target.id==='wreset')resetWeights()});
   document.addEventListener('click',function(e){var pop=$('#pop');if(pop&&pop.classList.contains('on')&&!e.target.closest('#pop')&&!e.target.closest('#dlBtn'))pop.classList.remove('on')});
+  document.addEventListener('click',function(e){var sp=$('#srcpop');if(sp&&sp.classList.contains('on')&&!e.target.closest('#srcpop')&&!e.target.closest('#upBtn'))sp.classList.remove('on')});
   // side panels dismiss on any click outside them (triggers are excluded so opening/switching never self-closes)
   document.addEventListener('click',function(e){var d=$('#drawer');if(!d||!d.classList.contains('open'))return;if(e.target.closest('#drawer'))return;if(e.target.closest('.node.cand')||e.target.closest('.chip')||e.target.closest('#vbadge')||e.target.closest('#memoBtn')||e.target.closest('#mandateBtn'))return;d.classList.remove('open')});
   document.addEventListener('keydown',function(e){if(e.key==='Escape'){var d=$('#drawer');if(d)d.classList.remove('open')}});
@@ -763,7 +796,17 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
   openDrawer(h);var d=$('#drawer');if(d)d.classList.add('wide');}
 function auditDrawer(){var A2=A.audit||[];
   var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
-  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+g.items.length+" claims</span></div>"+g.items.map(function(c){var src=(c.sources||[]).join(' · ')||'—';return "<div class='av-item"+(c.verified?'':' bad')+"'><span class='av-ck'>"+(c.verified?'✓':'!')+"</span><div class='av-body'><div class='av-line'><span class='av-met'>"+esc(c.metric)+"</span><span class='av-val'>"+(c.value==null?'—':esc(c.value))+"</span></div><div class='av-src' title=\""+esc(src)+"\">"+esc(src)+"</div></div></div>"}).join('')+"</div>"}).join('');
+  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+g.items.length+" verified</span></div>"+g.items.map(function(c){
+      var k=c.key||c.metric||'';var mi=METRIC_INFO[k]||{};
+      var val=fmtMetricVal(k,c.value);
+      var inputs=fmtInputs(c.sources);
+      var inHtml=inputs.length?("<div class='av-in'><span class='av-inlbl'>inputs</span>"+inputs.map(function(x){return "<span class='av-chip'>"+esc(x)+"</span>"}).join('')+"</div>"):"";
+      var defHtml=mi.def?("<div class='av-note'>"+esc(mi.def)+"</div>"):"";
+      return "<div class='av-item"+(c.verified?'':' bad')+"'>"
+        +"<span class='av-ck' title='"+(c.verified?'recomputed and matched':'could not verify')+"'>"+(c.verified?'✓':'!')+"</span>"
+        +"<div class='av-body'><div class='av-line'><span class='av-met'>"+esc(metricLabel(k))+"</span><span class='av-val'>"+esc(val)+"</span></div>"
+        +defHtml+inHtml+"</div></div>";
+    }).join('')+"</div>"}).join('');
   if(!A2.length)body="<p class='d-p'>This view is running on re-uploaded data — metrics were recomputed live from your CSV, so the memo's original claim ledger isn't attached. Load the bundled sample to see the full audit trail.</p>";
   var shield="<svg viewBox='0 0 24 24' fill='none'><path d='M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z' fill='var(--accent-soft)' stroke='var(--accent2)' stroke-width='1.3' stroke-linejoin='round'/><path d='M8.6 12.2l2.3 2.3 4.5-4.6' stroke='var(--accent2)' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
   openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+A.verified+" / "+A.total+" verified</div></div></div><div class='d-strat' style='margin-top:12px'>every figure re-checked against the deterministic metrics engine</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each numeric claim below was recomputed from the source return series and matched exactly — nothing reaches the page unverified.</p>"+body)}
@@ -773,6 +816,26 @@ function openExportPop(anchor){var pop=$('#pop');if(!pop)return;var r=anchor.get
     +"<div class='pop-opt' data-a='print'><span class='pi'>⎙</span><div class='pt'><b>Print</b><i>opens the print dialog</i></div></div></div>";
   pop.style.top=(r.bottom+8)+'px';pop.style.right=(window.innerWidth-r.right)+'px';pop.classList.add('on');
   $$('.pop-opt',pop).forEach(function(o){o.addEventListener('click',function(){var a=o.dataset.a;pop.classList.remove('on');setTimeout(function(){if(a==='print')window.print();else downloadPDF()},120)})});}
+/* ── CSV data-source panel: the single source of truth for the analysis inputs ── */
+function openSourcePop(anchor){var pop=$('#srcpop');if(!pop)return;var r=anchor.getBoundingClientRect();
+  var srcs=A.sources||[];
+  var list=srcs.length?srcs.map(function(sc,i){
+      return "<div class='srcrow' data-i='"+i+"' title='Open "+esc(sc.name)+" in a new tab'>"
+        +"<span class='srcic'>▤</span><div class='srctx'><b>"+esc(sc.name)+"</b><i>"+(sc.rows!=null?sc.rows+" data rows":"csv")+"</i></div>"
+        +"<span class='srcopen' data-i='"+i+"'>↗ open</span></div>";
+    }).join('')
+    :"<div class='srcempty'>This view was re-run from an uploaded file, so no embedded source is attached. Load CSVs below to make them the source of truth.</div>";
+  pop.innerHTML="<div class='pop-card srccard'>"
+    +"<div class='pop-hd'><b>CSV data source</b><i>the funds &amp; returns this analysis is computed from — open any file to review it</i></div>"
+    +"<div class='srclist'>"+list+"</div>"
+    +"<div class='pop-opt' id='srcup'><span class='pi'>⤒</span><div class='pt'><b>Load your own CSVs</b><i>select one or more · funds &amp; returns</i></div></div>"
+    +"</div>";
+  pop.style.top=(r.bottom+8)+'px';pop.style.right=(window.innerWidth-r.right)+'px';pop.classList.add('on');
+  $$('.srcrow',pop).forEach(function(row){row.addEventListener('click',function(e){e.stopPropagation();openSourceTab(+row.dataset.i)})});
+  var up=$('#srcup',pop);if(up)up.addEventListener('click',function(){pop.classList.remove('on');var ui=$('#upInput');if(ui)ui.click()});}
+function openSourceTab(i){var sc=(A.sources||[])[i];if(!sc)return;
+  var blob=new Blob([sc.text||''],{type:'text/plain'});var url=URL.createObjectURL(blob);
+  window.open(url,'_blank');setTimeout(function(){URL.revokeObjectURL(url)},8000);}
 /* ── minimal vector-PDF writer (crisp, dependency-free, downloads directly) ── */
 function _pesc(s){return String(s).replace(/[—–]/g,'-').replace(/·/g,'|').replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/[→▸]/g,'>').replace(/✓/g,'').replace(/[^\x20-\x7e]/g,'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
 function _cw(s,sz,mono){return mono?String(s).length*sz*0.6:String(s).length*sz*0.5}
@@ -865,6 +928,8 @@ function _validDate(s){if(s==null)return false;s=String(s).trim();if(!s||s.toLow
 function ingestFiles(list){var files=[].slice.call(list||[]);if(!files.length)return;
   toast("reading "+files.length+" file"+(files.length>1?'s':'')+"…");
   Promise.all(files.map(function(f){return f.text()})).then(function(all){
+    // uploaded files become the new source of truth shown in the CSV panel
+    A.sources=files.map(function(f,i){var t=all[i]||'';return {name:f.name,text:t,rows:Math.max(0,t.replace(/\n+$/,'').split('\n').length-1)}});
     var funds={},ret={},order=[],quar=0;
     all.forEach(function(txt){var rows=parseCSV(txt);if(rows.length<2)return;var hdr=rows[0].map(function(h){return h.toLowerCase().trim()});
       var iId=_findCol(hdr,['fund_id','fund','ticker','symbol','id']),iNm=_findCol(hdr,['name']),iSt=_findCol(hdr,['strategy']);
@@ -919,7 +984,7 @@ function recompute(funds,ret,order,quar){ try{
     if(ms.volCap!=null){var gx=12+(ms.volCap-vmin)/vr*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
   fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // detail html for the drawer
-  fd.forEach(function(d){var cells=[['ann return',pct(d.ret)],['ann vol',pct(d.vol)],['sharpe',num(d.sharpe)],['sortino',num(d.sortino)],['calmar',num(d.calmar)],['max drawdown',pct(d.maxdd)]].map(function(c){return "<div class='cell'><b>"+c[1]+"</b><i>"+c[0]+"</i></div>"}).join('');
+  fd.forEach(function(d){var cells=[['ann_return','ann return',pct(d.ret)],['ann_vol','ann vol',pct(d.vol)],['sharpe','sharpe',num(d.sharpe)],['sortino','sortino',num(d.sortino)],['calmar','calmar',num(d.calmar)],['max_drawdown','max drawdown',pct(d.maxdd)]].map(function(c){return "<div class='cell' data-mk='"+c[0]+"'><b>"+c[2]+"</b><i>"+c[1]+"</i></div>"}).join('');
     var lead=d.rank?("ranks #"+d.rank+" for this mandate"):(d.reason?("was excluded — "+esc(d.reason)):"was outscored below the shortlist");
     d.detail="<p class='d-p'>"+esc(d.name)+" "+lead+". It returned "+pct(d.ret)+" annualized against "+pct(d.vol)+" volatility, a Sharpe of "+num(d.sharpe)+" and a Sortino of "+num(d.sortino)+".</p><div class='mgrid'>"+cells+"</div><div class='src-lbl'>Recomputed from your uploaded returns</div>";});
   var win=fd.filter(function(d){return d.rank==1})[0];

@@ -90,7 +90,7 @@ _CSS = _read_asset("memo.css")
 _JS = _read_asset("memo.js")
 
 def _detail_html(sec, full, e):
-    cells="".join(f'<div class="cell"><b>{(_pct(full.get(k)) if k in _PCT else _num(full.get(k)))}</b><i>{k.replace("_"," ")}</i></div>' for k in METRIC_KEYS)
+    cells="".join(f'<div class="cell" data-mk="{k}"><b>{(_pct(full.get(k)) if k in _PCT else _num(full.get(k)))}</b><i>{k.replace("_"," ")}</i></div>' for k in METRIC_KEYS)
     chips=""
     if sec:
         for c in sec.claims:
@@ -242,7 +242,7 @@ def render_html(memo, ctx=None):
     vhtml=(f"<b>{e(top.name)}</b> leads on risk-adjusted return." if top else "No fund met the mandate.")
     def _fname(fid):
         f=ctx.get_fund(fid) if ctx else None; return f.name if f else fid
-    audit_claims=[{"fund":_fname(c.get("fund_id")),"metric":(c.get("metric") or "").replace("_"," "),
+    audit_claims=[{"fund":_fname(c.get("fund_id")),"key":(c.get("metric") or ""),"metric":(c.get("metric") or "").replace("_"," "),
                    "value":c.get("value"),"verified":bool(c.get("verified")),"sources":c.get("sources",[])}
                   for c in a.get("claims",[])]
     share_txt=((top.name+" — EQUI Investment Committee recommendation (leads on risk-adjusted return). Shortlist: "
@@ -265,6 +265,7 @@ def render_html(memo, ctx=None):
           "bench":({k:(round(v,4) if isinstance(v,float) else v) for k,v in bench.items()} if bench else None),"benchLine":benchLine,
           "nTotal":len(fd),"nEligible":sum(1 for d in fd if d["eligible"]),"nShort":len(sl),"nReject":sum(1 for d in fd if d.get("reason")),
           "audit":audit_claims,"shareText":share_txt,"readiness":rd,"memo":memo_payload,
+          "sources":[{"name":sc.get("name"),"rows":sc.get("rows"),"text":sc.get("text","")} for sc in (getattr(ctx,"sources",[]) if ctx else [])],
           "rfUsed":(getattr(ctx,"rf_used",None) if ctx else None),"rfSource":(getattr(ctx,"rf_source","mandate") if ctx else "mandate"),
           "mandateSpec":{"exclStrats":(next((c.value for c in mandate.constraints if c.field=="strategy" and c.op=="not_in"),[]) if mandate else []) or [],
                          "volCap":(next((c.value for c in mandate.constraints if c.field=="ann_vol" and c.op=="<="),None) if mandate else None),
@@ -318,7 +319,7 @@ def render_html(memo, ctx=None):
             f'<button class="hbtn" id="liveBtn" title="Fetch live market data from FRED (requires ./amb serve)">↻ live data</button>'
             f'<button class="hbtn" id="mandateBtn" title="Adjust the mandate — constraints and scoring weights — and re-decide live">mandate</button>'
             f'<button class="hbtn" id="memoBtn" title="Read the full IC memo — summary, recommendation, key risks, data appendix">memo</button>'
-            f'<button class="hbtn" id="upBtn" title="Load a fund-universe CSV (funds + returns) and re-run the analysis in place">load csv</button>'
+            f'<button class="hbtn" id="upBtn" aria-haspopup="true" title="View the CSV data behind this analysis, or load your own">csv data ▾</button>'
             f'<input type="file" id="upInput" accept=".csv" multiple style="display:none">'
             f'<button class="hbtn" id="shareBtn" title="Share the recommendation summary">share</button>'
             f'<button class="hbtn hbtn-primary" id="dlBtn" title="Download the memo as a PDF">download</button>'
@@ -351,7 +352,7 @@ def render_html(memo, ctx=None):
             '<div class="atmo"><div class="grid"></div></div><div id="tip"></div>'
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
             f'{printdoc}'
-            '<div id="drawer"></div><div id="play">Replay decision</div><div id="pop"></div><div id="toast"></div>'
+            '<div id="drawer"></div><div id="play">Replay decision</div><div id="pop"></div><div id="srcpop"></div><div id="toast"></div>'
             f'<script>window.AMB={_json_for_script(DATA)};</script><script>{_JS}</script></body></html>')
 
 def write_html(memo, path, ctx=None):
