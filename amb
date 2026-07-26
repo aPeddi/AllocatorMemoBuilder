@@ -18,7 +18,7 @@ warn(){ echo -e "${Y}!${N} $*"; }; err(){ echo -e "${R}✗${N} $*"; }; step(){ e
 
 [ -f .env ] && { set -a; . ./.env 2>/dev/null || true; set +a; }
 
-ready(){ [ -x "$PY" ] && "$PY" -c "import amb_core, pandas, pydantic" >/dev/null 2>&1; }
+ready(){ [ -x "$PY" ] && "$PY" -c "import amb_core, pandas, pydantic, rich" >/dev/null 2>&1; }
 
 setup(){
   step "Setting up (first run only)…"

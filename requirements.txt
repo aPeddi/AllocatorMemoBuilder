@@ -27,6 +27,7 @@ openai
 # Memo rendering / export
 jinja2
 openpyxl            # .xlsx export (Phase 2)
+rich                # fancy terminal build experience (./launch build step)
 
 # API surface (Phase 2 — present so `./amb serve` is ready)
 fastapi
