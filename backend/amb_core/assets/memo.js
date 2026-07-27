@@ -565,7 +565,7 @@ async function actZero(){
    +"<div class='hud-stage' id='hudstage'></div>"
    +"<div class='hud-bot'><div class='hud-phase'><span class='hp-n'>00</span><span class='hp-l' id='hudphase'>DATA ACQUISITION</span></div><div class='hud-prog' id='hudprog'></div><div class='hud-log' id='hudlog'></div></div>";
   var prog=$('#hudprog',az),stage=$('#hudstage',az);
-  ['acquire','parse','validate','reconcile','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
+  ['acquire','extract','normalize','assemble','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
   function phase(n,label){var pe=$('#hudphase',az);if(pe)pe.textContent=label;var pn=$('.hp-n',az);if(pn)pn.textContent='0'+n;
     $$('.hpseg',az).forEach(function(s){var i=+s.dataset.i;s.classList.toggle('done',i<n-1);s.classList.toggle('act',i===n-1)})}
   function log(t){var L=$('#hudlog',az);if(L)L.innerHTML="<span class='hl-cur'>▸</span> "+t}
@@ -618,83 +618,110 @@ async function actZero(){
   $('#beamB',az).classList.add('on');
   await wait(1100);if(aborted)return;$('#hub',az).classList.add('live');await wait(800);if(aborted)return;
 
-  // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
-  phase(2,'PARSE · NORMALIZE');
-  // DATA-DRIVEN from the single ingest source (srcCols / quarSrc, set at the top):
-  // real column names, real fund IDs, and the ACTUAL per-row quarantine reasons for
-  // THIS file — baked or uploaded. Changing the CSV changes everything shown here.
-  var mapCols=srcCols;
-  function _roleArrow(r){var m={date:'→ period',id:'→ id','return':'→ return',ret:'→ return',name:'→ name',strategy:'→ strategy'};return m[r]||('→ '+r)}
-  function _colOf(role){var c=mapCols.filter(function(x){return x.role===role||(role==='return'&&x.role==='ret')})[0];return c?c.name:role}
+  // ── shared parse data, all from the single ingest source (srcCols / quarSrc) ──
+  function _colOf(role){var c=srcCols.filter(function(x){return x.role===role||(role==='return'&&x.role==='ret')})[0];return c?c.name:role}
   var dcol=_colOf('date'),icol=_colOf('id'),vcol=_colOf('return');
   function _firstRet(f){var w=f&&f.wealth;return (w&&w.length>1&&w[0])?w[1]/w[0]-1:null}
   function _mdate(k){var s=((ING&&ING.start)||(ov&&ov.start)||'2023-07')+'';var m=s.match(/(\d{4})-(\d{1,2})/);if(!m)return s;var y=+m[1],mo=+m[2]-1+k;y+=Math.floor(mo/12);mo=((mo%12)+12)%12;return y+'-'+('0'+(mo+1)).slice(-2)+'-01'}
-  // real OK rows from the first few funds (real id + a real first monthly return)
   var okFunds=(A.funds||[]).filter(function(f){return f.eligible!==false}).slice(0,3);
   if(!okFunds.length)okFunds=(A.funds||[]).slice(0,3);
   var sample=okFunds.map(function(f,i){var rr=_firstRet(f);return {d:_mdate(i),id:f.id,v:(rr==null?'—':pct(rr)),bad:false}});
-  // real BAD rows — the ACTUAL malformed rows (real date/id/value that failed), not
-  // placeholder dashes; NONE if the file was clean. Fall back to reason-only rows only
-  // if we somehow have counts without sample content.
+  // real BAD rows — the ACTUAL malformed rows (real date/id/value that failed); none if clean
   var qr=quarSrc.reasons||{};var qsamp=quarSrc.samples||[];var badRows=[];
-  if(qsamp.length){
-    qsamp.slice(0,3).forEach(function(s){badRows.push({d:s.date||'—',id:s.id||'—',v:s.ret||'—',bad:true,reason:s.reason})});
-  }else{
-    Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});
-  }
+  if(qsamp.length){qsamp.slice(0,3).forEach(function(s){badRows.push({d:s.date||'—',id:s.id||'—',v:s.ret||'—',bad:true,reason:s.reason})});}
+  else{Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});}
   var rowsSample=sample.concat(badRows);
+
+  // ══ 2 · EXTRACT — pull each raw column out of the file and give it a role ══
+  // Shows the raw header, then classifies each column live into DATE / FUND / RETURN
+  // (the spine) or METADATA — so a first-time viewer SEES the fields being brought out.
+  phase(2,'EXTRACT FIELDS');
+  var rawCols=srcCols.map(function(c){return {name:c.name,role:(c.role==='ret'?'return':c.role)}})
+    .concat((srcOpt||[]).map(function(o){return {name:o,role:'meta'}}));
+  function _rlab(r){return r==='date'?'DATE':r==='id'?'FUND':r==='return'?'RETURN':'META'}
+  stage.innerHTML=
+   "<div class='az-ex'>"
+   +"<div class='az-ex-h'><span class='az-ex-tag'>RAW</span>"+esc(srcFile)+" · <b>"+rawCols.length+"</b> columns · <b>"+rowsN+"</b> rows</div>"
+   +"<div class='az-ex-cols' id='excols'>"+rawCols.map(function(c,i){return "<span class='az-exc' data-i='"+i+"'><b>"+esc(c.name)+"</b><i class='az-exc-r'></i></span>"}).join('')+"</div>"
+   +"<div class='az-ex-mid'><span class='az-ex-arrow'>↓</span> classify each column</div>"
+   +"<div class='az-ex-schema'>"
+     +"<div class='az-slot' data-r='date'><span class='az-slot-l'>DATE</span><b class='az-slot-v'>—</b></div>"
+     +"<div class='az-slot' data-r='id'><span class='az-slot-l'>FUND ID</span><b class='az-slot-v'>—</b></div>"
+     +"<div class='az-slot' data-r='return'><span class='az-slot-l'>RETURN</span><b class='az-slot-v'>—</b></div>"
+     +"<div class='az-slot meta'><span class='az-slot-l'>METADATA</span><b class='az-slot-v' id='metaslot'>0 fields</b></div>"
+   +"</div></div>";
+  log('reading header · classifying '+rawCols.length+' columns');
+  await wait(480);if(aborted)return;
+  var exchips=$$('.az-exc',az),metaN=0;
+  for(var xi=0;xi<rawCols.length;xi++){if(aborted)return;var xc=rawCols[xi],chip=exchips[xi];if(!chip)continue;
+    chip.classList.add('lit');var rl=$('.az-exc-r',chip);if(rl)rl.textContent=_rlab(xc.role);
+    if(xc.role==='meta'){chip.classList.add('meta');metaN++;var msl=$('#metaslot',az);if(msl)msl.textContent=metaN+' field'+(metaN>1?'s':'');}
+    else{chip.classList.add('core');var slot=$(".az-slot[data-r='"+xc.role+"']",az);if(slot){slot.classList.add('filled');var sv=$('.az-slot-v',slot);if(sv)sv.textContent=xc.name}}
+    await wait(rawCols.length>8?170:240);}
+  log('spine locked · date + fund + return · '+metaN+' metadata field'+(metaN===1?'':'s'));
+  await wait(950);if(aborted)return;
+
+  // ══ 3 · NORMALIZE — transform the messy values into one clean shape; quarantine the rest ══
+  // Real before → after on real tokens (not a checklist), beside the actual rows.
+  phase(3,'NORMALIZE');
+  var okDate=(sample[0]&&sample[0].d)||_mdate(0);
+  var okDec=_firstRet(okFunds[0]);var okDecStr=(okDec!=null&&isFinite(okDec))?okDec.toFixed(4):'0.0190';
+  var tf=[];
+  if(ING&&ING.unit==='percent')tf.push({a:'1.20%',r:'% → decimal',b:'0.0120',k:'ok'});
+  else if(ING&&ING.unit==='bps')tf.push({a:'120 bps',r:'bps → decimal',b:'0.0120',k:'ok'});
+  else tf.push({a:okDecStr,r:'recognized · decimal',b:okDecStr,k:'ok'});
+  tf.push({a:okDate,r:'parsed · ISO-8601',b:okDate,k:'ok'});
+  if(badRows.length){var b0=badRows[0];var btok=(b0.d&&b0.d!=='—')?b0.d:((b0.v&&b0.v!=='—')?b0.v:'(blank)');tf.push({a:btok,r:b0.reason||'unparseable',b:'null · quarantined',k:'bad'});}
   stage.innerHTML=
    "<div class='az-parse'>"
    +"<div class='az-matrix'><div class='az-mh'><span>"+esc(dcol)+"</span><span>"+esc(icol)+"</span><span>"+esc(vcol)+"</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
    +"<div class='az-side'>"
-     +"<div class='az-sh'>COLUMN MAP</div><div class='az-map' id='cmap'></div>"
-     +"<div class='az-sh'>NORMALIZE</div><div class='az-norm' id='cnorm'></div>"
-     +"<div class='az-sh'>OPTIONAL FIELDS</div><div class='az-opt' id='copt'></div>"
+     +"<div class='az-sh'>VALUE NORMALIZATION</div><div class='az-tf' id='tf'></div>"
+     +"<div class='az-sh'>SHARED WINDOW</div><div class='az-win2'>every fund aligned to <b>"+esc(ov.start||'')+" → "+esc(ov.end||'')+"</b></div>"
    +"</div></div>";
-  var mtx=$('#mtx',az);log('streaming rows · detecting schema');
-  for(var r=0;r<rowsSample.length;r++){if(aborted)return;var sr=rowsSample[r];var row=el('div','az-mrow');
+  var mtx=$('#mtx',az);log('normalizing values · row by row');
+  for(var r2=0;r2<rowsSample.length;r2++){if(aborted)return;var sr=rowsSample[r2];var row=el('div','az-mrow');
     var stat=sr.bad?"<span class='mstat'></span>":"<span class='mstat'><span class='okc'>✓</span></span>";
     row.dataset.reason=sr.reason||'';
     row.innerHTML=(sr.bad?"<span class='badc'>":"<span>")+esc(sr.d)+"</span><span>"+esc(String(sr.id))+"</span><span>"+esc(String(sr.v))+"</span>"+stat;
-    mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
-  await wait(360);if(aborted)return;
-  var cm=$('#cmap',az);var mapShow=mapCols.filter(function(c){return c.role&&['date','id','return','ret','name','strategy'].indexOf(c.role)>=0}).slice(0,5);
-  if(!mapShow.length)mapShow=mapCols.slice(0,3);
-  for(var mi=0;mi<mapShow.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+esc(mapShow[mi].name)+"</b><span>"+_roleArrow(mapShow[mi].role)+"</span>";cm.appendChild(mr);schedule(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
-  // normalizations actually available/applied (always: dates + blank coercion; unit conversions when the upload flagged them)
-  var norms=['parse dates → ISO-8601','coerce blanks / n/a → null'];
-  if(ING&&ING.unit==='percent')norms.unshift('% → decimal');
-  if(ING&&ING.unit==='bps')norms.unshift('basis points → decimal');
-  norms.push('align to one shared monthly window');
-  var cn=$('#cnorm',az);
-  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+esc(norms[ni]);cn.appendChild(nr);schedule(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
-  var optCols=(srcOpt&&srcOpt.length)?srcOpt:[];
-  var opt=$('#copt',az);opt.innerHTML=(optCols.length?optCols.map(function(o){return "<span class='optt'>"+esc(o)+"</span>"}).join('')+"<div class='opt-note'>→ liquidity + fee model</div>":"<div class='opt-note'>none in this file</div>");
-  schedule(function(){$$('.optt',az).forEach(function(t,i){schedule(function(){t.classList.add('in')},i*120)})},20);
-  log('normalizing types · mapping optional liquidity & fee fields');
-  await wait(1500);if(aborted)return;
-
-  // ══ 3 · VALIDATE — quarantine bad rows (each with its OWN real reason) ══
-  phase(3,'VALIDATE');
-  var reasonList=Object.keys(qr);var qsummary=reasonList.map(function(k){return qr[k]+' '+k}).join(' · ')||'none';
+    mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(230)}
+  await wait(280);if(aborted)return;
+  var tfh=$('#tf',az);
+  for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t=tf[ti];var tr=el('div','az-tfr'+(t.k==='bad'?' bad':''));
+    tr.innerHTML="<span class='az-tfa'>"+esc(String(t.a||'—'))+"</span><span class='az-tfrule'>"+esc(t.r)+"</span><span class='az-tfb'>"+esc(String(t.b))+"</span>";
+    tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(380)}
+  await wait(400);if(aborted)return;
+  // quarantine: strike the bad rows with their real reason
   var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
-  for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');
-    var ms=$('.mstat',qrows[vi]);if(ms)ms.innerHTML="⊘ "+esc(qrows[vi].dataset.reason||'quarantined')}
-  if(qN>0)log('validating '+rowsN+' rows · '+(rowsN-qN)+' valid · '+qN+' quarantined ('+qsummary+') · row-level, no fund dropped');
-  else log('validating '+rowsN+' rows · all parsed cleanly · none quarantined');
-  await wait(1700);if(aborted)return;
-
-  // ══ 4 · RECONCILE — match IDs + align the window ══
-  phase(4,'RECONCILE');
-  stage.innerHTML="<div class='az-rec'><div class='az-rec-h'>IDENTIFIER RECONCILIATION</div><div class='az-chips' id='rchips'></div>"
-   +"<div class='az-tl'><div class='az-tl-h'>SHARED WINDOW</div><div class='az-tl-bar'><i id='tlfill'></i></div>"
-   +"<div class='az-tl-dates'><span>"+(ov.start||'')+"</span><span>"+(ov.end||'')+"</span></div>"
-   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+fundsN+" funds matched · quarantine was row-level, so every fund keeps its valid months</div></div></div>";
-  var rc=$('#rchips',az);
-  for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);schedule(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
-  schedule(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);
-  log('reconciled '+WR+' identifiers · aligned '+(ov.start||'')+' → '+(ov.end||''));
+  for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');var qms=$('.mstat',qrows[vi]);if(qms)qms.innerHTML="⊘ "+esc(qrows[vi].dataset.reason||'quarantined')}
+  var qsummary=Object.keys(qr).map(function(k){return qr[k]+' '+k}).join(' · ')||'none';
+  if(qN>0)log('normalized '+rowsN+' rows · '+(rowsN-qN)+' valid · '+qN+' quarantined ('+qsummary+') · row-level, no fund dropped');
+  else log('normalized '+rowsN+' rows · all parsed cleanly · none quarantined');
   await wait(1600);if(aborted)return;
+
+  // ══ 4 · ASSEMBLE — group the validated rows into one aligned per-fund series each ══
+  // The payoff: the flat table becomes the universe. Each fund gets a lane with a
+  // real sparkline of its returns, all sharing one window — so the viewer SEES the
+  // dataset being built, not just told it happened.
+  phase(4,'ASSEMBLE UNIVERSE');
+  var months=((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36);
+  function _spark(w){if(!w||w.length<2)return "<svg class='az-spark' viewBox='0 0 118 20'></svg>";
+    var lo=Math.min.apply(null,w),hi=Math.max.apply(null,w),rng=(hi-lo)||1,W=118,H=20;
+    var pts=w.map(function(v,i){var x=(i/(w.length-1))*W,y=H-((v-lo)/rng)*(H-3)-1.5;return (Math.round(x*10)/10)+','+(Math.round(y*10)/10)}).join(' ');
+    return "<svg class='az-spark' viewBox='0 0 118 20' preserveAspectRatio='none'><polyline points='"+pts+"'/></svg>";}
+  var lanes=(A.funds||[]).slice(0,9);
+  stage.innerHTML=
+   "<div class='az-asm'>"
+   +"<div class='az-asm-h'><b>"+validN+"</b> valid rows &nbsp;→&nbsp; grouped by fund id &nbsp;→&nbsp; <b>"+fundsN+"</b> aligned per-fund series</div>"
+   +"<div class='az-lanes' id='lanes'></div>"
+   +"<div class='az-asm-win'><span>"+esc(ov.start||'')+"</span><span class='az-asm-wl'>"+months+" months · one shared window</span><span>"+esc(ov.end||'')+"</span></div>"
+   +"</div>";
+  var lh=$('#lanes',az);log('grouping rows into aligned per-fund series');
+  for(var li=0;li<lanes.length;li++){if(aborted)return;var fd0=lanes[li];var lane=el('div','az-lane');
+    lane.innerHTML="<span class='az-lane-id'>"+esc(fd0.id)+"</span>"+_spark(fd0.wealth)+"<span class='az-lane-n'>"+months+" mo</span>";
+    lh.appendChild(lane);schedule(function(x){x.classList.add('in')}.bind(null,lane),20);await wait(150)}
+  log('assembled '+fundsN+' funds · aligned '+(ov.start||'')+' → '+(ov.end||''));
+  await wait(1700);if(aborted)return;
 
   // ══ 5 · READY ══
   phase(5,'UNIVERSE READY');
