@@ -773,12 +773,25 @@ async function actZero(){
   // before → after on real values as the key to what "normalize" means.
   phase(3,'NORMALIZE');
   var okDate=(sample[0]&&sample[0].d)||_mdate(0);
-  var okDec=_firstRet(okFunds[0]);var okDecStr=(okDec!=null&&isFinite(okDec))?okDec.toFixed(4):'0.0190';
+  var okDec=_firstRet(okFunds[0]);var okDecStr=(okDec!=null&&isFinite(okDec))?okDec.toFixed(4):'-0.0067';
+  var _unit=(ING&&ING.unit)||'decimal';
+  var _pctOf=(okDec!=null&&isFinite(okDec))?((okDec*100).toFixed(2)+'%'):'-0.67%';        // this value, shown as a percent
+  var _dm=String(okDate).match(/(\d{4})-(\d{2})-(\d{2})/);var _usDate=_dm?(_dm[2]+'/'+_dm[3]+'/'+_dm[1]):'07/01/2023';   // this date, shown US-style
   var tf=[];
-  if(ING&&ING.unit==='percent')tf.push({a:'1.20%',r:'% → decimal',b:'0.0120',k:'ok'});
-  else if(ING&&ING.unit==='bps')tf.push({a:'120 bps',r:'bps → decimal',b:'0.0120',k:'ok'});
-  else tf.push({a:okDecStr,r:'recognized · decimal',b:okDecStr,k:'ok'});
-  tf.push({a:okDate,r:'parsed · ISO-8601',b:okDate,k:'ok'});
+  // Rows 1-2 · what normalize ACTUALLY did to THIS file: a real rescale when the values
+  // arrived in %/bps; a verified keep when they were already canonical (so identical
+  // before/after is explained — "kept", not a broken duplicate).
+  if(_unit==='percent')tf.push({a:_pctOf,r:'% → decimal',b:okDecStr,k:'ok'});
+  else if(_unit==='bps')tf.push({a:((okDec!=null&&isFinite(okDec))?Math.round(okDec*1e4)+' bps':'-67 bps'),r:'bps → decimal',b:okDecStr,k:'ok'});
+  else tf.push({a:okDecStr,r:'already decimal · kept',b:okDecStr,k:'keep'});
+  tf.push({a:okDate,r:'already ISO-8601 · kept',b:okDate,k:'keep'});
+  // When the file needed no conversion, DEMONSTRATE what normalize accepts — the SAME
+  // value/date in a raw form it WOULD rescale, marked "also accepts" so it is never read
+  // as data that was in the file. A percent/bps file already showed the real transform.
+  if(_unit!=='percent'&&_unit!=='bps'){
+    tf.push({a:_pctOf,r:'% → decimal',b:okDecStr,k:'eg'});
+    tf.push({a:_usDate,r:'US date → ISO-8601',b:okDate,k:'eg'});
+  }
   // NB: the failure story is no longer a transform chip — it lives in its own
   // QUARANTINED unit below (real cells + reason), so these chips stay purely about
   // what normalize does to GOOD values.
@@ -846,10 +859,12 @@ async function actZero(){
   for(var st=1;st<=steps;st++){if(aborted)return;var t=st/steps;if(vEl)vEl.textContent=Math.round(t*validN);if(qEl)qEl.textContent=Math.round(t*qN);await wait(sweepMs/steps)}
   if(vEl)vEl.textContent=validN;if(qEl)qEl.textContent=qN;
   // the concrete transforms — what "normalize" actually did to a real value
-  var tfh=$('#tf',az);
-  for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t2=tf[ti];var tr=el('div','az-tfr'+(t2.k==='bad'?' bad':''));
+  var tfh=$('#tf',az);var _egShown=false;
+  for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t2=tf[ti];
+    if(t2.k==='eg'&&!_egShown){_egShown=true;var dv=el('div','az-tfdiv');dv.textContent='also accepts';tfh.appendChild(dv);schedule(function(x){x.classList.add('in')}.bind(null,dv),20);}
+    var _cls=(t2.k==='bad'?' bad':t2.k==='eg'?' eg':t2.k==='keep'?' keep':'');var tr=el('div','az-tfr'+_cls);
     tr.innerHTML="<span class='az-tfa'>"+esc(String(t2.a||'—'))+"</span><span class='az-tfrule'>"+esc(t2.r)+"</span><span class='az-tfb'>"+esc(String(t2.b))+"</span>";
-    tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(360)}
+    tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(t2.k==='eg'?300:360)}
   // surface the rejects as their own unit: lift the red tiles out of their lanes so the
   // eye tracks them, then reveal one card per quarantined row — real cells + why it failed
   if(qN>0){

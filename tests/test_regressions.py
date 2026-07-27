@@ -423,6 +423,18 @@ def test_executive_summary_rendered_in_memo_and_pdf():
     assert 'heading="Executive Summary"' in Path("backend/amb_core/memo.py").read_text(), "the model section is renamed"
 
 
+def test_client_normalize_panel_demonstrates_transform_not_identity():
+    """The NORMALIZE panel showed identical before/after for already-canonical data, which
+    read as a no-op bug. Pin that clean values are labeled KEPT pass-throughs (identical is
+    explained), and that clearly-marked 'also accepts' example conversions demonstrate what
+    normalization does (percent→decimal, US-date→ISO); a %/bps file shows the real rescale."""
+    js = Path("backend/amb_core/assets/memo.js").read_text()
+    assert "already decimal" in js and "already ISO-8601" in js, "clean values must read as a kept pass-through, not a silent duplicate"
+    assert "also accepts" in js, "example conversions must be flagged as capability, not data from the file"
+    assert "US date" in js, "the panel must demonstrate a real date conversion"
+    assert "_unit==='percent'" in js and "bps" in js, "a %/bps file must show the genuine rescale"
+
+
 def test_client_acquire_card_reflects_actual_benchmark_source():
     """The Act 0 'acquire sources' card must show the benchmark source actually in use
     (FRED or Yahoo), not a hard-coded FRED — the mismatch where the card said FRED while
