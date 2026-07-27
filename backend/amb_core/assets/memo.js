@@ -1026,13 +1026,14 @@ function buildAudit(){
       var inp=[(r?r.length:'—')+' monthly returns'];
       if(mk==='sharpe'||mk==='sortino')inp.push('risk-free '+pct(rf));
       if(mk==='beta'||mk==='alpha')inp.push('vs '+benchNm);
-      claims.push({fund:d.name,kind:'metric',mode:mode,ok:ok,label:metricLabel(mk),value:fmtMetricVal(mk,v),
+      claims.push({fund:d.name,id:d.id,kind:'metric',mk:mk,mode:mode,ok:ok,label:metricLabel(mk),value:fmtMetricVal(mk,v),
         def:(METRIC_INFO[mk]||{}).def||'',inputs:inp,src:retSrc});
     });
     FIELDS.forEach(function(F){var v=d[F.fk];if(v==null||v===''||v==='—')return;
       var tr=trace(d.id,F.cands);
-      claims.push({fund:d.name,kind:'field',ok:!!tr,label:F.label,value:F.fmt(v),
-        raw:(tr?tr.raw:null),src:(tr?("column ‘"+tr.col+"’ · row "+tr.row+" · "+tr.file):"not located in source")});
+      claims.push({fund:d.name,id:d.id,kind:'field',ok:!!tr,label:F.label,value:F.fmt(v),
+        file:(tr?tr.file:null),col:(tr?tr.col:null),row:(tr?tr.row:null),raw:(tr?tr.raw:null),
+        src:(tr?("column ‘"+tr.col+"’ · row "+tr.row+" · "+tr.file):"not located in source")});
     });
   });
   var verified=claims.filter(function(c){return c.ok}).length;
@@ -1042,31 +1043,89 @@ function refreshAudit(){try{var L=buildAudit();A._auditLedger=L;A.verified=L.ver
   var vb=$('#vbadge');if(vb)vb.setAttribute('title',L.verified+'/'+L.total+' claims verified against the metrics engine — click for the audit trail');}catch(e){}}
 function auditDrawer(){
   var L=buildAudit();A._auditLedger=L;A.verified=L.verified;A.total=L.total;var A2=L.claims;
-  var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
-  function itemHtml(c){
-    var ck=c.ok?'✓':'!';var badcls=c.ok?'':' bad';
-    var tip=c.kind==='metric'
-      ? (c.mode==='recomputed'?(c.ok?'recomputed from the return series · matches the engine':'recompute differs from the engine'):'deterministic engine value')
-      : (c.ok?'traced to a specific source cell':'value as loaded — source cell not located');
-    var traceLine=(c.kind==='metric')
-      ? "<div class='av-src'><span class='av-k2'>"+(c.mode==='recomputed'?'recomputed from':'computed from')+"</span> "+esc(c.inputs.join(' · '))+" &nbsp;·&nbsp; <span class='av-k2'>source</span> "+esc(c.src)+"</div>"
-      : "<div class='av-src'><span class='av-k2'>source field</span> "+esc(c.src)+(c.raw!=null?(" &nbsp;·&nbsp; <span class='av-k2'>raw</span> “"+esc(c.raw)+"”"):"")+"</div>";
-    var defHtml=(c.kind==='metric'&&c.def)?("<div class='av-note'>"+esc(c.def)+"</div>"):"";
-    return "<div class='av-item"+badcls+"'><span class='av-ck' title='"+tip+"'>"+ck+"</span>"
-      +"<div class='av-body'><div class='av-line'><span class='av-met'>"+esc(c.label)+"</span><span class='av-val'>"+esc(c.value)+"</span></div>"
-      +defHtml+traceLine+"</div></div>";
+  var groups=[],gi={};A2.forEach(function(c,i){c._i=i;if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
+  // a COLLAPSED row: check · label · value · kind badge · chevron. Click the row to jump
+  // to its origin (chart+fund brief for a metric, the exact CSV cell for a source field);
+  // click the chevron to expand the provenance inline. Detail stays hidden until asked for.
+  function rowHtml(c){
+    var badcls=c.ok?'':' bad';
+    var badge=(c.kind==='metric')?"<span class='av-badge met'>metric</span>":"<span class='av-badge src'>source</span>";
+    var go=(c.kind==='metric')?"chart":(c.file?"csv":null);
+    var exp=(c.kind==='metric')
+      ? ((c.def?"<div class='av-note'>"+esc(c.def)+"</div>":"")+"<div class='av-src'><span class='av-k2'>"+(c.mode==='recomputed'?'recomputed from':'computed from')+"</span> "+esc(c.inputs.join(' · '))+" · <span class='av-k2'>source</span> "+esc(c.src)+"</div>")
+      : ("<div class='av-src'><span class='av-k2'>source field</span> "+esc(c.src)+(c.raw!=null?(" · <span class='av-k2'>raw</span> “"+esc(c.raw)+"”"):"")+"</div>");
+    var jumpLbl=(c.kind==='metric')?"↗ show on chart &amp; open "+esc(first(c.fund)):(c.file?("↗ open "+esc(c.file)+" at row "+c.row):"source cell not located");
+    return "<div class='av-row"+badcls+(go?'':' nogo')+"' data-i='"+c._i+"'"+(go?" data-go='"+go+"'":"")+">"
+      +"<div class='av-rhead'><span class='av-ck' title='"+(c.ok?(c.kind==='metric'?'recomputed · matches the engine':'traced to a source cell'):'not located')+"'>"+(c.ok?'✓':'!')+"</span>"
+      +"<span class='av-rlabel'>"+esc(c.label)+"</span><span class='av-rval'>"+esc(c.value)+"</span>"+badge
+      +"<button class='av-chev' data-chev='"+c._i+"' title='show where this came from' aria-label='details'>›</button></div>"
+      +"<div class='av-exp'>"+exp+(go?("<button class='av-jump' data-jump='"+c._i+"'>"+jumpLbl+"</button>"):"")+"</div>"
+    +"</div>";
   }
   var body=groups.map(function(g){
     var mets=g.items.filter(function(c){return c.kind==='metric'}),flds=g.items.filter(function(c){return c.kind==='field'});
     var okN=g.items.filter(function(c){return c.ok}).length;
     return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+okN+"/"+g.items.length+" traced</span></div>"
-      +(mets.length?"<div class='av-kind'>Computed metrics · re-verified against the engine</div>"+mets.map(itemHtml).join(''):"")
-      +(flds.length?"<div class='av-kind'>From the source file · traced to a column</div>"+flds.map(itemHtml).join(''):"")
+      +(mets.length?"<div class='av-kind'>Computed metrics</div>"+mets.map(rowHtml).join(''):"")
+      +(flds.length?"<div class='av-kind'>From the source file</div>"+flds.map(rowHtml).join(''):"")
       +"</div>";
   }).join('');
   if(!A2.length)body="<p class='d-p'>No shortlisted funds to audit yet — run the analysis first.</p>";
   var shield="<svg viewBox='0 0 24 24' fill='none'><path d='M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z' fill='var(--accent-soft)' stroke='var(--accent2)' stroke-width='1.3' stroke-linejoin='round'/><path d='M8.6 12.2l2.3 2.3 4.5-4.6' stroke='var(--accent2)' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
-  openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+L.verified+" / "+L.total+" traced</div></div></div><div class='d-strat' style='margin-top:12px'>every figure traced to a computed metric or a source field</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each claim below is traced to its origin — a metric recomputed from the source return series and matched against the engine, or a value read straight from a specific column of your CSV. Nothing reaches the page unverified.</p>"+body)}
+  openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+L.verified+" / "+L.total+" traced</div></div></div><div class='d-strat' style='margin-top:12px'>click any figure to jump to where it came from</div><p class='d-p'>Every figure links back to its origin — a computed metric (click to see it on the chart and in the fund brief) or a specific field in your CSV (click to open the file at the exact cell). Nothing reaches the memo unverified.</p>"+body);
+  var d=$('#drawer');if(!d)return;
+  // wire ONCE (openDrawer only swaps innerHTML, not the element) and always
+  // stopPropagation — otherwise the rebuild detaches the click target and the global
+  // outside-click closer treats it as an outside click and shuts the drawer.
+  if(!d._auditWired){d._auditWired=true;
+    d.addEventListener('click',function(e){
+      var chev=e.target.closest('.av-chev');
+      if(chev){e.stopPropagation();var row=chev.closest('.av-row');if(row)row.classList.toggle('open');return;}
+      var jb=e.target.closest('.av-jump'),row2=e.target.closest('.av-row');
+      if(!jb&&!row2)return;
+      var idx=jb?+jb.dataset.jump:(!row2.classList.contains('nogo')?+row2.dataset.i:-1);
+      if(idx<0)return;
+      e.stopPropagation();
+      var L2=A._auditLedger;var c=L2&&L2.claims[idx];if(!c)return;
+      if(c.kind==='metric')auditJumpMetric(c.id,c.mk);
+      else if(c.file)openSourceView(c.file,c.id,c.col);
+    });
+  }
+}
+// jump: a metric claim → pulse the fund on the risk/return chart + open its brief with
+// that metric highlighted, so you SEE where the number lives.
+function auditJumpMetric(fid,mk){
+  var n=nodes[fid];if(n){n.classList.add('auditpulse');setTimeout(function(){n.classList.remove('auditpulse')},2400);}
+  fundDrawer(fid);
+  var d=$('#drawer');if(!d)return;
+  var cell=d.querySelector(".cell[data-mk='"+mk+"']");if(cell)cell.classList.add('mkhot');
+  _auditBack(d);
+}
+// jump: a source-field claim → open the CSV windowed to the fund's row with the exact
+// cell (row × column) highlighted — the literal "link back to a specific source field".
+function openSourceView(fileName,fundId,colName){
+  var sc=(A.sources||[]).filter(function(s){return s.name===fileName})[0]||(A.sources||[])[0];
+  if(!sc||!sc.text){toast("<span class='tk' style='color:var(--loss)'>!</span>No embedded source for this file");return;}
+  var rows;try{rows=parseCSV(sc.text)}catch(e){rows=null;}
+  if(!rows||rows.length<2){toast("<span class='tk' style='color:var(--loss)'>!</span>Could not read that source");return;}
+  var hdr=rows[0],hlow=hdr.map(function(h){return String(h).toLowerCase().trim()});
+  var idCol=_findCol(hlow,['fund_id','fund','ticker','symbol','id']);
+  var colIdx=_findCol(hlow,[String(colName).toLowerCase().trim()]);
+  var tRow=-1;for(var r=1;r<rows.length;r++){if(idCol>=0&&String(rows[r][idCol]).trim()===String(fundId).trim()){tRow=r;break;}}
+  if(tRow<0)tRow=1;
+  var lo=Math.max(1,tRow-4),hi=Math.min(rows.length-1,tRow+4);
+  var thead="<tr><th class='ln'>#</th>"+hdr.map(function(h,ci){return "<th class='"+(ci===colIdx?'hotc':'')+"'>"+esc(h)+"</th>"}).join('')+"</tr>";
+  var tb='';
+  if(lo>1)tb+="<tr class='ell'><td class='ln'>⋮</td><td colspan='"+hdr.length+"'>"+(lo-1)+" earlier rows</td></tr>";
+  for(var rr=lo;rr<=hi;rr++){var hot=(rr===tRow);
+    tb+="<tr class='"+(hot?'hotr':'')+"'><td class='ln'>"+rr+"</td>"+hdr.map(function(_,ci){var cell=(rows[rr]&&rows[rr][ci]!=null)?rows[rr][ci]:'';return "<td class='"+(ci===colIdx?'hotc':'')+((hot&&ci===colIdx)?' hotcell':'')+"'>"+esc(cell)+"</td>"}).join('')+"</tr>";}
+  if(hi<rows.length-1)tb+="<tr class='ell'><td class='ln'>⋮</td><td colspan='"+hdr.length+"'>"+(rows.length-1-hi)+" more rows</td></tr>";
+  var cap="Traced to <b>"+esc(fileName)+"</b> · row <b>"+tRow+"</b> of "+(rows.length-1)+" · column <b>"+esc(colIdx>=0?hdr[colIdx]:colName)+"</b>";
+  openDrawer("<div class='d-pre'>Source field · exact origin</div><div class='d-name'>"+esc(colName)+"</div>"
+    +"<div class='srcview-cap'>"+cap+"</div><div class='srcview'><table>"+thead+tb+"</table></div>");
+  var d=$('#drawer');if(d)d.classList.add('wide');_auditBack(d);
+}
+function _auditBack(d){if(!d)return;var b=el('button','av-back');b.textContent='‹ Back to the audit trail';b.addEventListener('click',function(e){e.stopPropagation();auditDrawer();});d.appendChild(b);}
 function openExportPop(anchor){var pop=$('#pop');if(!pop)return;var r=anchor.getBoundingClientRect();
   pop.innerHTML="<div class='pop-card'><div class='pop-hd'><b>Export memo</b><i>a clean, no-nonsense PDF of the recommendation</i></div>"
     +"<div class='pop-opt' data-a='pdf'><span class='pi'>⤓</span><div class='pt'><b>Download PDF</b><i>saves the memo straight to your device</i></div></div>"
