@@ -19,7 +19,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config import Settings, get_settings
 from .retrieval import AnalysisContext
@@ -36,6 +36,12 @@ class ClaimsProvider(Protocol):
 
 
 # ── typed payload contract (parse the model's JSON into a known shape) ──
+def _only_dicts(v: Any) -> list:
+    """Keep only well-formed (dict) claim entries; a non-list or a list with
+    stray scalars is filtered rather than allowed to fail the whole payload."""
+    return [c for c in v if isinstance(c, dict)] if isinstance(v, list) else []
+
+
 class _Claimlet(BaseModel):
     model_config = ConfigDict(extra="allow")
     text: str = ""
@@ -67,6 +73,39 @@ class MemoPayload(BaseModel):
     recommendation: str = ""
     funds: list[_FundNote] = Field(default_factory=list)
     key_risks: _KeyRisks = Field(default_factory=_KeyRisks)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce(cls, data: Any) -> Any:
+        """Salvage a partially-malformed provider response field-by-field so one
+        wrong-typed field (e.g. a fast model emitting `key_risks` as a string) no
+        longer discards the whole live memo. Wrong-typed fields drop to their
+        default; well-formed siblings survive. Downstream still re-verifies every
+        numeric claim against the engine, so this only ever loses text, never trust."""
+        if not isinstance(data, dict):
+            return {}
+        d = dict(data)
+        for k in ("summary", "recommendation"):
+            v = d.get(k)
+            if v is not None and not isinstance(v, str):
+                d[k] = str(v)
+        # key_risks must be an object; a stringy/garbled value → default (memo.py
+        # then renders the deterministic metric-read risks section instead).
+        kr = d.get("key_risks")
+        if isinstance(kr, dict):
+            d["key_risks"] = {**kr, "claims": _only_dicts(kr.get("claims"))}
+        elif kr is not None:
+            d["key_risks"] = {}
+        # funds must be a list of objects; drop malformed entries and their claims.
+        fs = d.get("funds")
+        if isinstance(fs, list):
+            d["funds"] = [
+                {**f, "claims": _only_dicts(f.get("claims"))}
+                for f in fs if isinstance(f, dict)
+            ]
+        elif fs is not None:
+            d["funds"] = []
+        return d
 
 
 def _normalize_payload(raw: dict, model: str) -> dict:

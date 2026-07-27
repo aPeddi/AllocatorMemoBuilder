@@ -517,3 +517,37 @@ def test_single_file_is_the_sole_sample():
     assert (samples / "dataset.csv").exists()
     assert not (samples / "funds.csv").exists(), "legacy funds.csv came back"
     assert not (samples / "returns.csv").exists(), "legacy returns.csv came back"
+
+
+# ── a partially-malformed provider response degrades field-by-field, not wholesale ──
+def test_stringy_key_risks_does_not_discard_the_whole_memo():
+    """A fast model sometimes emits `key_risks` as a string instead of an object.
+    That single bad field must NOT nuke the good summary/recommendation/funds the
+    model produced (which is what happened before: the whole payload fell back to
+    the defaulted shape). The bad field drops to its default; siblings survive."""
+    from amb_core.llm import _normalize_payload
+
+    raw = {
+        "summary": "Screened 9 funds; 5 advanced.",
+        "recommendation": "Recommend Gotham as the core allocation.",
+        "funds": [
+            {"fund_id": "GOT", "paragraph": "Strong Sharpe.",
+             "claims": [{"text": "top Sharpe", "metric": "sharpe", "fund_id": "GOT", "value": 0.86},
+                        "STRAY_NON_DICT_CLAIM"]},
+            "NOT_A_FUND_OBJECT",
+        ],
+        "key_risks": "\n  <body>...</claims>\n",  # the exact failure mode
+    }
+    out = _normalize_payload(raw, "claude-haiku-4-5")
+
+    assert out["summary"] == "Screened 9 funds; 5 advanced."          # survived
+    assert out["recommendation"].startswith("Recommend Gotham")       # survived
+    assert [f["fund_id"] for f in out["funds"]] == ["GOT"]            # bad entry dropped
+    assert len(out["funds"][0]["claims"]) == 1                        # stray claim dropped
+    assert out["key_risks"] == {"body": "", "claims": []}            # coerced -> deterministic fallback
+
+
+def test_non_dict_provider_response_defaults_cleanly():
+    from amb_core.llm import _normalize_payload
+    out = _normalize_payload("total garbage, not even a dict", "m")  # type: ignore[arg-type]
+    assert out["summary"] == "" and out["funds"] == [] and out["recommendation"] == ""
