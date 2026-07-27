@@ -122,7 +122,8 @@ function buildField(){
 }
 var _lastLive=null;
 function updateCounter(lbl){var live=A.funds.filter(function(d){var n=nodes[d.id];return !n.classList.contains('gone')&&!n.classList.contains('cutout')}).length;var c=$('#counter');
-  if(c){c.innerHTML="<b>"+String(live).padStart(2,'0')+"</b><span class='cl'>"+(lbl||'Candidates')+"<br>in play</span>";
+  var tot=A.nTotal||A.funds.length;   // always relative to the FULL universe, so the 9 → 6 reduction is explicit
+  if(c){c.innerHTML="<b>"+String(live).padStart(2,'0')+"</b><span class='cl'>of "+String(tot).padStart(2,'0')+"<br>"+(lbl||'in play')+"</span>";
     if(_lastLive!==null&&live!==_lastLive){c.classList.remove('pop');void c.offsetWidth;c.classList.add('pop')}}
   _lastLive=live;updateTally();}
 function buildIntro(){
@@ -803,7 +804,7 @@ async function story(){
   A.funds.forEach(function(d){if(d.reason)nodes[d.id].classList.add('gone')});
   await wait(700);
   // ── ACT 3 · Scoring — survivors take the frontier; weigh them in focus ──
-  chapter('03 · Scoring',cap(NUM[A.nEligible]||A.nEligible)+' clear the mandate','scored on risk-adjusted return');
+  chapter('03 · Scoring',cap(NUM[A.nEligible]||A.nEligible)+' of '+(NUM[A.nTotal]||A.nTotal)+' clear the mandate','the '+A.nReject+' excluded breached a hard limit · survivors scored on risk-adjusted return');
   var ip=$('#intropane');if(ip)ip.classList.add('out');
   frontier();document.body.classList.add('scoring');updateCounter();await wait(1300);
   $('#scorepane').classList.add('in');buildWeigh();await wait(700);
@@ -1159,10 +1160,11 @@ function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.ord
   function _cell(v){var s=String(v==null?'':v).trim();return /^(nan|none|nat)$/i.test(s)?'':s}
   function _q(reason,dstr,id,rawRet){qreasons[reason]=(qreasons[reason]||0)+1;quar++;
     if(qsamples.length<4)qsamples.push({date:_cell(dstr),id:_cell(id),ret:_cell(rawRet),reason:reason});}
+  function _blank(x){var s=String(x==null?'':x).trim().toLowerCase();return s===''||s==='nan'||s==='none'||s==='nat'||s==='n/a'||s==='na'}
   function push(id,dstr,rawRet){var val=_normVal(rawRet,det.unit),iso=_isoStr(dstr,det.dateOrder);
     if(!id){_q('missing fund id',dstr,id,rawRet);return}
-    if(val==null){_q('unparseable return',dstr,id,rawRet);return}
-    if(iso==null){_q('bad date',dstr,id,rawRet);return}
+    if(val==null){_q(_blank(rawRet)?'missing return':'unparseable return',dstr,id,rawRet);return}
+    if(iso==null){_q(_blank(dstr)?'missing date':'unparseable date',dstr,id,rawRet);return}
     if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val});okN++;
     if(minD==null||iso<minD)minD=iso;}
   if(det.shape==='wide'){var use=det.series.filter(function(s){return !s.excludedByUser});

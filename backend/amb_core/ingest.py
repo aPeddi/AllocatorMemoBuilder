@@ -31,18 +31,24 @@ def _find_col(columns: list[str], candidates: list[str]) -> Optional[str]:
     return None
 
 
-def _quarantine_reason(date_ok: bool, fund_ok: bool, ret_ok: bool) -> str:
-    """A SPECIFIC reason per bad row (not one generic string), so downstream
-    readiness buckets and the ingest animation reflect what actually went wrong in
-    THIS file — a clean file shows nothing, a bad-return file says 'unparseable
-    return', not a blanket 'bad date'."""
+def _is_blank(x) -> bool:
+    if x is None:
+        return True
+    s = str(x).strip().lower()
+    return s in ("", "nan", "none", "nat", "n/a", "na")
+
+
+def _quarantine_reason(raw_date, date_ok: bool, fund_ok: bool, raw_ret, ret_ok: bool) -> str:
+    """A SPECIFIC reason per bad row, distinguishing a MISSING (blank) cell from an
+    UNPARSEABLE (present but malformed) one — 'missing date' reads very differently
+    from 'unparseable date', and a first-time viewer should see exactly which it was."""
     parts = []
     if not date_ok:
-        parts.append("bad date")
+        parts.append("missing date" if _is_blank(raw_date) else "unparseable date")
     if not fund_ok:
         parts.append("missing fund id")
     if not ret_ok:
-        parts.append("unparseable return")
+        parts.append("missing return" if _is_blank(raw_ret) else "unparseable return")
     return ", ".join(parts) or "unparseable row"
 
 
@@ -82,7 +88,7 @@ def load_returns(path: str | Path) -> tuple[dict[str, ReturnSeries], list[dict]]
         fund_ok = f != "" and f.lower() != "nan"
         if d is None or v is None or not fund_ok:
             quarantined.append(
-                {"row": int(i), "reason": _quarantine_reason(d is not None, fund_ok, v is not None), "raw": dict(r)}
+                {"row": int(i), "reason": _quarantine_reason(r[date_col], d is not None, fund_ok, r[ret_col], v is not None), "raw": dict(r)}
             )
             continue
         rows.append((f, d, v))
@@ -241,7 +247,7 @@ def load_dataset(path: str | Path) -> tuple[list[Fund], dict[str, ReturnSeries],
         v = normalize_return(r[ret_col])
         fund_ok = f != "" and f.lower() != "nan"
         if d is None or v is None or not fund_ok:
-            quarantined.append({"row": int(i), "reason": _quarantine_reason(d is not None, fund_ok, v is not None), "raw": dict(r)})
+            quarantined.append({"row": int(i), "reason": _quarantine_reason(r[date_col], d is not None, fund_ok, r[ret_col], v is not None), "raw": dict(r)})
             continue
         rows.append((f, d, v))
 

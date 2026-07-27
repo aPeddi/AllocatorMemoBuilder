@@ -34,18 +34,26 @@ def test_quarantine_reasons_are_specific_not_blanket():
     assert len(reasons) >= 2
 
 
-def test_missing_fund_id_is_its_own_reason(tmp_path):
+def test_reason_distinguishes_missing_from_unparseable(tmp_path):
+    """A blank cell is 'missing X'; a present-but-malformed cell is 'unparseable X'.
+    'missing date' must not be reported as 'bad date' — they mean different things."""
     csv = tmp_path / "d.csv"
     csv.write_text(
         "date,fund_id,monthly_return\n"
         "2024-01-01,AAA,0.01\n2024-02-01,AAA,0.02\n"
-        "2024-01-01,,0.03\n"          # missing fund id
-        "2024-02-01,AAA,notnum\n"     # unparseable return
+        ",AAA,0.03\n"                 # blank date        -> missing date
+        "2024-03-01,AAA,\n"           # blank return      -> missing return
+        "not-a-date,AAA,0.04\n"       # malformed date    -> unparseable date
+        "2024-04-01,,0.05\n"          # blank fund id     -> missing fund id
     )
     _f, _s, quar = load_dataset(str(csv))
     reasons = {q["reason"] for q in quar}
-    assert any("fund id" in r for r in reasons)
-    assert any("return" in r for r in reasons)
+    assert any("missing date" in r for r in reasons)
+    assert any("missing return" in r for r in reasons)
+    assert any("unparseable date" in r for r in reasons)
+    assert any("missing fund id" in r for r in reasons)
+    # a blank date is never mislabeled as a malformed one
+    assert not any(r == "bad date" for r in reasons)
 
 
 # ── ingest schema: the app must show the real file's fields ───────────────────

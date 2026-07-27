@@ -13,11 +13,17 @@ from typing import Optional
 
 
 def _reason_bucket(reason: str) -> str:
+    """Primary reason for the summary count — the specific missing/unparseable
+    vocabulary, so '2 missing date' reads clearly rather than a vague 'bad date'."""
     r = (reason or "").lower()
-    if "date" in r:
-        return "bad date"
-    if "fund" in r or "id" in r:
+    if "missing date" in r:
+        return "missing date"
+    if "unparseable date" in r or "bad date" in r:
+        return "unparseable date"
+    if "fund" in r or "missing id" in r:
         return "missing id"
+    if "missing return" in r:
+        return "missing return"
     if "return" in r or "value" in r:
         return "unparseable return"
     return "other"
