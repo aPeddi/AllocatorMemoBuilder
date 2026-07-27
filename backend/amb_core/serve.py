@@ -25,7 +25,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from .config import get_settings
-from .ingest import load_returns
+from .ingest import load_dataset
 from .marketdata import fetch_risk_free_annual, resolve_benchmark
 from .metrics import annualize as _annualize  # shared engine helper (ret, vol, wealth)
 
@@ -61,7 +61,7 @@ def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
         return {"ok": False, "error": "no benchmark source available"}
     # align to the fund window so the live curve overlays the fund curves
     try:
-        series, _ = load_returns(SAMPLES / "returns.csv")
+        _funds, series, _quar = load_dataset(SAMPLES / "dataset.csv")
         periods = {p.period for sr in series.values() for p in sr.points}
         lo, hi = min(periods), max(periods)
         win = [p for p in bench.points if lo <= p.period <= hi]
@@ -90,6 +90,33 @@ def api_market():
     except Exception as e:  # noqa: BLE001 — log detail server-side, return a generic message
         log.warning("market_payload failed: %s", e)
         return JSONResponse({"ok": False, "error": "market data temporarily unavailable"}, status_code=502)
+
+
+@app.post("/api/map-columns")
+async def api_map_columns(request: Request):
+    """Served-mode ingest assist: propose a CSV column mapping (structure only).
+    Receives just the header + a few sample rows (never the full file, never values);
+    returns index-based hints the browser presents for the user to confirm. Falls back
+    to `{ok: False}` (client uses its deterministic detection) when no LLM is configured."""
+    try:
+        body = await request.json()
+    except Exception:  # noqa: BLE001
+        return JSONResponse({"ok": False, "error": "bad request"}, status_code=400)
+    header = body.get("header") or []
+    samples = body.get("samples") or []
+    shape = body.get("shape") or "long"
+    if not isinstance(header, list) or not header or len(header) > 512:
+        return JSONResponse({"ok": False, "error": "header required"}, status_code=400)
+    samples = [r for r in samples if isinstance(r, list)][:8]  # cap: only a taste of the data leaves the browser
+    from .llm import propose_mapping, select_tool_caller
+    caller = select_tool_caller()
+    if caller is None:
+        return JSONResponse({"ok": False, "reason": "no LLM configured"})
+    try:
+        return JSONResponse(propose_mapping(header, samples, str(shape), caller))
+    except Exception as e:  # noqa: BLE001 — degrade to deterministic client detection
+        log.warning("map-columns proposal failed: %s", e)
+        return JSONResponse({"ok": False, "error": "mapping unavailable"}, status_code=502)
 
 
 @app.get("/api/health")

@@ -57,7 +57,9 @@ def main(argv=None) -> int:
             from .llm import select_claims_provider
             provider = select_claims_provider()  # None -> deterministic template
             if provider is not None:
-                model = s.strong_model if s.llm_provider == "anthropic" else s.openai_model
+                # Mirror the composition root: the memo provider is bound to the fast
+                # model (see llm._PROVIDER_CONFIG), so the label reflects what's used.
+                model = s.fast_model if s.llm_provider == "anthropic" else s.openai_model
                 label = f"{s.llm_provider} · {model}"
         except Exception as e:  # noqa: BLE001
             print(f"! LLM unavailable ({e}); falling back to template.")

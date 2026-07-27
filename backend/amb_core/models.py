@@ -37,7 +37,7 @@ class Fund(_Model):
     lockup_months: Optional[float] = None
     notice_days: Optional[float] = None
     redemption_days: Optional[float] = None  # derived ordinal: freq -> days-to-liquidity
-    source_ref: Optional[str] = None  # e.g. "funds.csv:row=3"
+    source_ref: Optional[str] = None  # e.g. "dataset.csv:row=3"
 
 
 class ReturnPoint(_Model):

@@ -14,8 +14,6 @@ def _fresh_settings():
 
 
 SAMPLE_DATASET = "data/samples/dataset.csv"
-SAMPLE_FUNDS = "data/samples/funds.csv"
-SAMPLE_RETURNS = "data/samples/returns.csv"
 MANDATE = "data/mandates/default.yaml"
 
 

@@ -251,14 +251,12 @@ def _cli(argv: Optional[list[str]] = None) -> int:
     import sys
     from pathlib import Path
 
-    from .ingest import load_funds, load_returns
+    from .ingest import load_dataset
     from .marketdata import load_snapshot
 
     args = list(sys.argv[1:] if argv is None else argv)
-    funds_csv = args[0] if len(args) > 0 else "data/samples/funds.csv"
-    returns_csv = args[1] if len(args) > 1 else "data/samples/returns.csv"
-    funds = load_funds(funds_csv)
-    series, _ = load_returns(returns_csv)
+    dataset_csv = args[0] if len(args) > 0 else "data/samples/dataset.csv"
+    funds, series, _ = load_dataset(dataset_csv)
     bench = load_snapshot("SP500", Path("data/benchmarks"))
     print(f"  {'fund':<10} {'ret':>8} {'vol':>8} {'sharpe':>7} {'sortino':>7} {'calmar':>7} {'maxDD':>8} {'beta':>6}")
     for f in funds:

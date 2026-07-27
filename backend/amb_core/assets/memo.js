@@ -301,7 +301,7 @@ function fetchLiveMarket(manual){
 function sourceChip(){var c=$('#srcchip');if(!c)return;var b=A.bench;if(!b){c.style.display='none';return}
   var kind=b.kind||'snapshot';var lbl=(kind==='live'?'LIVE · FRED':kind==='cache'?'CACHED · FRED':'SNAPSHOT · local');
   c.className='srcchip '+kind;c.innerHTML="<i></i><b>market data</b> "+lbl;c.style.display='';
-  c.title="Fund data: your local CSVs (funds.csv, returns.csv). Benchmark / market data: "+(kind==='live'?'live FRED API':'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+".";}
+  c.title="Fund data: your local CSV (dataset.csv). Benchmark / market data: "+(kind==='live'?'live FRED API':'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+".";}
 function benchBadge(){var el2=$('#benchsrc');if(!el2)return;var b=A.bench;if(!b){el2.style.display='none';return}
   var kind=b.kind||'snapshot';var label=(kind==='live'?'LIVE · FRED':(kind==='cache'?'CACHED · FRED':'SNAPSHOT'));
   el2.className='srcbadge '+kind;el2.innerHTML="<i></i>"+label+(b.asOf?" · "+b.asOf:"");el2.style.display='';
@@ -553,7 +553,7 @@ async function actZero(){
   stage.innerHTML=
    "<div class='az-acq'>"
    +"<div class='az-src' id='srcA'><div class='az-src-h'><span class='az-ic'>▤</span>LOCAL FILES</div>"
-     +"<div class='az-row'><span>funds.csv</span><b id='fa'>—</b></div><div class='az-row'><span>returns.csv</span><b id='fb'>—</b></div>"
+     +"<div class='az-row'><span>dataset.csv · funds</span><b id='fa'>—</b></div><div class='az-row'><span>dataset.csv · returns</span><b id='fb'>—</b></div>"
      +(LIVE?"":"<div class='az-row'><span>"+(b.benchFile||'sp500_monthly.csv')+"</span><b>"+(b.n||36)+" obs</b></div>")
      +"<div class='az-st' id='stA'>connecting</div></div>"
    +"<div class='az-beam a' id='beamA'></div>"

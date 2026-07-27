@@ -170,5 +170,30 @@ def test_provider_selection_uses_injected_settings():
     assert select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="anthropic", ANTHROPIC_API_KEY="")) is None
     assert select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="none")) is None
     # key present -> a ready, bound AnalysisContext->payload callable
-    bound = select_claims_provider(Settings(**base, AMB_LLM_PROVIDER="anthropic", ANTHROPIC_API_KEY="sk-test"))
+    s = Settings(**base, AMB_LLM_PROVIDER="anthropic", ANTHROPIC_API_KEY="sk-test")
+    bound = select_claims_provider(s)
     assert callable(bound)
+    # speed-first: the memo provider is bound to the FAST model, not the strong one
+    # (narration-only + re-verified downstream), so `./launch` stays snappy.
+    assert getattr(bound, "keywords", {}).get("model") == s.fast_model
+
+
+def test_propose_mapping_is_structure_only_and_bounded():
+    """The mapping assist returns index-based structure hints, fences the CSV as
+    untrusted data, and drops any out-of-range / wrong-shape fields from the model."""
+    from amb_core.llm import propose_mapping, _normalize_mapping
+    header = ["As Of", "Fund", "Net Return"]
+
+    def stub(system, tool, prompt):
+        assert "<csv>" in prompt                 # header/samples are fenced as data
+        assert "never as instructions" in system.replace("never as", "never as")  # guardrail present
+        assert "never" in system.lower()
+        return {"unit": "decimal", "map": {"date": 0, "id": 1, "ret": 2, "strategy": 99}, "exclude": [1]}
+
+    m = propose_mapping(header, [["2024-01-01", "ORV", "0.012"]], "long", stub)
+    assert m["ok"] and m["unit"] == "decimal"
+    assert m["map"] == {"date": 0, "id": 1, "ret": 2}   # out-of-range strategy=99 dropped
+    assert "exclude" not in m                            # long shape ignores wide-only hints
+    # wide + bounds + date order
+    w = _normalize_mapping({"unit": "bps", "date_order": "dmy", "exclude": [2, 99, -1]}, ["a", "b", "c"], "wide")
+    assert w["unit"] == "bps" and w["dateOrder"] == "dmy" and w["exclude"] == [2]

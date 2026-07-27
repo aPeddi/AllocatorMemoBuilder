@@ -1,6 +1,6 @@
 import pytest
 
-from amb_core.ingest import load_returns, normalize_return
+from amb_core.ingest import load_dataset, normalize_return
 
 
 @pytest.mark.parametrize(
@@ -25,9 +25,10 @@ def test_normalize_return(raw, expected):
         assert got == pytest.approx(expected)
 
 
-def test_load_returns_quarantines_bad_rows():
-    series, quarantined = load_returns("data/samples/returns.csv")
-    assert len(series) == 9                 # 9 funds
+def test_dataset_quarantines_bad_rows():
+    funds, series, quarantined = load_dataset("data/samples/dataset.csv")
+    assert len(funds) == 9                  # 9 funds (metadata, one per fund_id)
+    assert len(series) == 9                 # 9 return series
     assert len(quarantined) == 3            # the 3 deliberately messy rows
     for s in series.values():
         assert s.frequency == "monthly"

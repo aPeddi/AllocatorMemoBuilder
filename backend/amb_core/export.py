@@ -352,7 +352,7 @@ def render_html(memo, ctx=None):
             '<div class="atmo"><div class="grid"></div></div><div id="tip"></div>'
             f'<div class="app">{header}<div class="mid">{stage}{side}</div>{rail}</div>'
             f'{printdoc}'
-            '<div id="drawer"></div><div id="play">Replay decision</div><div id="pop"></div><div id="srcpop"></div><div id="toast"></div>'
+            '<div id="drawer"></div><div id="play">Replay decision</div><div id="pop"></div><div id="srcpop"></div><div id="mapmodal"></div><div id="toast"></div>'
             f'<script>window.AMB={_json_for_script(DATA)};</script><script>{_JS}</script></body></html>')
 
 def write_html(memo, path, ctx=None):

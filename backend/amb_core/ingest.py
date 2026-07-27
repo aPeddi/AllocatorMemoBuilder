@@ -222,8 +222,8 @@ def _cli(argv=None) -> int:
     import sys
 
     args = list(sys.argv[1:] if argv is None else argv)
-    path = args[0] if args else "data/samples/returns.csv"
-    series, quarantined = load_returns(path)
+    path = args[0] if args else "data/samples/dataset.csv"
+    _funds, series, quarantined = load_dataset(path)
     print(f"funds: {len(series)}  quarantined rows: {len(quarantined)}")
     for fid, s in series.items():
         print(f"  {fid:<10} {s.frequency:<9} n={len(s.points):<4} hash={s.source_hash}")

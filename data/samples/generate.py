@@ -3,8 +3,8 @@
 
 Stdlib only + a fixed seed, so it is reproducible and runs anywhere (no numpy).
 Writes:
-  data/samples/funds.csv         fund metadata
-  data/samples/returns.csv       36 monthly returns per fund (decimals) + a few
+  data/samples/dataset.csv       single combined long file: 36 monthly returns per
+                                 fund (decimals) + fund metadata on each row + a few
                                  deliberately messy rows to exercise quarantine
   data/benchmarks/sp500_monthly.csv   as-of benchmark snapshot (ADR-0005)
 """
@@ -68,32 +68,37 @@ def main() -> int:
         "ED": ("Quarterly", 12, 45), "CR": ("Quarterly", 24, 60), "MS": ("Quarterly", 12, 45),
         "VEN": ("Illiquid", 60, 90), "RA": ("Annual", 36, 90), "DA": ("Daily", 0, 5),
     }
-    with (SAMPLES / "funds.csv").open("w", newline="") as fh:
-        w = csv.writer(fh)
-        w.writerow(["fund_id", "name", "strategy", "aum_mm", "inception_date", "mgmt_fee_pct",
-                    "redemption_freq", "lockup_months", "notice_days", "notes"])
-        for f in FUNDS:
-            fid, name, strat, aum, inc, fee, notes = f[0], f[1], f[2], f[3], f[4], f[5], f[9]
-            rf, lk, nd = LIQUIDITY.get(fid, ("Monthly", 0, 30))
-            w.writerow([fid, name, strat, aum, inc, fee, rf, lk, nd, notes])
+    # per-fund metadata tail (repeated on every observation row of the single file)
+    META = {}
+    for f in FUNDS:
+        fid, name, strat, aum, inc, fee, notes = f[0], f[1], f[2], f[3], f[4], f[5], f[9]
+        rf, lk, nd = LIQUIDITY.get(fid, ("Monthly", 0, 30))
+        META[fid] = [name, strat, aum, inc, fee, rf, lk, nd, notes]
 
+    # One combined long file: date, fund_id, monthly_return, then the fund metadata.
+    # The ingest layer reads fund metadata from the first-seen row per fund_id and the
+    # return series from (date, monthly_return) — one source of truth, no join needed.
     rows = []
     for fid, _name, _strat, _aum, _inc, _fee, beta, alpha_m, idio, _notes in FUNDS:
         for d, mk in zip(dates, market):
             r = alpha_m + beta * mk + rnd.gauss(0.0, idio)
-            rows.append([d, fid, round(r, 6)])
+            rows.append([d, fid, round(r, 6), *META[fid]])
 
-    # a few deliberately messy rows -> should be quarantined, not counted
-    rows.append(["", "MAC", 0.01])          # missing date
-    rows.append(["2026-06-01", "MN", ""])   # missing return
-    rows.append(["not-a-date", "ED", "n/a"])  # junk
+    # a few deliberately messy rows -> should be quarantined, not counted (metadata
+    # still present so the fund is known; only the observation is unusable)
+    rows.append(["", "MAC", 0.01, *META["MAC"]])       # missing date
+    rows.append(["2026-06-01", "MN", "", *META["MN"]])  # missing return
+    rows.append(["not-a-date", "ED", "", *META["ED"]])  # junk date + empty return
 
-    with (SAMPLES / "returns.csv").open("w", newline="") as fh:
-        w = csv.writer(fh)
-        w.writerow(["date", "fund_id", "monthly_return"])
+    with (SAMPLES / "dataset.csv").open("w", newline="") as fh:
+        w = csv.writer(fh, lineterminator="\n")  # LF to match the repo's committed sample
+        w.writerow(["date", "fund_id", "monthly_return", "name", "strategy", "aum_mm",
+                    "inception_date", "mgmt_fee_pct", "redemption_freq", "lockup_months",
+                    "notice_days", "notes"])
         w.writerows(rows)
 
-    print(f"wrote {len(FUNDS)} funds, {len(rows)} return rows (incl. 3 messy), {len(dates)} benchmark points")
+    print(f"wrote {len(rows)} rows for {len(FUNDS)} funds (incl. 3 messy), "
+          f"{len(dates)} benchmark points → data/samples/dataset.csv")
     return 0
 
 
