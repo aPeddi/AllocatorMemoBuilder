@@ -357,11 +357,11 @@ def test_client_audit_recomputes_benchmark_and_peer_metrics():
     metrics from the same series and matches them, so every audited metric is genuinely
     recomputed (not merely accepted)."""
     js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
-    # `_bret`/`_peerAvg` are locals unique to buildAudit's recompute additions
-    assert "_benchStats(r,_bret" in js, "audit must re-derive beta/alpha/correlation from benchmark returns"
-    assert "mm.beta=_bs.beta" in js and "mm.correlation=_bs.corr" in js, "audit must fold benchmark metrics into the recomputed set"
-    assert "mm.peer_corr=_pc" in js, "audit must re-derive peer correlation"
-    assert "function_peerAvg(" in js, "audit must have its own peer-correlation re-derivation"
+    # the audit re-derives beta/alpha/correlation/peer_corr via the shared helper and
+    # folds them into the recomputed metric set that is matched against the stored value
+    assert "_relBenchPeer(A.funds,A.bench)" in js, "audit must re-derive the benchmark/peer metrics via the shared helper"
+    assert "mm.beta=o.beta" in js and "mm.correlation=o.corr" in js, "audit must fold benchmark metrics into the recomputed set"
+    assert "mm.peer_corr=o.peer_corr" in js, "audit must re-derive peer correlation"
 
 
 def test_client_mandate_enforces_all_four_hard_limits_uniformly():
@@ -379,6 +379,50 @@ def test_client_mandate_enforces_all_four_hard_limits_uniformly():
     assert js.count("redd:_reddOf(id)") >= 2, "every rebuilt fund must carry its redemption-days for liquidity screening"
 
 
+def test_client_synth_recomputes_relative_metrics_for_audit():
+    """Under live/served data the demo path (synthAlphaOverBench) shifts each fund's
+    return stream — so its beta / alpha / benchmark-correlation / peer-correlation must be
+    re-derived from the shifted series, or the audit (which re-derives from the same
+    series) flags them unverified (the 61/80 regression). Pin ONE shared re-derivation
+    helper used by BOTH the synth path (to SET) and buildAudit (to VERIFY), so a stored
+    value and its audit re-derivation are identical by construction."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    assert js.count("function_relBenchPeer(") == 1, "one shared benchmark/peer re-derivation"
+    synth = js[js.index("functionsynthAlphaOverBench("):]
+    synth = synth[:synth.index("functionrelayoutScatter(")]
+    assert "_relBenchPeer(A.funds,b)" in synth, "synth must re-derive the benchmark/peer metrics from the shifted series"
+    assert "d.beta=o.beta" in synth and "d.peer_corr=o.peer_corr" in synth, "synth must store the re-derived metrics"
+    assert "_relBenchPeer(A.funds,A.bench)" in js, "the audit must verify via the SAME shared helper"
+
+
+def test_client_story_is_generation_guarded():
+    """A stale story coroutine must not resume and touch a rebuilt node map after an
+    upload/rerender — the crash was `nodes[id].classList` on undefined because `aborted`
+    flaps back to false for the new run. Pin that story() captures its generation and
+    bails at every checkpoint when GEN advances."""
+    js = Path("backend/amb_core/assets/memo.js").read_text()
+    story = js[js.index("async function story()"):js.index("async function cutLowest")]
+    assert "var _g=GEN" in story, "story must capture its generation token"
+    assert story.count("_g!==GEN") >= 4, "every story checkpoint must bail when the generation advances"
+
+
+def test_client_benchmark_source_prompt_blocks_the_flow():
+    """The source chooser must BLOCK the render until the user picks (return a promise the
+    caller awaits), not fire-and-forget while the story proceeds on a silent default."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    assert "returnchooseBenchSource(provs,okIds,def).then(apply)" in js, "the fetch must await the user's source pick"
+    assert "functionchooseBenchSource(provs,okIds,def){returnnewPromise(" in js, "the chooser must return a promise"
+
+
+def test_executive_summary_rendered_in_memo_and_pdf():
+    """'Executive Summary' must be a VISIBLE label — renaming the model heading isn't
+    enough; the memo modal and the PDF each render it."""
+    js = Path("backend/amb_core/assets/memo.js").read_text()
+    assert "Executive summary</div>" in js, "the memo modal must show an Executive summary heading"
+    assert "EXECUTIVE SUMMARY" in js, "the PDF must have an EXECUTIVE SUMMARY section"
+    assert 'heading="Executive Summary"' in Path("backend/amb_core/memo.py").read_text(), "the model section is renamed"
+
+
 def test_client_offers_benchmark_source_choice():
     """With more than one live benchmark source available (FRED + Yahoo), the page must
     let the user choose which reference index to measure against, remember the choice for
@@ -388,7 +432,7 @@ def test_client_offers_benchmark_source_choice():
     assert js.count("functionchooseBenchSource(") == 1, "one benchmark-source chooser"
     assert js.count("function_applyBench(") == 1, "one shared benchmark-apply path"
     assert "d.providers" in js, "fetch must read the per-provider availability map"
-    assert "okIds.length>=2){chooseBenchSource(" in js, "two live sources → prompt the user"
+    assert "okIds.length>=2){returnchooseBenchSource(" in js, "two live sources → prompt the user (and block on it)"
     assert "A._benchProvider" in js, "the chosen source must be remembered for the session"
     # server side really probes multiple providers
     serve = Path("backend/amb_core/serve.py").read_text()

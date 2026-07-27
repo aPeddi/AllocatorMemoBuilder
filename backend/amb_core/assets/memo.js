@@ -300,10 +300,11 @@ function fetchLiveMarket(manual){
       if(id)A._benchProvider=id;_applyBench(b,d);
       if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data · "+esc(b.srcName||'')+" · "+esc(b.name)+" · as-of "+esc(b.asOf));
       else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+esc(b.name)+" ("+esc(b.kind)+")");}
-    // remembered choice → honor it; two live sources & no choice yet → let the user pick;
-    // one source → use it; none live → the cache/snapshot primary.
+    // remembered choice → honor it; two live sources & no choice yet → BLOCK on the
+    // user's pick (return the promise so the caller waits before rendering); one source
+    // → use it; none live → the cache/snapshot primary.
     if(A._benchProvider&&provs[A._benchProvider]&&provs[A._benchProvider].ok){apply(A._benchProvider);}
-    else if(okIds.length>=2){chooseBenchSource(provs,okIds,def,apply);}
+    else if(okIds.length>=2){return chooseBenchSource(provs,okIds,def).then(apply);}
     else if(okIds.length===1){apply(okIds[0]);}
     else{apply(null);}
   }).catch(function(e){
@@ -323,7 +324,7 @@ function _applyBench(b,d){
 }
 // when more than one live benchmark source is available, let the user choose which
 // reference index to measure against. Remembered for the session via A._benchProvider.
-function chooseBenchSource(provs,okIds,def,cb){
+function chooseBenchSource(provs,okIds,def){return new Promise(function(resolve){
   var old=$('#benchpick');if(old)old.remove();
   var wrap=document.createElement('div');wrap.id='benchpick';wrap.className='bpm on';
   function optRow(id){var p=provs[id],b=p.benchmark;
@@ -335,11 +336,11 @@ function chooseBenchSource(provs,okIds,def,cb){
     +"<div class='bp-opts'>"+okIds.map(optRow).join('')+"</div>"
     +"<p class='bp-fine'>FRED serves price-return index levels; Yahoo serves dividend-adjusted (total-return) levels, so the two can differ by a few points a year. You can switch sources any time from the market-data chip.</p></div>";
   document.body.appendChild(wrap);
-  function done(id){wrap.remove();cb(id)}
+  function done(id){wrap.remove();resolve(id)}
   $$('.bp-opt',wrap).forEach(function(o){o.addEventListener('click',function(){done(o.dataset.id)})});
   var x=$('#bpX',wrap);if(x)x.addEventListener('click',function(){done(def)});
   var bk=$('.mm-back',wrap);if(bk)bk.addEventListener('click',function(){done(def)});
-}
+});}
 function _srcShort(b){var s=(b&&b.srcName)||'';return /yahoo/i.test(s)?'Yahoo':/fred/i.test(s)?'FRED':(s||'local')}
 // >=2 live sources returned this session → the chip becomes a switcher
 function _canSwitchSource(){var m=A._market;if(!m||!m.providers)return null;var ok=Object.keys(m.providers).filter(function(k){return m.providers[k].ok&&m.providers[k].benchmark});return ok.length>=2?ok:null}
@@ -348,7 +349,7 @@ function sourceChip(){var c=$('#srcchip');if(!c)return;var b=A.bench;if(!b){c.st
   var lbl=(kind==='live'?'LIVE · '+src:kind==='cache'?'CACHED · '+src:'SNAPSHOT · local');
   c.className='srcchip '+kind+(sw?' switch':'');c.innerHTML="<i></i><b>market data</b> "+lbl+(sw?" <span class='src-sw'>switch ⇄</span>":"");c.style.display='';
   c.title="Fund data: your local CSV (dataset.csv). Benchmark / market data: "+(kind==='live'?('live '+(b.srcName||src)+' API'):'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+"."+(sw?" Click to switch source.":"");
-  c.onclick=(sw?function(){chooseBenchSource(A._market.providers,sw,(A._benchProvider||sw[0]),function(id){A._benchProvider=id;_applyBench(A._market.providers[id].benchmark,A._market);toast("<span class='tk'>&#10003;</span>Benchmark source · "+esc(A._market.providers[id].name))})}:null);}
+  c.onclick=(sw?function(){chooseBenchSource(A._market.providers,sw,(A._benchProvider||sw[0])).then(function(id){A._benchProvider=id;_applyBench(A._market.providers[id].benchmark,A._market);toast("<span class='tk'>&#10003;</span>Benchmark source · "+esc(A._market.providers[id].name))})}:null);}
 function benchBadge(){var el2=$('#benchsrc');if(!el2)return;var b=A.bench;if(!b){el2.style.display='none';return}
   var kind=b.kind||'snapshot';var src=_srcShort(b);var label=(kind==='live'?'LIVE · '+src:(kind==='cache'?'CACHED · '+src:'SNAPSHOT'));
   el2.className='srcbadge '+kind;el2.innerHTML="<i></i>"+label+(b.asOf?" · "+b.asOf:"");el2.style.display='';
@@ -490,6 +491,11 @@ function synthAlphaOverBench(){
     if(d.fee!=null) d.netret=(mm.ann_return!=null?mm.ann_return-d.fee/100:null);
     d._synth=true;
   });
+  // the shift changed each fund's OWN return stream, so its benchmark-relative + peer
+  // metrics must be re-derived from the shifted series (they were stale before — the
+  // exact cause of beta/alpha/correlation/peer_corr failing the audit under live data).
+  var _rel=_relBenchPeer(A.funds,b);
+  A.funds.forEach(function(d){var o=_rel[d.id];if(o){d.beta=o.beta;d.alpha=o.alpha;d.corr=o.corr;d.peer_corr=o.peer_corr}});
   var pf=A.funds.filter(function(d){return d.ret!=null&&d.vol!=null});
   if(pf.length){var vs=pf.map(function(d){return d.vol}),rs2=pf.map(function(d){return d.ret});
     var vmn=Math.min.apply(null,vs),vmx=Math.max.apply(null,vs),rmn=Math.min.apply(null,rs2),rmx=Math.max.apply(null,rs2);
@@ -889,17 +895,18 @@ async function actZero(){
   var azl=$('#az');if(azl)azl.remove();document.body.classList.remove('az-run');
 }
 async function story(){
+  var _g=GEN;   // this run's generation — if a rerender/upload/skip bumps GEN, stop even if `aborted` has flapped back to false for the newer run (prevents a stale story touching a rebuilt node map)
   paused=false;document.body.classList.remove('paused');document.body.classList.add('playing');var _pb=$('#pausebtn');if(_pb){_pb.innerHTML='❚❚&nbsp;pause';_pb.classList.remove('on')}
   var total=A.funds.length;
-  await actZero();if(aborted)return;
+  await actZero();if(aborted||_g!==GEN)return;
   // ── ACT 1 · Universe — show every candidate, big and legible ──
   var big=bigN();
   chapter('01 · Universe',(big?total:cap(NUM[total]||total))+' candidates','the full fund universe enters the screen');
   A.funds.forEach(function(d,i){var n=nodes[d.id];var p=universePos(i);n.style.left=p.x+'%';n.style.bottom=p.y+'%'});
   var showStep=big?Math.max(20,Math.floor(1600/total)):170;   // quicker reveal for a big universe; unchanged at sample
-  for(var i=0;i<total;i++){if(aborted)return;nodes[A.funds[i].id].classList.add('shown');await wait(showStep)}
+  for(var i=0;i<total;i++){if(aborted||_g!==GEN)return;var _n=nodes[A.funds[i].id];if(_n)_n.classList.add('shown');await wait(showStep)}
   await wait(350);
-  if(!big){for(var i2=0;i2<total;i2++){if(aborted)return;nodes[A.funds[i2].id].classList.add('labeled');await wait(120)}}
+  if(!big){for(var i2=0;i2<total;i2++){if(aborted||_g!==GEN)return;var _n2=nodes[A.funds[i2].id];if(_n2)_n2.classList.add('labeled');await wait(120)}}
   // else: too many funds to label at once — hover tooltips carry per-fund detail; the shortlist is labeled at settle
   await wait(big?1400:2000);
   // ── ACT 2 · Screening — cut the mandate failures one at a time, slowly ──
@@ -908,7 +915,7 @@ async function story(){
   $('#counter').classList.add('on');updateCounter();
   await wait(1100);
   var gates=$$('.gate');var rj=rejects();
-  for(var j=0;j<rj.length;j++){if(aborted)return;var ex=rj[j];var en=nodes[ex.id];
+  for(var j=0;j<rj.length;j++){if(aborted||_g!==GEN)return;var ex=rj[j];var en=nodes[ex.id];if(!en)continue;
     var rs=(ex.reasons&&ex.reasons.length)?ex.reasons:[{text:ex.reason,kind:ex.rkind}];
     var kinds=rs.map(function(r){return r.kind});
     en.classList.add('focus');await wait(560);       // bring it forward
@@ -924,7 +931,8 @@ async function story(){
   }
   gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
   document.body.classList.remove('screening');$('#gates').classList.remove('on');
-  A.funds.forEach(function(d){if(d.reason)nodes[d.id].classList.add('gone')});
+  if(aborted||_g!==GEN)return;
+  A.funds.forEach(function(d){var _n=nodes[d.id];if(d.reason&&_n)_n.classList.add('gone')});
   await wait(700);
   // ── ACT 3 · Scoring — survivors take the frontier; weigh them in focus ──
   chapter('03 · Scoring',cap(NUM[A.nEligible]||A.nEligible)+' of '+(NUM[A.nTotal]||A.nTotal)+' clear the mandate','the '+A.nReject+' excluded breached a hard limit · survivors scored on risk-adjusted return');
@@ -935,19 +943,19 @@ async function story(){
   await cutLowest();
   $('.sweetz').classList.add('on');await wait(650);
   // ── ACT 4 · Recommendation — one fund resolves ──
-  var win=shortlisted()[0];if(aborted||!win)return;
+  var win=shortlisted()[0];if(aborted||_g!==GEN||!win)return;
   chapter('04 · Recommendation',esc(first(win.name)),esc(win.name));
   focusWinner(win);
   $('#trajpane').classList.add('in');buildTraj();
   await wait(2100);settle();
 }
 async function cutLowest(){var c=A.funds.filter(function(d){return d.cut})[0];if(!c||aborted)return;
-  var n=nodes[c.id];clearHalos();setLeaderNode(null);
+  var n=nodes[c.id];if(!n)return;clearHalos();setLeaderNode(null);
   n.classList.add('focus','cutfocus');showRtag(c.id,"outscored · <b>below the top "+A.nShort+"</b>",true);await wait(1800);
   n.classList.remove('focus','cutfocus');n.classList.add('cutout','dimmed');clearRtags();updateCounter('Shortlist');await wait(700);}
-function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
-  setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
-function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();refreshAudit();benchBadge();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
+function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(!n)return;if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
+  setLeaderNode(win.id);var wn=nodes[win.id];var cr=wn&&$('.crown',wn);if(cr)cr.lastChild.textContent='recommended';}
+function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();refreshAudit();benchBadge();A.funds.forEach(function(d){var n=nodes[d.id];if(n&&d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
   if(bigN())shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});   // big universe: only the shortlist keeps an always-on label
   schedule(function(){layoutRows();redrawTraj()},680);}
 
@@ -1053,7 +1061,7 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
    +"<div class='mv-hero'>"+reco+"</div>"
    +"<div class='mv-pills'><span class='mvp'>"+A.nShort+" of "+A.nTotal+" advance</span><span class='mvp ok' title='Every numeric claim in this memo was recomputed from the source series and matched within tolerance'>&#10003; "+A.verified+"/"+A.total+" claims verified</span></div>"
    +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+esc(first(w.name))+"</span><span class='mv-ws'>"+esc(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
-   +(m.summary?("<p class='mv-lead'>"+m.summary+"</p>"):"")
+   +(m.summary?("<div class='mv-h'>Executive summary</div><p class='mv-lead'>"+m.summary+"</p>"):"")
    +"<div class='mv-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>Max DD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
    +"<div class='mv-h'>Shortlist rationale</div><div class='mv-rat'>"+shortlisted().map(function(s){return "<div class='mv-rr"+(s.rank==1?" win":"")+"'><div class='mv-rr-h'><span class='mv-rr-n'>"+String(s.rank).padStart(2,'0')+"</span><b>"+esc(first(s.name))+"</b>"+(s.strategy?"<span class='mv-rr-s'>"+esc(s.strategy)+"</span>":"")+"</div><p>"+esc(fundRationale(s))+"</p></div>"}).join('')+"</div>"
    +"<div class='mv-h'>Key risks</div>"+(risks.body?("<p class='mv-lead sm'>"+risks.body+"</p>"):"")+"<div class='mvr-list'>"+claims+"</div>"
@@ -1102,20 +1110,10 @@ function buildAudit(){
   // recomputation (not just trusts the engine value). Benchmark returns come from the
   // loaded index; peer correlation is each fund's avg pairwise corr to the others — both
   // rebuilt from the SAME series the figures were computed from.
-  var _bret=(A.bench&&A.bench.wealth&&A.bench.wealth.length>2)?_reconstructReturns(A.bench.wealth):null;
-  var _benchAnn=(A.bench&&A.bench.ret!=null)?A.bench.ret:null;
-  var _fret={};(A.funds||[]).forEach(function(f){var rr=_reconstructReturns(f.wealth);if(rr&&rr.length>2)_fret[f.id]=rr});
-  var _fids=Object.keys(_fret);
-  function _peerAvg(id){var base=_fret[id];if(!base)return null;var cs=[];
-    _fids.forEach(function(j){if(j===id)return;var o=_fret[j];var n=Math.min(base.length,o.length);if(n<3)return;
-      var c=_pearson(base.slice(base.length-n),o.slice(o.length-n));if(c!=null)cs.push(c)});
-    return cs.length?cs.reduce(function(s,x){return s+x},0)/cs.length:null;}
+  var _rel=_relBenchPeer(A.funds,A.bench);   // same re-derivation the live/synth path uses to SET these
   pool.forEach(function(d){
     var r=_reconstructReturns(d.wealth);var mm=r?fundMetrics(r):null;
-    if(mm){
-      if(_bret){var _bs=_benchStats(r,_bret,mm.ann_return,_benchAnn);mm.beta=_bs.beta;mm.alpha=_bs.alpha;mm.correlation=_bs.corr;}
-      var _pc=_peerAvg(d.id);if(_pc!=null)mm.peer_corr=_pc;
-    }
+    if(mm){var o=_rel[d.id]||{};mm.beta=o.beta;mm.alpha=o.alpha;mm.correlation=o.corr;if(o.peer_corr!=null)mm.peer_corr=o.peer_corr;}
     var retTr=trace(d.id,['monthly_return','return','ret','performance','value']);
     var retSrc=retTr?("column ‘"+retTr.col+"’ · "+retTr.file):"monthly return series";
     METRICS.forEach(function(p){var mk=p[0],fk=p[1];var v=d[fk];if(v==null||!isFinite(v))return;
@@ -1304,6 +1302,9 @@ function downloadPDF(){
     y-=cardH+22;}
   function sec(t){feed(42);T(M,y,t,9,'F3',CA);LN(M,y-6,W-M,y-6,CL,0.7);y-=20}
   function body(t){wrap(t,10.5,'F1',IW).forEach(function(l){feed(14);T(M,y,l,10.5,'F1',CD);y-=14});y-=6}
+  // executive summary — the memo's orientation paragraph (LLM or deterministic template)
+  var _memo=(A._reran?liveMemo():(A.memo||{}));
+  if(_memo&&_memo.summary){sec('EXECUTIVE SUMMARY');body(String(_memo.summary).replace(/<[^>]+>/g,''))}
   sec('MANDATE - HARD LIMITS');body(A.gates.map(function(g){return g.label+' '+g.detail}).join('    |    '));
   body('SCORING WEIGHTS:  '+weightFactors().map(function(k){return k.replace(/_/g,' ')+' '+Math.round(A.weights[k]*100)+'%'}).join('  |  '));
   if(A.bench)body('MEASURED AGAINST:  '+A.bench.name+' (reference · passive equity beta, out of mandate) - return '+pct(A.bench.ret)+' | volatility '+pct(A.bench.vol));
@@ -1327,7 +1328,7 @@ function downloadPDF(){
   var exs=A.funds.filter(function(d){return d.reason});
   if(exs.length){sec('EXCLUDED BY MANDATE');exs.forEach(function(d){feed(17);T(M,y,d.name,10,'F2',CI);T(M+150,y,d.reason,9.5,'F3',CLo);TR(W-M,y,pct(d.ret)+'  vol '+pct(d.vol),9,'F3',CD);y-=17});y-=8}
   // key risks — same source as the on-screen memo
-  var _km=(A._reran?liveMemo():(A.memo||{}));var kr=(_km&&_km.keyRisks)?_km.keyRisks:null;
+  var _km=_memo;var kr=(_km&&_km.keyRisks)?_km.keyRisks:null;
   if(kr&&kr.claims&&kr.claims.length){sec('KEY RISKS');
     kr.claims.slice(0,4).forEach(function(c){var t=String(c.text||'').replace(/<[^>]+>/g,'').trim();var fn=String(c.fund||'').trim();
       if(fn&&t.toLowerCase().indexOf(fn.toLowerCase())<0)t=fn+' - '+t;   // add fund only if not already named in the text
@@ -1432,6 +1433,24 @@ function _peerCorr(retMap,ids){var maps={};ids.forEach(function(id){var m={};ret
     for(var k in maps[i]){if(k in maps[j])common.push(k)}if(common.length<3)return;common.sort();
     var c=_pearson(common.map(function(k){return maps[i][k]}),common.map(function(k){return maps[j][k]}));if(c!=null)cs.push(c)});
     out[i]=cs.length?Math.round((cs.reduce(function(s,x){return s+x},0)/cs.length)*1e6)/1e6:null});return out;}
+// ONE re-derivation of the benchmark-relative + peer metrics from reconstructed wealth,
+// shared by the live/synth path (which SETS them onto each fund) and the audit (which
+// VERIFIES them). Because both read the SAME series through the SAME code, a stored
+// value and its audit re-derivation are identical by construction — no drift, no false
+// "unverified" flag. Returns {id:{beta,alpha,corr,peer_corr}}.
+function _relBenchPeer(funds,bench){
+  var br=(bench&&bench.wealth&&bench.wealth.length>2)?_reconstructReturns(bench.wealth):null;
+  var bAnn=(bench&&bench.ret!=null)?bench.ret:null;
+  var fret={};(funds||[]).forEach(function(f){var rr=_reconstructReturns(f.wealth);if(rr&&rr.length>2)fret[f.id]=rr});
+  var ids=Object.keys(fret);
+  function peerAvg(id){var base=fret[id];if(!base)return null;var cs=[];
+    ids.forEach(function(j){if(j===id)return;var o=fret[j];var n=Math.min(base.length,o.length);if(n<3)return;
+      var c=_pearson(base.slice(base.length-n),o.slice(o.length-n));if(c!=null)cs.push(c)});
+    return cs.length?cs.reduce(function(s,x){return s+x},0)/cs.length:null;}
+  var out={};(funds||[]).forEach(function(d){var r=fret[d.id];var o={beta:null,alpha:null,corr:null,peer_corr:null};
+    if(r){if(br){var bs=_benchStats(r,br,d.ret,bAnn);o.beta=bs.beta;o.alpha=bs.alpha;o.corr=bs.corr}o.peer_corr=peerAvg(d.id)}
+    out[d.id]=o});
+  return out;}
 function fundMetrics(r){var ppy=12,rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02)),n=r.length;if(n<2)return null;   // use the ACTUAL risk-free (same as synthAlphaOverBench + the audit label) so Sharpe/Sortino recompute matches the stored value — a mandate default 0.02 here silently mis-verified the audit under a live rf
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
