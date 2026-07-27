@@ -31,6 +31,21 @@ def _find_col(columns: list[str], candidates: list[str]) -> Optional[str]:
     return None
 
 
+def _quarantine_reason(date_ok: bool, fund_ok: bool, ret_ok: bool) -> str:
+    """A SPECIFIC reason per bad row (not one generic string), so downstream
+    readiness buckets and the ingest animation reflect what actually went wrong in
+    THIS file — a clean file shows nothing, a bad-return file says 'unparseable
+    return', not a blanket 'bad date'."""
+    parts = []
+    if not date_ok:
+        parts.append("bad date")
+    if not fund_ok:
+        parts.append("missing fund id")
+    if not ret_ok:
+        parts.append("unparseable return")
+    return ", ".join(parts) or "unparseable row"
+
+
 def infer_frequency(dates: list[date]) -> tuple[str, int]:
     if len(dates) < 2:
         return ("monthly", 12)
@@ -64,9 +79,10 @@ def load_returns(path: str | Path) -> tuple[dict[str, ReturnSeries], list[dict]]
         d = _parse_date(r[date_col])
         f = str(r[fund_col]).strip()
         v = normalize_return(r[ret_col])
-        if d is None or v is None or f == "" or f.lower() == "nan":
+        fund_ok = f != "" and f.lower() != "nan"
+        if d is None or v is None or not fund_ok:
             quarantined.append(
-                {"row": int(i), "reason": "unparseable date/fund/return", "raw": dict(r)}
+                {"row": int(i), "reason": _quarantine_reason(d is not None, fund_ok, v is not None), "raw": dict(r)}
             )
             continue
         rows.append((f, d, v))
@@ -201,8 +217,9 @@ def load_dataset(path: str | Path) -> tuple[list[Fund], dict[str, ReturnSeries],
         d = _parse_date(r[date_col])
         f = str(r[fund_col]).strip()
         v = normalize_return(r[ret_col])
-        if d is None or v is None or f == "" or f.lower() == "nan":
-            quarantined.append({"row": int(i), "reason": "unparseable date/fund/return", "raw": dict(r)})
+        fund_ok = f != "" and f.lower() != "nan"
+        if d is None or v is None or not fund_ok:
+            quarantined.append({"row": int(i), "reason": _quarantine_reason(d is not None, fund_ok, v is not None), "raw": dict(r)})
             continue
         rows.append((f, d, v))
 

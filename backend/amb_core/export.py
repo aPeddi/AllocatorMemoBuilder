@@ -12,6 +12,28 @@ _PCT={"ann_return","ann_vol","max_drawdown","downside_dev","alpha","tracking_err
 def _pct(x): return "—" if x is None else f"{x*100:.1f}%"
 def _num(x): return "—" if x is None else f"{x:.2f}"
 
+def _axis(vals):
+    """Balanced plot range — mirrors the client `_axis` in memo.js. The range is the
+    INLIER span (min/max inside the Tukey fences), so the bulk of the funds fill most
+    of the field instead of being crushed by one extreme; outliers saturate into the
+    margins via _pos rather than stretching the range."""
+    a=sorted(v for v in vals if v is not None and math.isfinite(v));n=len(a)
+    if not n: return (0.0,1.0)
+    if n<4: return (a[0],(a[-1] if a[-1]>a[0] else a[0]+1))
+    def q(p):
+        i=(n-1)*p;lo=math.floor(i);hi=math.ceil(i);return a[lo]+(a[hi]-a[lo])*(i-lo)
+    q1,q3=q(0.25),q(0.75);iqr=(q3-q1) or abs(q(0.5)) or 1
+    fl,fh=q1-1.5*iqr,q3+1.5*iqr
+    inl=[v for v in a if fl<=v<=fh]
+    if len(inl)<2: inl=a
+    lo,hi=inl[0],inl[-1]
+    return (lo,(hi if hi>lo else lo+1))
+def _pos(v,ax):
+    lo,hi=ax;t=(v-lo)/((hi-lo) or 1);C=0.05;SP=0.90
+    if t<0: return C-C*((-t)/((-t)+0.6))
+    if t>1: return (C+SP)+C*((t-1)/((t-1)+0.6))
+    return C+t*SP
+
 def render_markdown(memo: Memo) -> str:
     """Plain-Markdown rendering of a Memo. Lives here in the rendering layer (not
     in memo.py, the assembly layer) so `memo` never needs to import `export` —
@@ -189,7 +211,7 @@ def render_html(memo, ctx=None):
     fd=[]
     if plist:
         vols=[m["ann_vol"] for _,m in plist];rets=[m["ann_return"] for _,m in plist]
-        vmin,vmax=min(vols),max(vols);rmin,rmax=min(rets),max(rets);vr=(vmax-vmin) or 1;rr=(rmax-rmin) or 1
+        volAx=_axis(vols);retAx=_axis(rets)
         for fid,m in plist:
             f=ctx.get_fund(fid) if ctx else None;ser=series.get(fid)
             wealth=[];c=1.0
@@ -206,7 +228,7 @@ def render_html(memo, ctx=None):
             fd.append({"id":fid,"name":(f.name if f else fid),"strategy":(f.strategy if f else ""),
                 "rank":rk,"excluded":rk is None,"eligible":eligible,"cut":cut,"rkind":reason_kind,
                 "srank":(rk if rk else (90 if cut else 99)),
-                "x":round(12+(m["ann_vol"]-vmin)/vr*76,1),"y":round(12+(m["ann_return"]-rmin)/rr*76,1),
+                "x":round(12+_pos(m["ann_vol"],volAx)*76,1),"y":round(12+_pos(m["ann_return"],retAx)*76,1),
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"sortino":m.get("sortino"),"calmar":m.get("calmar"),"maxdd":m.get("max_drawdown"),
                 "beta":m.get("beta"),"alpha":m.get("alpha"),"corr":m.get("correlation"),
                 "fee":(f.mgmt_fee_pct if f else None),"netret":netret,
@@ -221,21 +243,21 @@ def render_html(memo, ctx=None):
     if surv:
         zv=[d["vol"] for d in surv];zr=[d["ret"] for d in surv]
         if bench: zv=zv+[bench["vol"]];zr=zr+[bench["ret"]]
-        zvmin,zvmax=min(zv),max(zv);zrmin,zrmax=min(zr),max(zr);zvr=(zvmax-zvmin) or 1;zrr=(zrmax-zrmin) or 1
-        for d in surv: d["xz"]=round(14+(d["vol"]-zvmin)/zvr*72,1);d["yz"]=round(14+(d["ret"]-zrmin)/zrr*72,1)
+        zvAx=_axis(zv);zrAx=_axis(zr)
+        for d in surv: d["xz"]=round(14+_pos(d["vol"],zvAx)*72,1);d["yz"]=round(14+_pos(d["ret"],zrAx)*72,1)
         if bench:
-            bench["xz"]=round(14+(bench["vol"]-zvmin)/zvr*72,1)
-            bench["yz"]=round(14+(bench["ret"]-zrmin)/zrr*72,1)
+            bench["xz"]=round(14+_pos(bench["vol"],zvAx)*72,1)
+            bench["yz"]=round(14+_pos(bench["ret"],zrAx)*72,1)
             if bench["vol"]>0:
                 s=bench["ret"]/bench["vol"]  # index return-per-unit-risk
                 def _mapxy(vol):
-                    return (round(14+(vol-zvmin)/zvr*72,1), round(14+(s*vol-zrmin)/zrr*72,1))
-                x1,y1=_mapxy(zvmin);x2,y2=_mapxy(zvmax)
+                    return (round(14+_pos(vol,zvAx)*72,1), round(14+_pos(s*vol,zrAx)*72,1))
+                x1,y1=_mapxy(zvAx[0]);x2,y2=_mapxy(zvAx[1])
                 benchLine={"x1":x1,"y1":y1,"x2":x2,"y2":y2}
     for d in fd: d.setdefault("xz",d["x"]);d.setdefault("yz",d["y"])
 
     if plist and volcap is not None:
-        gx=12+(volcap-vmin)/vr*76
+        gx=12+_pos(volcap,volAx)*76
         if 0<gx<100: gateX=round(gx,1)
     top=sl[0] if sl else None
     vplain=f"{top.name} leads on risk-adjusted return." if top else "No fund met the mandate."

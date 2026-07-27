@@ -442,18 +442,30 @@ function synthAlphaOverBench(){
 function relayoutScatter(){  // recompute the risk/return frontier so it includes the current benchmark
   var surv=A.funds.filter(function(d){return d.eligible});var b=A.bench;A.benchLine=null;
   if(!surv.length)return;
+  // robust axis (same Tukey basis as the server-side/CSV paths) so one outlier fund
+  // can't crush the cluster; extremes clamp to the margins, the bulk spreads out.
   var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});
   if(b){zv=zv.concat([b.vol]);zr=zr.concat([b.ret])}
-  var zvmin=Math.min.apply(null,zv),zvmax=Math.max.apply(null,zv),zrmin=Math.min.apply(null,zr),zrmax=Math.max.apply(null,zr);
-  var zvr=(zvmax-zvmin)||1,zrr=(zrmax-zrmin)||1;
-  surv.forEach(function(d){d.xz=Math.round((14+(d.vol-zvmin)/zvr*72)*10)/10;d.yz=Math.round((14+(d.ret-zrmin)/zrr*72)*10)/10});
-  if(b){b.xz=Math.round((14+(b.vol-zvmin)/zvr*72)*10)/10;b.yz=Math.round((14+(b.ret-zrmin)/zrr*72)*10)/10;
-    if(b.vol>0){var s=b.ret/b.vol;var mp=function(vol){return [Math.round((14+(vol-zvmin)/zvr*72)*10)/10,Math.round((14+(s*vol-zrmin)/zrr*72)*10)/10]};var p1=mp(zvmin),p2=mp(zvmax);A.benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
-  A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});}
+  var zvAx=_axis(zv),zrAx=_axis(zr);
+  surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
+  if(b){b.xz=Math.round((14+_pos(b.vol,zvAx)*72)*10)/10;b.yz=Math.round((14+_pos(b.ret,zrAx)*72)*10)/10;
+    if(b.vol>0){var s=b.ret/b.vol;var mp=function(vol){return [Math.round((14+_pos(vol,zvAx)*72)*10)/10,Math.round((14+_pos(s*vol,zrAx)*72)*10)/10]};var p1=mp(zvAx.lo),p2=mp(zvAx.hi);A.benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
+  A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
+  // repaint the ranked nodes + benchmark marker + ray from the SAME coords, so the
+  // marker always sits on the line and nodes don't lag a stale layout.
+  if(document.body.classList.contains('settled')||document.body.classList.contains('scoring')){
+    A.funds.forEach(function(d){var n=nodes[d.id];if(n&&d.eligible&&d.xz!=null){n.style.left=d.xz+'%';n.style.bottom=d.yz+'%'}});
+    if($('#guides')&&$('#guides').classList.contains('on'))buildGuides();
+  }}
 function buildGuides(){var g=$('#guides');
   if(!A.bench){if(g)g.classList.remove('on');return}
-  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';$('.bl',mk).innerHTML=esc(A.bench.name.split(' (')[0])+' · reference'}
-  var bl=$('#beatlbl');if(bl){bl.innerHTML='reference index ·<br>passive beta ·<br>out of mandate';}
+  // short tag on the diamond (which now sits ON the beta line); the full annotation
+  // lives at the line's end so the reader's eye follows the line to its label.
+  var shortNm=esc(A.bench.name.split(' (')[0].replace(/\s*total return\s*/i,'').trim()||'S&P 500');
+  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';var blab=$('.bl',mk);if(blab)blab.innerHTML=shortNm}
+  var bl=$('#beatlbl');if(bl){bl.innerHTML=shortNm+' · reference index ·<br>passive beta · out of mandate';
+    if(A.benchLine){bl.style.bottom=A.benchLine.y2+'%';}   // align the label to the up-right END of the line
+  }
   drawBenchLine();if(g)g.classList.add('on');
 }
 function drawBenchLine(){ if(!A.benchLine)return;var f=$('#field');if(!f)return;var W=f.clientWidth,H=f.clientHeight,L=A.benchLine;
@@ -585,39 +597,69 @@ async function actZero(){
 
   // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
   phase(2,'PARSE · NORMALIZE');
-  // date, fund_id, raw value, status ('ok' | 'norm' cleaned→col5 | 'bad' date→quarantined); 3 bad matches the real quarantine count
-  var sample=[['2023-07-01','MAC','0.021','ok',''],['2023-07-01','EQ-LS','1.95%','norm','0.0195'],['2023-08-01','MN','0,70%','norm','0.0070'],['—','VEN','0.031','bad',''],['2023-13-01','CR','0.012','bad',''],['n/a','DA','0.008','bad','']];
+  // DATA-DRIVEN: real column names, real fund IDs, and the ACTUAL quarantine reasons
+  // for THIS dataset (A.ingest is set on CSV upload; else the canonical schema). So
+  // changing the CSV changes the rows, the mapping, and what gets crossed off.
+  var ING=A.ingest||null;
+  var mapCols=(ING&&ING.cols&&ING.cols.length)?ING.cols
+    :[{name:'date',role:'date'},{name:'fund_id',role:'id'},{name:'monthly_return',role:'return'}];
+  function _roleArrow(r){var m={date:'→ period',id:'→ id','return':'→ return',ret:'→ return',name:'→ name',strategy:'→ strategy'};return m[r]||('→ '+r)}
+  function _colOf(role){var c=mapCols.filter(function(x){return x.role===role||(role==='return'&&x.role==='ret')})[0];return c?c.name:role}
+  var dcol=_colOf('date'),icol=_colOf('id'),vcol=_colOf('return');
+  function _firstRet(f){var w=f&&f.wealth;return (w&&w.length>1&&w[0])?w[1]/w[0]-1:null}
+  function _mdate(k){var s=((ING&&ING.start)||(ov&&ov.start)||'2023-07')+'';var m=s.match(/(\d{4})-(\d{1,2})/);if(!m)return s;var y=+m[1],mo=+m[2]-1+k;y+=Math.floor(mo/12);mo=((mo%12)+12)%12;return y+'-'+('0'+(mo+1)).slice(-2)+'-01'}
+  // real OK rows from the first few funds (real id + a real first monthly return)
+  var okFunds=(A.funds||[]).filter(function(f){return f.eligible!==false}).slice(0,3);
+  if(!okFunds.length)okFunds=(A.funds||[]).slice(0,3);
+  var sample=okFunds.map(function(f,i){var rr=_firstRet(f);return {d:_mdate(i),id:f.id,v:(rr==null?'—':pct(rr)),bad:false}});
+  // real BAD rows expanded from the ACTUAL quarantine reasons — none if the file was
+  // clean. Prefer the uploaded file's own reasons (A.ingest.quar) over the baked ones.
+  var qr=(ING&&ING.quar&&ING.quar.reasons&&Object.keys(ING.quar.reasons).length)?ING.quar.reasons:(rd.quarantine_reasons||{});
+  var qN=(ING&&ING.quar)?ING.quar.count:QN;
+  var validN=(ING&&ING.valid!=null)?ING.valid:((ROWS||0)-QN);
+  var rowsN=(ING)?(validN+qN):ROWS;
+  var badRows=[];
+  Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});
+  var rowsSample=sample.concat(badRows);
   stage.innerHTML=
    "<div class='az-parse'>"
-   +"<div class='az-matrix'><div class='az-mh'><span>date</span><span>fund_id</span><span>monthly_return</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
+   +"<div class='az-matrix'><div class='az-mh'><span>"+esc(dcol)+"</span><span>"+esc(icol)+"</span><span>"+esc(vcol)+"</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
    +"<div class='az-side'>"
      +"<div class='az-sh'>COLUMN MAP</div><div class='az-map' id='cmap'></div>"
      +"<div class='az-sh'>NORMALIZE</div><div class='az-norm' id='cnorm'></div>"
      +"<div class='az-sh'>OPTIONAL FIELDS</div><div class='az-opt' id='copt'></div>"
    +"</div></div>";
   var mtx=$('#mtx',az);log('streaming rows · detecting schema');
-  for(var r=0;r<sample.length;r++){if(aborted)return;var sr=sample[r];var stt=sr[3];var baddate=(stt==='bad');var row=el('div','az-mrow');
-    var vcell=(stt==='norm')?"<span>"+sr[2]+" <b class='normv'>&rarr; "+sr[4]+"</b></span>":"<span>"+sr[2]+"</span>";
-    var stat=baddate?"<span class='mstat'></span>":(stt==='norm'?"<span class='mstat'><span class='okc'>✓</span> cleaned</span>":"<span class='mstat'><span class='okc'>✓</span></span>");
-    row.innerHTML=(baddate?"<span class='badc'>":"<span>")+sr[0]+"</span><span>"+sr[1]+"</span>"+vcell+stat;
+  for(var r=0;r<rowsSample.length;r++){if(aborted)return;var sr=rowsSample[r];var row=el('div','az-mrow');
+    var stat=sr.bad?"<span class='mstat'></span>":"<span class='mstat'><span class='okc'>✓</span></span>";
+    row.dataset.reason=sr.reason||'';
+    row.innerHTML=(sr.bad?"<span class='badc'>":"<span>")+esc(sr.d)+"</span><span>"+esc(String(sr.id))+"</span><span>"+esc(String(sr.v))+"</span>"+stat;
     mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(240)}
   await wait(360);if(aborted)return;
-  var maps=[['date','→ period'],['fund_id','→ id'],['monthly_return','→ return']];var cm=$('#cmap',az);
-  for(var mi=0;mi<maps.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+maps[mi][0]+"</b><span>"+maps[mi][1]+"</span>";cm.appendChild(mr);schedule(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
-  var norms=['% → decimal','strip 1,000s','ISO-8601 dates','coerce n/a → null'];var cn=$('#cnorm',az);
-  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+norms[ni];cn.appendChild(nr);schedule(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
-  var opt=$('#copt',az);opt.innerHTML="<span class='optt'>redemption_freq</span><span class='optt'>lockup_months</span><span class='optt'>notice_days</span><span class='optt'>mgmt_fee</span><div class='opt-note'>→ liquidity + fee model</div>";
+  var cm=$('#cmap',az);var mapShow=mapCols.filter(function(c){return c.role&&['date','id','return','ret','name','strategy'].indexOf(c.role)>=0}).slice(0,5);
+  if(!mapShow.length)mapShow=mapCols.slice(0,3);
+  for(var mi=0;mi<mapShow.length;mi++){if(aborted)return;var mr=el('div','az-mapr');mr.innerHTML="<b>"+esc(mapShow[mi].name)+"</b><span>"+_roleArrow(mapShow[mi].role)+"</span>";cm.appendChild(mr);schedule(function(x){x.classList.add('in')}.bind(null,mr),20);await wait(300)}
+  // normalizations actually available/applied (always: dates + blank coercion; unit conversions when the upload flagged them)
+  var norms=['parse dates → ISO-8601','coerce blanks / n/a → null'];
+  if(ING&&ING.unit==='percent')norms.unshift('% → decimal');
+  if(ING&&ING.unit==='bps')norms.unshift('basis points → decimal');
+  norms.push('align to one shared monthly window');
+  var cn=$('#cnorm',az);
+  for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+esc(norms[ni]);cn.appendChild(nr);schedule(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
+  var optCols=(ING&&ING.optional&&ING.optional.length)?ING.optional:['redemption_freq','lockup_months','notice_days','mgmt_fee'];
+  var opt=$('#copt',az);opt.innerHTML=optCols.map(function(o){return "<span class='optt'>"+esc(o)+"</span>"}).join('')+"<div class='opt-note'>→ liquidity + fee model</div>";
   schedule(function(){$$('.optt',az).forEach(function(t,i){schedule(function(){t.classList.add('in')},i*120)})},20);
   log('normalizing types · mapping optional liquidity & fee fields');
   await wait(1500);if(aborted)return;
 
-  // ══ 3 · VALIDATE — quarantine bad rows ══
+  // ══ 3 · VALIDATE — quarantine bad rows (each with its OWN real reason) ══
   phase(3,'VALIDATE');
-  var qreason=(Object.keys(rd.quarantine_reasons||{'bad date':QN})[0]||'bad date');
+  var reasonList=Object.keys(qr);var qsummary=reasonList.map(function(k){return qr[k]+' '+k}).join(' · ')||'none';
   var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
   for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');
-    var ms=$('.mstat',qrows[vi]);if(ms)ms.innerHTML="⊘ "+qreason;await wait(340)}
-  log('validating '+ROWS+' rows · '+(ROWS-QN)+' valid · '+QN+' quarantined ('+qreason+') · row-level, no fund dropped');
+    var ms=$('.mstat',qrows[vi]);if(ms)ms.innerHTML="⊘ "+esc(qrows[vi].dataset.reason||'quarantined')}
+  if(qN>0)log('validating '+rowsN+' rows · '+(rowsN-qN)+' valid · '+qN+' quarantined ('+qsummary+') · row-level, no fund dropped');
+  else log('validating '+rowsN+' rows · all parsed cleanly · none quarantined');
   await wait(1700);if(aborted)return;
 
   // ══ 4 · RECONCILE — match IDs + align the window ══
@@ -912,14 +954,20 @@ function downloadPDF(){
 function _pmean(a){return a.reduce(function(s,x){return s+x},0)/a.length}
 function _ppstd(a){var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/a.length)}
 function _psstd(a){if(a.length<2)return 0;var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/(a.length-1))}
-// robust axis range (Tukey fences) so one outlier fund can't crush the cluster to an
-// edge — the bulk spreads across the field and extremes clamp to the margins.
+// balanced axis: the range is the INLIER span (min/max of values inside the Tukey
+// fences), so the bulk of the funds fill most of the field instead of being crushed
+// into a corner by one extreme. Outliers don't stretch the range — _pos saturates
+// them into the outer margins (never off-canvas, and they don't stack exactly).
 function _axis(vals){var a=vals.filter(function(v){return v!=null&&isFinite(v)}).slice().sort(function(x,y){return x-y});var n=a.length;
   if(!n)return {lo:0,hi:1};if(n<4)return {lo:a[0],hi:(a[n-1]>a[0]?a[n-1]:a[0]+1)};
   function q(p){var i=(n-1)*p,lo=Math.floor(i),h=Math.ceil(i);return a[lo]+(a[h]-a[lo])*(i-lo)}
-  var q1=q(0.25),q3=q(0.75),iqr=(q3-q1)||Math.abs(q(0.5))||1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
-  return {lo:lo,hi:(hi>lo?hi:lo+1)};}
-function _pos(v,ax){var t=(v-ax.lo)/((ax.hi-ax.lo)||1);return t<0?0:(t>1?1:t)}
+  var q1=q(0.25),q3=q(0.75),iqr=(q3-q1)||Math.abs(q(0.5))||1,fl=q1-1.5*iqr,fh=q3+1.5*iqr;
+  var inl=a.filter(function(v){return v>=fl&&v<=fh});if(inl.length<2)inl=a;
+  var lo=inl[0],hi=inl[inl.length-1];return {lo:lo,hi:(hi>lo?hi:lo+1)};}
+function _pos(v,ax){var t=(v-ax.lo)/((ax.hi-ax.lo)||1),C=0.05,SP=0.90;
+  if(t<0)return C-C*((-t)/((-t)+0.6));         // below the bulk → bottom margin (saturating)
+  if(t>1)return (C+SP)+C*((t-1)/((t-1)+0.6));   // above the bulk → top margin (saturating)
+  return C+t*SP;}                                // in the bulk → fill 5%..95% of the field
 /* ── one client-side scoring core, shared by screenAndScore, reweigh and the CSV
    recompute so the z-score basis can't drift between them. acc(item,key) reads a
    metric off whatever the caller holds (a fund object or a metrics dict); callers
@@ -1015,12 +1063,27 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
   return out;}
 // apply a confirmed mapping → append to ret{}/order[]; returns quarantined count
 function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.order,ret=acc.ret;
-  function push(id,dstr,val){if(!id||val==null){quar++;return}var iso=_isoStr(dstr,det.dateOrder);if(iso==null){quar++;return}if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val})}
+  var qreasons={},minD=null,okN=0;   // track WHY rows fail, the valid count + earliest date, so the ingest animation reflects THIS file
+  function _q(reason){qreasons[reason]=(qreasons[reason]||0)+1;quar++;}
+  function push(id,dstr,val){var iso=_isoStr(dstr,det.dateOrder);
+    if(!id){_q('missing fund id');return}
+    if(val==null){_q('unparseable return');return}
+    if(iso==null){_q('bad date');return}
+    if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val});okN++;
+    if(minD==null||iso<minD)minD=iso;}
   if(det.shape==='wide'){var use=det.series.filter(function(s){return !s.excludedByUser});
     body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,_normVal(r[s.idx],det.unit))})});
   }else if(det.shape==='long'){var m=det.map;
     body.forEach(function(r){push(String(r[m.id]||'').trim(),r[m.date],_normVal(r[m.ret],det.unit))});
     if(m.name>=0||m.strategy>=0)body.forEach(function(r){var id=String(r[m.id]||'').trim();if(id&&!acc.funds[id])acc.funds[id]={name:(m.name>=0?String(r[m.name]||id).trim():id),strategy:(m.strategy>=0?String(r[m.strategy]||'').trim():'')}});}
+  // remember this file's real column mapping so the ingest animation reflects IT
+  // (not the canonical baked schema) when the story replays after the upload.
+  function _cn(idx){var c=(det.cols||[]).filter(function(x){return x.idx===idx})[0];return c?c.name:''}
+  var ingCols=[],optional=[];
+  if(det.shape==='long'){var mm=det.map;ingCols=[{name:_cn(mm.date),role:'date'},{name:_cn(mm.id),role:'id'},{name:_cn(mm.ret),role:'return'}];
+    if(mm.name>=0)optional.push(_cn(mm.name));if(mm.strategy>=0)optional.push(_cn(mm.strategy));}
+  else{ingCols=[{name:_cn(det.dateCol),role:'date'},{name:'fund columns',role:'id'},{name:'values',role:'return'}];}
+  A.ingest={cols:ingCols,unit:det.unit,optional:optional,file:det._file,quar:{reasons:qreasons,count:quar},valid:okN,start:minD};
   return quar;}
 function finalizeIngest(acc){var ids=Object.keys(acc.ret);
   if(ids.length<2){showIngestError(acc._failed&&acc._failed[0],acc);return}   // not enough usable returns → explain, don't silently toast

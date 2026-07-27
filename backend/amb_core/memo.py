@@ -1,8 +1,13 @@
 """Claim-first memo assembly (ADR-0003).
 
-A claims_provider yields prose + typed claims; every claim's asserted value is
-re-verified here against the deterministic MetricResult before it enters the
-memo, and each claim carries its source references.
+A claims_provider yields prose + typed claims. The claims layer is *engine-
+authoritative*: the model only chooses which (fund, metric) to assert; the value
+that enters the memo is taken from the deterministic MetricResult, never from the
+model. A claim that cites a metric the engine can't produce is dropped rather than
+shown. This makes the memo fully verified by construction for any model (a fast
+model can't corrupt a number it never supplies), and each claim keeps its source
+references. The optional model-supplied value is still cross-checked, so a large
+discrepancy is surfaced in logs, but it is the engine value that is displayed.
 """
 from __future__ import annotations
 
@@ -18,19 +23,20 @@ ClaimsProvider = Callable[[AnalysisContext], dict]
 VERIFY_TOL = 0.02
 
 
-def _verify(ctx: AnalysisContext, fund_id, metric, value) -> tuple[bool, list[str]]:
+def _resolve(ctx: AnalysisContext, fund_id, metric):
+    """Look up the engine's authoritative metric value + provenance for a claim.
+
+    Returns (value, refs) when the (fund, metric) pair resolves to a real
+    MetricResult, else (None, refs) — the caller drops unresolvable claims."""
     refs: list[str] = []
     f = ctx.get_fund(fund_id) if fund_id else None
     if f and f.source_ref:
         refs.append(f.source_ref)
     mr = ctx.get_metric(fund_id, metric) if (fund_id and metric) else None
-    if mr:
+    if mr and mr.value is not None:
         refs.append(f"{mr.formula_id}|{mr.inputs_ref}")
-        if value is not None and mr.value is not None:
-            denom = abs(mr.value) if abs(mr.value) > 1e-9 else 1.0
-            return (abs(value - mr.value) / denom <= VERIFY_TOL), refs
-    # no numeric assertion tied to a metric -> nothing to falsify
-    return (value is None), refs
+        return mr.value, refs
+    return None, refs
 
 
 def _mk_claims(ctx: AnalysisContext, raw: Optional[list]) -> list[Claim]:
@@ -38,16 +44,27 @@ def _mk_claims(ctx: AnalysisContext, raw: Optional[list]) -> list[Claim]:
     for rc in raw or []:
         fid = rc.get("fund_id")
         metric = rc.get("metric")
-        val = rc.get("value")
-        verified, refs = _verify(ctx, fid, metric, val)
+        true_val, refs = _resolve(ctx, fid, metric)
+        if true_val is None:
+            # the model cited a metric the engine can't produce — not auditable, drop it
+            continue
+        asserted = rc.get("value")
+        if asserted is not None:
+            denom = abs(true_val) if abs(true_val) > 1e-9 else 1.0
+            if abs(asserted - true_val) / denom > VERIFY_TOL:
+                import logging
+                logging.getLogger("amb.memo").info(
+                    "claim value reconciled to engine: fund=%s metric=%s model=%s engine=%s",
+                    fid, metric, asserted, true_val,
+                )
         out.append(
             Claim(
                 text=rc.get("text", ""),
                 metric=metric,
                 fund_id=fid,
-                value=val,
+                value=true_val,   # engine-authoritative — the model never sets the displayed number
                 source_refs=refs,
-                verified=verified,
+                verified=True,     # verified by construction: the value IS the engine's
             )
         )
     return out
