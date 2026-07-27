@@ -172,6 +172,25 @@ def test_client_bench_line_single_ray_through_builder():
     )
 
 
+def test_client_sharpe_uses_live_rf_and_canonical_excess():
+    """Audit falsely flagged Sharpe/Sortino as unverified under live market data. Two
+    causes, both about consistency of the Sharpe/Sortino definition across the client:
+      1. fundMetrics (the audit's re-derivation) recomputed with a hardcoded mandate
+         default (0.02) instead of the ACTUAL risk-free (A.rfUsed) the stored value used.
+      2. synthAlphaOverBench (the live path) computed Sharpe as (geometric_return - rf)/vol,
+         while the engine (metrics.py) + fundMetrics use ARITHMETIC excess. So the live
+         path showed a Sharpe the engine never would, and the audit correctly flagged it.
+    Both are aligned to one definition (arithmetic excess at the real risk-free); pin it."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    fm = js[js.index("functionfundMetrics("):][:400]
+    assert "A.rfUsed" in fm, "fundMetrics must re-derive with the actual risk-free (A.rfUsed), not a hardcoded default"
+    synth = js[js.index("functionsynthAlphaOverBench("):][:3800]
+    assert "annex=nm*ppy-rf" in synth, "synth Sharpe/Sortino must use arithmetic excess (annex), matching metrics.py"
+    assert "d.sharpe=(vol>0?annex/vol" in synth, "synth Sharpe must be arithmetic-excess / vol"
+    assert "d.sortino=(dvol>0?annex/dvol" in synth, "synth Sortino must be arithmetic-excess / downside-dev"
+    assert "(ret-rf)/vol" not in synth, "geometric-excess Sharpe reintroduced — it won't match the engine or the audit"
+
+
 def test_outlier_does_not_crush_the_plotted_cluster(tmp_path):
     memo, ctx = _outlier_ctx(tmp_path)
     data = _extract_data(render_html(memo, ctx))

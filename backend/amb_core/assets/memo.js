@@ -421,15 +421,19 @@ function synthAlphaOverBench(){
     z=z.map(function(v){return (v-zm)/zsd});                                 // re-standardize so target vol holds
     var tMeanM=Math.pow(1+tRet,1/ppy)-1, tSdM=tVol/Math.sqrt(ppy);
     var nr=z.map(function(v){return tMeanM+v*tSdM});                         // hit target mean & vol, keep skew
-    var nw=[],c=1; for(j=0;j<m;j++){c*=(1+nr[j]); nw.push(Math.round(c*1e4)/1e4);}
+    var nw=[],c=1; for(j=0;j<m;j++){c*=(1+nr[j]); nw.push(Math.round(c*1e6)/1e6);}   // 6dp so the audit can re-derive returns (and drawdown) precisely
     var nm=0; for(j=0;j<m;j++) nm+=nr[j]; nm/=m;
     var nv=0; for(j=0;j<m;j++){var e3=nr[j]-nm; nv+=e3*e3;} var vol=Math.sqrt(nv/(m-1))*Math.sqrt(ppy);
     var g2=1; for(j=0;j<m;j++) g2*=(1+nr[j]); var ret=(g2>0?Math.pow(g2,ppy/m)-1:0);
     var mar=rf/ppy,ds=0; for(j=0;j<m;j++){var q=nr[j]-mar; if(q<0) ds+=q*q;} var dvol=Math.sqrt(ds/m)*Math.sqrt(ppy);
     var peak=1,mdd=0; for(j=0;j<m;j++){if(nw[j]>peak)peak=nw[j]; var dq=nw[j]/peak-1; if(dq<mdd)mdd=dq;}
+    // Sharpe/Sortino use ARITHMETIC excess (mean(r-rf_p)*ppy), the SAME definition as
+    // metrics.py + fundMetrics — not geometric-return-minus-rf. Otherwise the live path
+    // shows a Sharpe the engine never would, and the audit correctly flags it as unverified.
+    var annex=nm*ppy-rf;
     d.wealth=nw; d.ret=ret; d.vol=vol;
-    d.sharpe=(vol>0?(ret-rf)/vol:0);
-    d.sortino=(dvol>0?(ret-rf)/dvol:0);
+    d.sharpe=(vol>0?annex/vol:0);
+    d.sortino=(dvol>0?annex/dvol:0);
     d.maxdd=mdd; d.calmar=(mdd<0?ret/Math.abs(mdd):0);
     if(d.fee!=null) d.netret=ret-d.fee/100;
     d._synth=true;
@@ -1285,7 +1289,7 @@ function _accFund(d,k){return d[metricField(k)]}                 // metric off a
 function _zStats(items,acc,keys){var st={};keys.forEach(function(k){var vals=[];items.forEach(function(it){var v=acc(it,k);if(v!=null&&isFinite(v))vals.push(v)});if(vals.length>=2)st[k]=[_pmean(vals),_ppstd(vals)]});return st}
 function _zComps(it,acc,weights,DIR,st){var cp=[];Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;cp.push({k:k,c:Math.round(weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)*1000)/1000})});return cp}
 function _zRaw(it,acc,weights,DIR,st){var s=0;Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;s+=weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)});return s}
-function fundMetrics(r){var ppy=12,rf=(A.mandateSpec&&A.mandateSpec.rf)||0.02,n=r.length;if(n<2)return null;
+function fundMetrics(r){var ppy=12,rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02)),n=r.length;if(n<2)return null;   // use the ACTUAL risk-free (same as synthAlphaOverBench + the audit label) so Sharpe/Sortino recompute matches the stored value — a mandate default 0.02 here silently mis-verified the audit under a live rf
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
   var sh=vol?annex/vol:null;var dn=r.map(function(x){return Math.min(x-rfp,0)});var dd=Math.sqrt(_pmean(dn.map(function(x){return x*x})))*Math.sqrt(ppy);
