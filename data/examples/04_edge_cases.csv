@@ -1,0 +1,27 @@
+date,fund_id,monthly_return,strategy
+2023-01-01,CLEAN,-0.01434,Global Macro
+2023-02-01,CLEAN,0.01516,Global Macro
+2023-03-01,CLEAN,-0.01646,Global Macro
+2023-04-01,CLEAN,-0.003155,Global Macro
+2023-05-01,CLEAN,-0.011067,Global Macro
+2023-06-01,CLEAN,0.031352,Global Macro
+2023-01-01,SHORT,-0.010445,Market Neutral
+2023-02-01,SHORT,0.00731,Market Neutral
+2023-03-01,SHORT,0.025675,Market Neutral
+2023-01-01,DIRTY,-0.008347,Event-Driven
+2023-02-01,DIRTY,0.005821,Event-Driven
+2023-03-01,DIRTY,0.034125,Event-Driven
+2023-04-01,DIRTY,-0.029807,Event-Driven
+2023-05-01,DIRTY,0.002106,Event-Driven
+2023-06-01,DIRTY,0.002417,Event-Driven
+,DIRTY,0.01,Event-Driven
+not-a-date,DIRTY,0.02,Event-Driven
+2023-07-01,DIRTY,,Event-Driven
+2023-08-01,DIRTY,N/A,Event-Driven
+2023-09-01,,0.03,Event-Driven
+2023-01-01, MixCase ,0.044039,Long/Short Equity
+2023-02-01, MixCase ,-0.011921,Long/Short Equity
+2023-03-01, MixCase ,0.018744,Long/Short Equity
+2023-04-01, MixCase ,0.033693,Long/Short Equity
+2023-05-01, MixCase ,0.009312,Long/Short Equity
+2023-06-01, MixCase ,0.012945,Long/Short Equity

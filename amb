@@ -2,7 +2,7 @@
 #
 # amb — engine behind ./launch and ./test.
 #
-#   ./launch   build + serve + open the live app  (real FRED API call in-browser)
+#   ./launch   build + serve + open the live app  (real live market-data call in-browser)
 #   ./test     run the test suite
 #
 set -uo pipefail
@@ -52,7 +52,7 @@ serve_live(){  # $1 = "open" to auto-open the browser once the server is up
   local HOST="${AMB_SERVE_HOST:-127.0.0.1}" PORT="${AMB_SERVE_PORT:-8000}"
   local URL="http://$HOST:$PORT"
   if [ "$autoopen" = "open" ]; then
-    ok "Live app → ${B}${URL}${N}   ${D}(real FRED API call in your browser · Ctrl+C to stop)${N}"
+    ok "Live app → ${B}${URL}${N}   ${D}(real live market-data call in your browser · Ctrl+C to stop)${N}"
     ( if command -v curl >/dev/null 2>&1; then
         for _ in $(seq 1 80); do curl -fsS -o /dev/null "$URL/api/health" 2>/dev/null && break; sleep 0.3; done
       else sleep 2; fi
@@ -71,7 +71,7 @@ case "${1:-}" in
     echo ""
     echo -e "  ${B}amb${N} — build the IC memo and serve it live"
     echo ""
-    echo -e "    ${C}./launch${N}   build + serve + open the live app  ${D}(real FRED API call in-browser)${N}"
+    echo -e "    ${C}./launch${N}   build + serve + open the live app  ${D}(real live market-data call in-browser)${N}"
     echo -e "    ${C}./test${N}     run the test suite"
     echo "" ;;
   *) err "unknown option: $1"; echo -e "  try ${C}./launch${N} or ${C}./test${N}" ;;

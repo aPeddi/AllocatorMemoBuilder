@@ -1,6 +1,10 @@
 # 0008 — Anthropic direct for model access
 
 **Status:** Accepted · 2026-07-22 · refines the stack in SPEC §7
+> **Current (2026-07-27):** the drafting default is now the **fast** model (haiku-class),
+> not the strong one — the LLM only narrates and every figure is re-derived from the
+> engine, so the strong tier isn't needed for the draft. An **OpenAI** provider was also
+> wired behind the same `llm.py` seam as the configurable alternate.
 
 ## Context
 The brainstorm named OpenRouter for provider-agnostic access. In practice the

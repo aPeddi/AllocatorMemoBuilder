@@ -309,7 +309,7 @@ function fetchLiveMarket(manual){
     else{apply(null);}
   }).catch(function(e){
     clearTimeout(tmo);if(chip){chip.classList.remove('busy')}sourceChip();
-    if(manual)toast("<span class='tk' style='color:var(--loss)'>!</span>Live fetch needs the server — run <b>./amb serve</b>");
+    if(manual)toast("<span class='tk' style='color:var(--loss)'>!</span>Live fetch needs the server — run <b>./launch</b>");
   });
 }
 // apply one benchmark payload to the app + keep every dependent view consistent.

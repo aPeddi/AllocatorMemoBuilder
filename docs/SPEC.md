@@ -15,7 +15,8 @@ The build is optimized as a take-home for the Applied-AI founding-engineer role
 at Equi: it should read as production-minded (clean seams, tests, guardrails)
 while shipping one narrow path done *excellently* rather than ten done halfway.
 It runs entirely locally — `./launch` sets up on first run, builds the memo, and
-opens it in a browser (with a real live FRED call); `./test` runs the suite.
+opens it in a browser (with a real live market-data call to FRED or Yahoo Finance);
+`./test` runs the suite.
 
 ## 2. Scope — phased, honest about 7 days
 
@@ -31,7 +32,8 @@ export. Driven and demoed entirely through `./amb`.
 **Phase 2 — the deliverables (Should).** Rich local exports over the same core: a
 styled, Equi-branded HTML memo (print-to-PDF ready) and a formatted XLSX workbook
 (shortlist · all-fund metrics · audit trail), plus a minimal localhost server so
-the browser can make a *live* FRED call and open the memo (ADR-0009 → ADR-0010).
+the browser can make a *live* market-data call (FRED or Yahoo Finance) and open the
+memo (ADR-0009 → ADR-0010 → ADR-0011).
 
 **Phase 3 — the flourish (Could).** What-if mandate re-scoring in the browser;
 AI-assisted CSV column mapping for arbitrary uploads; text RAG over fund notes.
@@ -45,7 +47,8 @@ theming. Each is name-checked in the architecture as an extension point so the
 ## 3. Product flow
 
 1. Provide a combined fund CSV (or an arbitrary one — the app maps its columns).
-2. Define the mandate in a simple, config-driven form (constraints + weights).
+2. Define the mandate in a simple, config-driven form (hard-limit constraints,
+   strategy preferences or exclusions, and scoring weights).
 3. The system normalizes data, attaches the benchmark, computes metrics, screens
    and scores against the mandate, and drafts a sourced memo.
 4. It returns a ranked shortlist and a full IC memo whose every figure traces to
@@ -67,7 +70,7 @@ Retrieval layer (typed AnalysisContext) — the ONLY way the memo reaches number
     │
 Core (amb_core): ingest · metrics · scoring · retrieval · memo · export · serve
     │
-External adapters (FRED benchmark, snapshotted by default; live via a localhost proxy)
+External adapters (FRED + Yahoo Finance benchmark, snapshotted by default; live via a localhost proxy)
 ```
 
 `amb_core` is a plain Python package usable with zero web/agent layers — that is
@@ -78,7 +81,8 @@ what `./amb` exercises directly, and what the unit tests target.
 ### 5.1 Ingestion & normalization
 A **single combined CSV is canonical** (long: date, fund id, return, plus optional
 per-fund metadata). Arbitrary/messy CSVs are handled too: the client detects the
-shape (long vs wide matrix), infers column roles and value units, and — in served
+shape (long, a wide date×funds matrix, or **summary statistics** — precomputed
+per-fund metrics with no return series), infers column roles and value units, and — in served
 mode — an LLM *proposes* a column mapping the user confirms (structure only, never
 values; see §5.7). Frequency is inferred, locale quirks coerced (European decimals,
 `%` strings, thousands separators), and unparseable rows are **quarantined with a
@@ -89,7 +93,9 @@ dropped. A content hash on the series ties every downstream number to its input.
 Deterministic, pure-Python, unit-tested against hand-checked golden values.
 Computes allocator-grade metrics: annualized return, volatility, **Sharpe,
 Sortino, Calmar**, max drawdown, downside deviation, alpha/beta vs. benchmark,
-correlation, tracking error, hit rate. Explicit and tested handling of:
+**correlation to the benchmark**, **peer correlation** (each fund's average
+pairwise correlation to the other funds in the universe), tracking error, hit
+rate. Explicit and tested handling of:
 annualization from detected frequency, the **risk-free rate source** (FRED), and
 short/patchy series. This engine is the ground truth; the memo only ever *reports*
 its outputs. (ADR-0004.)
@@ -154,8 +160,11 @@ Memo(sections[], claims[], shortlist[], audit_map, version)
   alternate, and an offline deterministic template when no key is set. One
   structured tool call for the draft; a fast model is the default (it only
   narrates — see §5.4). No agent framework.
-- **Live data:** a minimal FastAPI server (`serve.py`, localhost) proxies FRED so
-  the browser sees a real call without ever holding the key (ADR-0010).
+- **Live data:** a minimal FastAPI server (`serve.py`, localhost) proxies the
+  market-data providers — **FRED and Yahoo Finance** — so the browser sees a real
+  call without ever holding a key; when both are live the page lets the user pick
+  the reference source (`AMB_BENCHMARK_PROVIDER = auto | fred | yahoo`). (ADR-0010,
+  ADR-0011.)
 - **Exports:** self-contained HTML (Equi-styled, print-to-PDF) + XLSX (openpyxl) +
   Markdown + JSON audit map.
 - **Storage:** file-based today; `AMB_DATABASE_URL` is a config seam for a future
@@ -193,7 +202,9 @@ AllocatorMemoBuilder/
 │       └── assets/         # versioned memo CSS/JS (the HUD); export.py assembles them
 ├── data/
 │   ├── samples/            # bundled sample dataset.csv (committed, single file)
-│   ├── benchmarks/         # as-of FRED snapshot (committed)
+│   ├── examples/           # test-CSV pack to try in the app (returns, summary stats,
+│   │                       #   wide, edge cases, correlation) + its own README
+│   ├── benchmarks/         # as-of FRED/Yahoo snapshot (committed)
 │   └── mandates/           # default mandate (constraints + weights)
 ├── tests/
 └── docs/
@@ -225,14 +236,18 @@ for the AI patterns. A short screen recording (HUD first, then architecture).
    harness. (ADR-0001)
 8. **Web tier: dropped, then right-sized.** The full FastAPI+Next.js tier was cut
    (ADR-0009); a *minimal* localhost server was later re-introduced purely to make
-   a live FRED call from the browser and serve the self-contained HUD (ADR-0010).
+   a live market-data call (FRED + Yahoo Finance) from the browser and serve the
+   self-contained HUD (ADR-0010, ADR-0011).
    No Next.js, no auth tier — the HUD is one self-contained HTML file.
 
 ## 13. Resolved questions
 
 - **Sample data:** a realistic 9-fund universe is synthesized deterministically
   (`data/samples/generate.py`) into one combined `dataset.csv`, with a few
-  deliberately messy rows to exercise quarantine.
+  deliberately messy rows to exercise quarantine. A separate **example pack**
+  (`data/examples/`) covers the other input paths — a summary-statistics file,
+  a wide matrix, a deliberately-broken file for the quarantine reveal, and a
+  peer-correlation showcase — to drag into the running app.
 - **Memo depth:** a shortlist of five, each with an analytical paragraph, and one
   clearly-marked leader as the recommendation.
 - **Model access:** Anthropic direct (ADR-0008); the drafting default is the fast

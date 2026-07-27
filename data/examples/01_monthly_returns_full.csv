@@ -1,0 +1,193 @@
+date,fund_id,monthly_return,name,strategy,mgmt_fee_pct,redemption_freq,lockup_months,notice_days,notes
+2023-01-01,MAC,-0.00155,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-02-01,MAC,-0.038299,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-03-01,MAC,0.048191,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-04-01,MAC,-0.034427,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-05-01,MAC,0.023927,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-06-01,MAC,0.032103,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-07-01,MAC,-0.010682,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-08-01,MAC,0.002624,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-09-01,MAC,0.02756,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-10-01,MAC,0.00804,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-11-01,MAC,-0.01459,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-12-01,MAC,0.009736,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-01-01,MAC,0.01126,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-02-01,MAC,0.029746,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-03-01,MAC,0.011595,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-04-01,MAC,-0.030686,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-05-01,MAC,-0.007603,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-06-01,MAC,-0.017668,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-07-01,MAC,0.042473,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-08-01,MAC,0.048436,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-09-01,MAC,0.004341,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-10-01,MAC,0.03707,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-11-01,MAC,0.027948,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2024-12-01,MAC,-0.003807,Northwind Global Macro,Global Macro,1.75,Monthly,12,30,Discretionary macro; runs FX + rates.
+2023-01-01,EMN,0.020588,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-02-01,EMN,0.010004,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-03-01,EMN,0.0025,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-04-01,EMN,-0.007679,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-05-01,EMN,-0.00655,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-06-01,EMN,0.002748,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-07-01,EMN,0.00541,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-08-01,EMN,0.007959,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-09-01,EMN,0.009165,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-10-01,EMN,-0.004809,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-11-01,EMN,0.011495,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-12-01,EMN,-0.007508,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-01-01,EMN,-0.002266,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-02-01,EMN,0.014251,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-03-01,EMN,0.013788,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-04-01,EMN,0.002551,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-05-01,EMN,0.023428,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-06-01,EMN,-0.002817,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-07-01,EMN,0.000872,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-08-01,EMN,0.010998,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-09-01,EMN,0.007551,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-10-01,EMN,0.012294,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-11-01,EMN,0.002707,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2024-12-01,EMN,0.013588,Keel Market Neutral,Market Neutral,1.25,Monthly,0,15,Beta-neutral stat-arb book.
+2023-01-01,EVT,-0.00059,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-02-01,EVT,0.022634,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-03-01,EVT,0.011761,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-04-01,EVT,0.011947,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-05-01,EVT,0.041288,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-06-01,EVT,0.010483,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-07-01,EVT,-0.018251,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-08-01,EVT,-0.00622,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-09-01,EVT,0.023212,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-10-01,EVT,-0.003481,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-11-01,EVT,0.003379,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-12-01,EVT,0.010824,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-01-01,EVT,-0.024534,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-02-01,EVT,0.031538,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-03-01,EVT,0.016969,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-04-01,EVT,0.030994,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-05-01,EVT,0.009355,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-06-01,EVT,-0.00075,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-07-01,EVT,0.011788,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-08-01,EVT,0.00945,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-09-01,EVT,-0.001123,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-10-01,EVT,-0.019298,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-11-01,EVT,0.002262,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2024-12-01,EVT,0.002102,Harbor Event-Driven,Event-Driven,1.5,Quarterly,12,60,Merger + hard-catalyst events.
+2023-01-01,LSE,-0.017236,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-02-01,LSE,0.005624,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-03-01,LSE,0.006127,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-04-01,LSE,0.051591,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-05-01,LSE,-0.029475,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-06-01,LSE,0.056866,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-07-01,LSE,-0.014541,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-08-01,LSE,-0.01451,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-09-01,LSE,-0.020873,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-10-01,LSE,0.047171,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-11-01,LSE,-0.032959,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-12-01,LSE,0.028888,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-01-01,LSE,0.06197,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-02-01,LSE,0.01182,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-03-01,LSE,0.049652,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-04-01,LSE,-0.062568,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-05-01,LSE,-0.037777,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-06-01,LSE,0.031803,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-07-01,LSE,0.048129,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-08-01,LSE,-0.019782,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-09-01,LSE,0.067407,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-10-01,LSE,0.005592,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-11-01,LSE,-0.058562,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2024-12-01,LSE,0.024752,Ridgeline Long/Short,Long/Short Equity,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~55%."
+2023-01-01,SCR,0.02469,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-02-01,SCR,0.001053,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-03-01,SCR,-0.010725,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-04-01,SCR,-0.000303,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-05-01,SCR,0.028899,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-06-01,SCR,-0.033302,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-07-01,SCR,0.03223,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-08-01,SCR,0.00295,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-09-01,SCR,-0.020366,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-10-01,SCR,0.006216,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-11-01,SCR,-0.005038,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-12-01,SCR,0.024469,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-01-01,SCR,-0.008811,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-02-01,SCR,0.008206,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-03-01,SCR,0.033616,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-04-01,SCR,-0.021132,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-05-01,SCR,-0.023953,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-06-01,SCR,0.002416,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-07-01,SCR,0.015924,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-08-01,SCR,0.02642,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-09-01,SCR,0.000454,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-10-01,SCR,-0.013654,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-11-01,SCR,0.02001,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2024-12-01,SCR,0.016749,Beacon Structured Credit,Structured Credit,1.0,Quarterly,24,90,CLO mezz + RMBS carry.
+2023-01-01,MST,-0.009226,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-02-01,MST,0.001559,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-03-01,MST,0.047437,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-04-01,MST,0.018019,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-05-01,MST,-0.004169,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-06-01,MST,0.002942,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-07-01,MST,0.000561,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-08-01,MST,0.000648,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-09-01,MST,-0.015492,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-10-01,MST,0.012766,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-11-01,MST,0.030519,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-12-01,MST,0.034573,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-01-01,MST,-0.031618,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-02-01,MST,0.001238,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-03-01,MST,0.020974,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-04-01,MST,-0.002436,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-05-01,MST,0.021361,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-06-01,MST,0.008123,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-07-01,MST,0.033631,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-08-01,MST,0.049845,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-09-01,MST,-0.010375,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-10-01,MST,-0.015929,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-11-01,MST,0.019468,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2024-12-01,MST,-0.025497,Summit Multi-Strategy,Multi-Strategy,2.0,Monthly,18,45,Pod shop; risk-allocated across sleeves.
+2023-01-01,CTA,0.024984,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-02-01,CTA,-0.036115,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-03-01,CTA,0.006014,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-04-01,CTA,0.036213,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-05-01,CTA,0.063819,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-06-01,CTA,-0.023158,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-07-01,CTA,0.027865,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-08-01,CTA,0.022774,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-09-01,CTA,0.002217,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-10-01,CTA,0.062836,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-11-01,CTA,-0.025526,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-12-01,CTA,-0.08967,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-01-01,CTA,0.028443,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-02-01,CTA,-0.062419,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-03-01,CTA,-0.060333,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-04-01,CTA,-0.011269,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-05-01,CTA,0.054493,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-06-01,CTA,0.01379,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-07-01,CTA,0.026811,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-08-01,CTA,0.038999,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-09-01,CTA,-0.005177,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-10-01,CTA,-0.070491,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-11-01,CTA,-0.043534,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2024-12-01,CTA,0.008323,Traverse Trend,Managed Futures,1.25,Weekly,0,10,Cross-asset trend follower; crisis-alpha convex.
+2023-01-01,REL,0.002167,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-02-01,REL,0.013593,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-03-01,REL,0.020506,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-04-01,REL,0.006458,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-05-01,REL,0.014721,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-06-01,REL,0.016315,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-07-01,REL,0.021577,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-08-01,REL,0.009105,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-09-01,REL,0.007623,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-10-01,REL,0.011089,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-11-01,REL,-0.0073,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2023-12-01,REL,0.003426,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-01-01,REL,0.002355,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-02-01,REL,-0.003112,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-03-01,REL,0.010797,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-04-01,REL,-0.010796,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-05-01,REL,0.016055,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-06-01,REL,-0.001657,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-07-01,REL,-0.011162,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-08-01,REL,0.009325,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-09-01,REL,0.008697,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-10-01,REL,0.009011,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-11-01,REL,-0.012166,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.
+2024-12-01,REL,-0.001822,Anchor Real Assets,Real Assets,1.5,Annual,36,120,Infra + real estate income; illiquid by design.

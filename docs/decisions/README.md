@@ -20,7 +20,8 @@ immutable once **Accepted**; to change a decision, add a new ADR that
 | [0007](0007-local-first-storage-sqlite.md) | SQLite local-first; Postgres optional | Accepted |
 | [0008](0008-anthropic-direct-model-access.md) | Anthropic direct (native tool-use) over OpenRouter | Accepted |
 | [0009](0009-local-first-surface.md) | Local-first surface: CLI + file exports, no web server | Superseded by 0010 |
-| [0010](0010-minimal-local-server-for-live-data-and-hud.md) | Minimal localhost server for live FRED data + the decision HUD | Accepted |
+| [0010](0010-minimal-local-server-for-live-data-and-hud.md) | Minimal localhost server for live market data + the decision HUD | Accepted |
+| [0011](0011-second-live-benchmark-provider.md) | Second live benchmark provider (Yahoo Finance) + a source chooser | Accepted · refines 0005/0010 |
 
 New ADRs: copy the shape of an existing one, take the next number, start at
 **Proposed**, move to **Accepted** when the direction is locked.

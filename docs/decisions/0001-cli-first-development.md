@@ -1,6 +1,10 @@
 # 0001 — `./amb` CLI as the primary dev & test harness
 
 **Status:** Accepted · 2026-07-22
+> **Current (2026-07-27):** the surface was trimmed to two operator commands —
+> `./launch` (setup + build + serve + open) and `./test` — which wrap the steps
+> below; `amb_core.demo`/`serve` are invoked by those wrappers rather than exposed
+> as separate `./amb` subcommands.
 
 ## Context
 The product's real substance is a data → metrics → memo pipeline. A front-end is

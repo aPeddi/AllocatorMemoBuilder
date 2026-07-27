@@ -1,0 +1,151 @@
+date,fund_id,monthly_return,name,strategy,notes
+2023-01-01,BET1,-0.006153,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-02-01,BET1,-0.062273,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-03-01,BET1,0.018597,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-04-01,BET1,0.038408,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-05-01,BET1,0.007619,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-06-01,BET1,-0.027937,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-07-01,BET1,0.007475,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-08-01,BET1,0.010989,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-09-01,BET1,0.032021,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-10-01,BET1,0.094876,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-11-01,BET1,0.017828,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-12-01,BET1,-0.029122,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-01-01,BET1,-0.020001,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-02-01,BET1,0.009045,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-03-01,BET1,-0.029918,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-04-01,BET1,0.012365,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-05-01,BET1,-0.032958,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-06-01,BET1,0.0108,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-07-01,BET1,-0.004157,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-08-01,BET1,0.011747,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-09-01,BET1,0.009048,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-10-01,BET1,0.031256,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-11-01,BET1,-0.057289,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-12-01,BET1,-0.037877,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-01-01,BET1,0.001291,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-02-01,BET1,0.045148,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-03-01,BET1,0.035631,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-04-01,BET1,0.032758,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-05-01,BET1,-0.014703,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-06-01,BET1,-0.010538,Cobalt Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-01-01,BET2,0.003863,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-02-01,BET2,-0.060277,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-03-01,BET2,0.03009,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-04-01,BET2,0.037205,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-05-01,BET2,0.01313,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-06-01,BET2,-0.015872,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-07-01,BET2,0.006079,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-08-01,BET2,0.01983,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-09-01,BET2,0.028814,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-10-01,BET2,0.073388,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-11-01,BET2,0.018343,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-12-01,BET2,-0.015894,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-01-01,BET2,-0.019846,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-02-01,BET2,0.008782,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-03-01,BET2,-0.033565,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-04-01,BET2,0.021306,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-05-01,BET2,-0.031276,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-06-01,BET2,0.003523,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-07-01,BET2,-0.016266,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-08-01,BET2,0.019009,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-09-01,BET2,0.007807,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-10-01,BET2,0.04551,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-11-01,BET2,-0.049199,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-12-01,BET2,-0.043127,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-01-01,BET2,-0.015186,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-02-01,BET2,0.057027,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-03-01,BET2,0.034994,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-04-01,BET2,0.036904,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-05-01,BET2,-0.002304,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-06-01,BET2,0.003756,Slate Equity Beta,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-01-01,BET3,0.000526,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-02-01,BET3,-0.061899,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-03-01,BET3,0.026153,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-04-01,BET3,0.032783,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-05-01,BET3,-0.002422,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-06-01,BET3,-0.020333,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-07-01,BET3,0.011919,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-08-01,BET3,0.024609,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-09-01,BET3,0.035663,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-10-01,BET3,0.079229,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-11-01,BET3,0.037169,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-12-01,BET3,-0.019312,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-01-01,BET3,-0.026963,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-02-01,BET3,0.015566,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-03-01,BET3,-0.035331,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-04-01,BET3,-0.004885,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-05-01,BET3,-0.023753,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-06-01,BET3,-0.004337,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-07-01,BET3,-0.017146,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-08-01,BET3,0.037888,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-09-01,BET3,0.004503,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-10-01,BET3,0.038021,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-11-01,BET3,-0.049863,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2024-12-01,BET3,-0.032363,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-01-01,BET3,-0.017859,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-02-01,BET3,0.054175,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-03-01,BET3,0.030003,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-04-01,BET3,0.029988,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-05-01,BET3,-0.004144,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2025-06-01,BET3,0.005132,Vertex Growth,Long/Short Equity,Loads on the common equity factor (crowded).
+2023-01-01,BET4,-0.003087,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-02-01,BET4,-0.053118,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-03-01,BET4,0.021393,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-04-01,BET4,0.033895,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-05-01,BET4,0.030527,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-06-01,BET4,-0.013988,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-07-01,BET4,0.0048,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-08-01,BET4,0.020134,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-09-01,BET4,0.01842,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-10-01,BET4,0.087973,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-11-01,BET4,0.017468,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-12-01,BET4,-0.0195,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-01-01,BET4,-0.005792,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-02-01,BET4,0.013064,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-03-01,BET4,-0.011622,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-04-01,BET4,0.009164,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-05-01,BET4,-0.021157,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-06-01,BET4,-0.004057,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-07-01,BET4,-0.011651,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-08-01,BET4,0.010513,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-09-01,BET4,0.021742,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-10-01,BET4,0.052625,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-11-01,BET4,-0.036776,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2024-12-01,BET4,-0.038436,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-01-01,BET4,-0.013165,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-02-01,BET4,0.055488,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-03-01,BET4,0.023792,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-04-01,BET4,0.0541,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-05-01,BET4,-0.014281,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2025-06-01,BET4,-0.030537,Halcyon Equity,Event-Driven,Loads on the common equity factor (crowded).
+2023-01-01,DIV,0.01713,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-02-01,DIV,0.063877,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-03-01,DIV,-0.015895,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-04-01,DIV,-0.020852,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-05-01,DIV,-0.007472,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-06-01,DIV,0.037636,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-07-01,DIV,0.002313,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-08-01,DIV,-0.005893,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-09-01,DIV,-0.015354,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-10-01,DIV,-0.062647,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-11-01,DIV,-0.00619,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2023-12-01,DIV,0.023063,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-01-01,DIV,0.028849,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-02-01,DIV,-0.002947,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-03-01,DIV,0.034247,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-04-01,DIV,-0.005885,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-05-01,DIV,0.04223,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-06-01,DIV,-0.003855,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-07-01,DIV,0.019977,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-08-01,DIV,0.007181,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-09-01,DIV,0.004638,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-10-01,DIV,-0.030964,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-11-01,DIV,0.070591,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2024-12-01,DIV,0.0479,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-01-01,DIV,0.026053,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-02-01,DIV,-0.038266,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-03-01,DIV,-0.00998,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-04-01,DIV,-0.020803,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-05-01,DIV,0.028748,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).
+2025-06-01,DIV,0.02857,Meridian Tail Hedge,Managed Futures,True diversifier: moves against the crowd (negative peer corr).

@@ -36,6 +36,15 @@ chip); pin one with `fred` or `yahoo`. With no keys the app still runs fully off
 committed benchmark snapshot + a deterministic template memo. Either way, **every
 figure is verified against the metrics engine** before it reaches the page.
 
+### Try it with your own data
+
+The app opens on a bundled sample. To exercise the other input paths, drag one of the
+files in [`data/examples/`](data/examples/) into the app's CSV upload — a full
+monthly-returns universe, a **summary-statistics** file (precomputed metrics, no return
+series), a **wide** date×funds matrix, a deliberately-broken file that shows the
+**quarantine** reveal, and a **peer-correlation** showcase. See
+[`data/examples/README.md`](data/examples/README.md) for what each demonstrates.
+
 ## How it's built (and why)
 
 - **The deterministic metrics engine is the source of truth.** Sharpe, Sortino,
@@ -47,9 +56,9 @@ figure is verified against the metrics engine** before it reaches the page.
   OpenAI / offline template) selected from config; adding a provider is one branch.
   Fund data is treated as untrusted input (fenced, data-only system prompt) to
   resist prompt injection.
-- **Secrets stay server-side.** The browser can't call FRED directly (no CORS), so
-  a tiny local proxy holds the key and the page fetches `/api/market`; the key is
-  never shipped to the client. Data embedded in the page is escaped to be XSS-safe,
+- **Secrets stay server-side.** The browser can't call the market-data APIs directly
+  (no CORS), so a tiny local proxy holds any key and the page fetches `/api/market`;
+  keys are never shipped to the client. Data embedded in the page is escaped to be XSS-safe,
   and the server binds to localhost with conservative headers.
 - **Modular rendering.** The memo's CSS/JS live as versioned assets under
   `backend/amb_core/assets/`; `export.py` is a thin assembler.
