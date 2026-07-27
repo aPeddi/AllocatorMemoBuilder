@@ -23,7 +23,7 @@ def _reason_bucket(reason: str) -> str:
     return "other"
 
 
-def build_readiness(funds, series_by_fund, benchmark, quarantined, rf_used, rf_source) -> dict:
+def build_readiness(funds, series_by_fund, benchmark, quarantined, rf_used, rf_source, ingest_schema=None) -> dict:
     fund_ids = [f.fund_id for f in funds]
     fund_id_set = set(fund_ids)
     series_ids = set(series_by_fund.keys())
@@ -86,4 +86,5 @@ def build_readiness(funds, series_by_fund, benchmark, quarantined, rf_used, rf_s
         "date_ranges_consistent": date_ranges_consistent,
         "benchmark": bench_block,
         "risk_free": {"value": rf_used, "source": rf_source},
+        "ingest": ingest_schema,   # real file name + column roles + optional fields, for the ingest UI
     }

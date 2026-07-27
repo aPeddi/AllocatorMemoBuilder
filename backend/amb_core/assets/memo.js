@@ -545,6 +545,20 @@ async function actZero(){
   var LIVE=(b.kind==='live');
   var _EPB=(A._keyed?"fred/series/observations?series_id=":"fredgraph.csv?id=");
   var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
+  // ── ONE ingest source of truth: the uploaded file (A.ingest) overrides the baked
+  //    schema (readiness.ingest). Everything the animation shows — file name, extracted
+  //    fields, quarantine reasons/counts — flows from this, so it always matches the
+  //    file actually loaded (and an upload with 0 bad rows shows 0, not the baked ones).
+  var ING=A.ingest||null, RDI=rd.ingest||null;
+  var srcFile=ING?(ING.file||'your CSV'):((RDI&&RDI.file)||'dataset.csv');
+  var srcCols=(ING&&ING.cols&&ING.cols.length)?ING.cols:((RDI&&RDI.cols&&RDI.cols.length)?RDI.cols:[{name:'date',role:'date'},{name:'fund_id',role:'id'},{name:'monthly_return',role:'return'}]);
+  var srcOpt=(ING&&ING.optional)?ING.optional:((RDI&&RDI.optional)?RDI.optional:['redemption_freq','lockup_months','notice_days','mgmt_fee']);
+  var quarSrc=(ING&&ING.quar)?ING.quar:{reasons:(rd.quarantine_reasons||{}),count:QN};   // upload authoritative EVEN IF empty
+  var qN=quarSrc.count||0;
+  var fundsN=ING?((A.funds||[]).length||UNIV):UNIV;
+  var validN=(ING&&ING.valid!=null)?ING.valid:Math.max(0,(ROWS||0)-QN);
+  var rowsN=validN+qN;
+  var fieldNames=srcCols.map(function(c){return c.name}).concat(srcOpt);
   az.innerHTML=
     "<div class='hud-grid'></div><div class='hud-scan'></div>"
    +"<div class='hud-top'><div class='hud-id'><span class='hud-rec'></span>EQUI · DATA CORE</div></div>"
@@ -564,8 +578,9 @@ async function actZero(){
   phase(1,'ACQUIRE SOURCES');
   stage.innerHTML=
    "<div class='az-acq'>"
-   +"<div class='az-src' id='srcA'><div class='az-src-h'><span class='az-ic'>▤</span>LOCAL FILES</div>"
-     +"<div class='az-row'><span>dataset.csv · funds</span><b id='fa'>—</b></div><div class='az-row'><span>dataset.csv · returns</span><b id='fb'>—</b></div>"
+   +"<div class='az-src' id='srcA'><div class='az-src-h'><span class='az-ic'>▤</span>LOCAL FILE</div>"
+     +"<div class='az-row az-file'><span>"+esc(srcFile)+"</span><b id='fa'>—</b></div>"
+     +"<div class='az-fx'><span class='az-fx-l'>fields extracted</span><div class='az-fx-chips' id='azfields'></div></div>"
      +(LIVE?"":"<div class='az-row'><span>"+(b.benchFile||'sp500_monthly.csv')+"</span><b>"+(b.n||36)+" obs</b></div>")
      +"<div class='az-st' id='stA'>connecting</div></div>"
    +"<div class='az-beam a' id='beamA'></div>"
@@ -577,8 +592,16 @@ async function actZero(){
      +"<div class='az-st' id='stB'>"+(LIVE?"resolving host · stlouisfed.org":"standby")+"</div></div>"
    +"<div class='az-using' id='azusing'></div>"
    +"</div>";
-  await wait(360);$('#srcA',az).classList.add('in');log('mounting local dataset · data/samples/');await wait(520);if(aborted)return;
-  $('#fa',az).textContent=UNIV+' records';$('#fb',az).textContent=ROWS+' rows';$('#stA',az).innerHTML="<span class='ok'>●</span> loaded";
+  await wait(360);$('#srcA',az).classList.add('in');log('mounting local file · '+srcFile);await wait(520);if(aborted)return;
+  $('#fa',az).textContent=fundsN+' funds · '+rowsN+' rows';
+  // show the actual fields extracted from THIS file (core roles + optional metadata)
+  var fxHost=$('#azfields',az);
+  if(fxHost){var roleTag={date:'date',id:'fund',ret:'return','return':'return',name:'name',strategy:'strategy'};
+    var chips=srcCols.map(function(c){return "<span class='az-fxc role'>"+esc(c.name)+"<i>"+(roleTag[c.role]||c.role||'')+"</i></span>"})
+      .concat((srcOpt||[]).map(function(o){return "<span class='az-fxc'>"+esc(o)+"</span>"}));
+    fxHost.innerHTML=chips.join('');
+    schedule(function(){$$('.az-fxc',fxHost).forEach(function(t,i){schedule(function(){t.classList.add('in')},i*70)})},20);}
+  $('#stA',az).innerHTML="<span class='ok'>●</span> loaded";
   $('#beamA',az).classList.add('on');await wait(500);if(aborted)return;
   $('#srcB',az).classList.add('in');
   if(LIVE){
@@ -597,12 +620,10 @@ async function actZero(){
 
   // ══ 2 · PARSE — raw rows, column mapping, normalization, optional fields ══
   phase(2,'PARSE · NORMALIZE');
-  // DATA-DRIVEN: real column names, real fund IDs, and the ACTUAL quarantine reasons
-  // for THIS dataset (A.ingest is set on CSV upload; else the canonical schema). So
-  // changing the CSV changes the rows, the mapping, and what gets crossed off.
-  var ING=A.ingest||null;
-  var mapCols=(ING&&ING.cols&&ING.cols.length)?ING.cols
-    :[{name:'date',role:'date'},{name:'fund_id',role:'id'},{name:'monthly_return',role:'return'}];
+  // DATA-DRIVEN from the single ingest source (srcCols / quarSrc, set at the top):
+  // real column names, real fund IDs, and the ACTUAL per-row quarantine reasons for
+  // THIS file — baked or uploaded. Changing the CSV changes everything shown here.
+  var mapCols=srcCols;
   function _roleArrow(r){var m={date:'→ period',id:'→ id','return':'→ return',ret:'→ return',name:'→ name',strategy:'→ strategy'};return m[r]||('→ '+r)}
   function _colOf(role){var c=mapCols.filter(function(x){return x.role===role||(role==='return'&&x.role==='ret')})[0];return c?c.name:role}
   var dcol=_colOf('date'),icol=_colOf('id'),vcol=_colOf('return');
@@ -612,13 +633,8 @@ async function actZero(){
   var okFunds=(A.funds||[]).filter(function(f){return f.eligible!==false}).slice(0,3);
   if(!okFunds.length)okFunds=(A.funds||[]).slice(0,3);
   var sample=okFunds.map(function(f,i){var rr=_firstRet(f);return {d:_mdate(i),id:f.id,v:(rr==null?'—':pct(rr)),bad:false}});
-  // real BAD rows expanded from the ACTUAL quarantine reasons — none if the file was
-  // clean. Prefer the uploaded file's own reasons (A.ingest.quar) over the baked ones.
-  var qr=(ING&&ING.quar&&ING.quar.reasons&&Object.keys(ING.quar.reasons).length)?ING.quar.reasons:(rd.quarantine_reasons||{});
-  var qN=(ING&&ING.quar)?ING.quar.count:QN;
-  var validN=(ING&&ING.valid!=null)?ING.valid:((ROWS||0)-QN);
-  var rowsN=(ING)?(validN+qN):ROWS;
-  var badRows=[];
+  // real BAD rows expanded from the ACTUAL quarantine reasons — NONE if the file was clean
+  var qr=quarSrc.reasons||{};var badRows=[];
   Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});
   var rowsSample=sample.concat(badRows);
   stage.innerHTML=
@@ -646,8 +662,8 @@ async function actZero(){
   norms.push('align to one shared monthly window');
   var cn=$('#cnorm',az);
   for(var ni=0;ni<norms.length;ni++){if(aborted)return;var nr=el('div','az-normr');nr.innerHTML="<span class='ck'>✓</span>"+esc(norms[ni]);cn.appendChild(nr);schedule(function(x){x.classList.add('in')}.bind(null,nr),20);await wait(230)}
-  var optCols=(ING&&ING.optional&&ING.optional.length)?ING.optional:['redemption_freq','lockup_months','notice_days','mgmt_fee'];
-  var opt=$('#copt',az);opt.innerHTML=optCols.map(function(o){return "<span class='optt'>"+esc(o)+"</span>"}).join('')+"<div class='opt-note'>→ liquidity + fee model</div>";
+  var optCols=(srcOpt&&srcOpt.length)?srcOpt:[];
+  var opt=$('#copt',az);opt.innerHTML=(optCols.length?optCols.map(function(o){return "<span class='optt'>"+esc(o)+"</span>"}).join('')+"<div class='opt-note'>→ liquidity + fee model</div>":"<div class='opt-note'>none in this file</div>");
   schedule(function(){$$('.optt',az).forEach(function(t,i){schedule(function(){t.classList.add('in')},i*120)})},20);
   log('normalizing types · mapping optional liquidity & fee fields');
   await wait(1500);if(aborted)return;
@@ -667,7 +683,7 @@ async function actZero(){
   stage.innerHTML="<div class='az-rec'><div class='az-rec-h'>IDENTIFIER RECONCILIATION</div><div class='az-chips' id='rchips'></div>"
    +"<div class='az-tl'><div class='az-tl-h'>SHARED WINDOW</div><div class='az-tl-bar'><i id='tlfill'></i></div>"
    +"<div class='az-tl-dates'><span>"+(ov.start||'')+"</span><span>"+(ov.end||'')+"</span></div>"
-   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+WR+"/"+UNIV+" funds matched · quarantine was row-level, so every fund keeps its valid months</div></div></div>";
+   +"<div class='az-tl-n'><b>"+((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36)+"</b> months · one shared window · "+fundsN+" funds matched · quarantine was row-level, so every fund keeps its valid months</div></div></div>";
   var rc=$('#rchips',az);
   for(var f=0;f<A.funds.length;f++){if(aborted)return;var fd0=A.funds[f];var ch=el('div','az-fchip');ch.innerHTML="<span class='ck'>✓</span>"+fd0.id;rc.appendChild(ch);schedule(function(x){x.classList.add('in')}.bind(null,ch),20);await wait(150)}
   schedule(function(){var tf=$('#tlfill',az);if(tf)tf.classList.add('on')},300);

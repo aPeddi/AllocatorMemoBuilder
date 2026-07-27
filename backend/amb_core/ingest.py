@@ -142,6 +142,28 @@ def _fund_colmap(cols: list[str]) -> dict[str, Optional[str]]:
     return {role: _find_col(cols, cands) for role, cands in _FUND_COLS.items()}
 
 
+def dataset_schema(path: str | Path) -> dict:
+    """Describe a single-file dataset's real columns + roles for the ingest UI, so the
+    app shows the ACTUAL file it loaded and the fields it extracted — which column is
+    the date / fund id / return, and which optional metadata fields were found."""
+    cols = [str(c) for c in pd.read_csv(path, nrows=0).columns]
+    date_col = _find_col(cols, ["date", "period", "month", "asof", "as_of"])
+    fund_col = _find_col(cols, ["fund_id", "fund", "ticker", "symbol", "id"])
+    ret_col = _find_col(cols, ["monthly_return", "return", "ret", "performance", "value"])
+    core = {date_col, fund_col, ret_col}
+    cm = _fund_colmap(cols)
+    optional: list[str] = []
+    for role, c in cm.items():
+        if c and c not in core and c not in optional:
+            optional.append(c)
+    mapped = [
+        {"name": date_col or "date", "role": "date"},
+        {"name": fund_col or "fund_id", "role": "id"},
+        {"name": ret_col or "monthly_return", "role": "return"},
+    ]
+    return {"file": Path(path).name, "cols": mapped, "optional": optional}
+
+
 def _fund_from_row(r, cm: dict[str, Optional[str]], source_ref: str) -> Fund:
     def g(role: str):
         c = cm.get(role)

@@ -45,9 +45,15 @@ def run(
     step("Ingesting dataset")
     # single combined file is canonical; a separate returns_csv keeps the legacy
     # two-file path working for callers that still have split exports.
+    ingest_schema = None
     if returns_csv is None:
         funds, series, quarantined = load_dataset(dataset)
         _src_paths: tuple = (dataset,)
+        try:
+            from .ingest import dataset_schema
+            ingest_schema = dataset_schema(dataset)
+        except Exception:  # noqa: BLE001 — schema is UI sugar; never block the run
+            ingest_schema = None
     else:
         funds = load_funds(dataset)
         series, quarantined = load_returns(returns_csv)
@@ -80,7 +86,7 @@ def run(
     step("Screening & scoring")
     usable = [f for f in funds if f.fund_id in metrics_by_fund]
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)
-    readiness = build_readiness(funds, series, benchmark, quarantined, rf_used, rf_source)
+    readiness = build_readiness(funds, series, benchmark, quarantined, rf_used, rf_source, ingest_schema)
     ctx = AnalysisContext(
         funds=funds, benchmark=benchmark, metrics_by_fund=metrics_by_fund,
         metric_results=metric_results, shortlist=shortlist, mandate=mandate,
