@@ -33,6 +33,24 @@ def _pos(v,ax):
     if t<0: return C-C*((-t)/((-t)+0.6))
     if t>1: return (C+SP)+C*((t-1)/((t-1)+0.6))
     return C+t*SP
+def _ray_through(ox,oy,mx,my,lo=8.0,hi=92.0):
+    """The reference line, guaranteed to pass through the marker. Because `_pos`
+    saturates outliers non-linearly, a line drawn between axis-range endpoints no
+    longer lands on the marker — so instead we take the ray from the screen origin
+    (0-risk / 0-return, mapped) through the marker and clip it to the plot box. The
+    marker is on this line by construction."""
+    dx,dy=mx-ox,my-oy
+    cand=[]
+    if abs(dx)>1e-9: cand+=[(lo-ox)/dx,(hi-ox)/dx]
+    if abs(dy)>1e-9: cand+=[(lo-oy)/dy,(hi-oy)/dy]
+    def inbox(t):
+        x,y=ox+t*dx,oy+t*dy
+        return lo-0.05<=x<=hi+0.05 and lo-0.05<=y<=hi+0.05
+    valid=[t for t in cand if inbox(t)]
+    if len(valid)<2: return None
+    t1,t2=min(valid),max(valid)
+    return {"x1":round(ox+t1*dx,1),"y1":round(oy+t1*dy,1),
+            "x2":round(ox+t2*dx,1),"y2":round(oy+t2*dy,1)}
 
 def render_markdown(memo: Memo) -> str:
     """Plain-Markdown rendering of a Memo. Lives here in the rendering layer (not
@@ -249,11 +267,8 @@ def render_html(memo, ctx=None):
             bench["xz"]=round(14+_pos(bench["vol"],zvAx)*72,1)
             bench["yz"]=round(14+_pos(bench["ret"],zrAx)*72,1)
             if bench["vol"]>0:
-                s=bench["ret"]/bench["vol"]  # index return-per-unit-risk
-                def _mapxy(vol):
-                    return (round(14+_pos(vol,zvAx)*72,1), round(14+_pos(s*vol,zrAx)*72,1))
-                x1,y1=_mapxy(zvAx[0]);x2,y2=_mapxy(zvAx[1])
-                benchLine={"x1":x1,"y1":y1,"x2":x2,"y2":y2}
+                ox=14+_pos(0.0,zvAx)*72;oy=14+_pos(0.0,zrAx)*72   # 0-risk/0-return, mapped
+                benchLine=_ray_through(ox,oy,bench["xz"],bench["yz"])
     for d in fd: d.setdefault("xz",d["x"]);d.setdefault("yz",d["y"])
 
     if plist and volcap is not None:

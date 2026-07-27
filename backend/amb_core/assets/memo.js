@@ -449,7 +449,7 @@ function relayoutScatter(){  // recompute the risk/return frontier so it include
   var zvAx=_axis(zv),zrAx=_axis(zr);
   surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
   if(b){b.xz=Math.round((14+_pos(b.vol,zvAx)*72)*10)/10;b.yz=Math.round((14+_pos(b.ret,zrAx)*72)*10)/10;
-    if(b.vol>0){var s=b.ret/b.vol;var mp=function(vol){return [Math.round((14+_pos(vol,zvAx)*72)*10)/10,Math.round((14+_pos(s*vol,zrAx)*72)*10)/10]};var p1=mp(zvAx.lo),p2=mp(zvAx.hi);A.benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
+    if(b.vol>0){var ox=14+_pos(0,zvAx)*72,oy=14+_pos(0,zrAx)*72;A.benchLine=_rayThrough(ox,oy,b.xz,b.yz)}}
   A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // repaint the ranked nodes + benchmark marker + ray from the SAME coords, so the
   // marker always sits on the line and nodes don't lag a stale layout.
@@ -553,7 +553,7 @@ async function actZero(){
   var srcFile=ING?(ING.file||'your CSV'):((RDI&&RDI.file)||'dataset.csv');
   var srcCols=(ING&&ING.cols&&ING.cols.length)?ING.cols:((RDI&&RDI.cols&&RDI.cols.length)?RDI.cols:[{name:'date',role:'date'},{name:'fund_id',role:'id'},{name:'monthly_return',role:'return'}]);
   var srcOpt=(ING&&ING.optional)?ING.optional:((RDI&&RDI.optional)?RDI.optional:['redemption_freq','lockup_months','notice_days','mgmt_fee']);
-  var quarSrc=(ING&&ING.quar)?ING.quar:{reasons:(rd.quarantine_reasons||{}),count:QN};   // upload authoritative EVEN IF empty
+  var quarSrc=(ING&&ING.quar)?ING.quar:{reasons:(rd.quarantine_reasons||{}),count:QN,samples:((RDI&&RDI.quar_samples)||[])};   // upload authoritative EVEN IF empty
   var qN=quarSrc.count||0;
   var fundsN=ING?((A.funds||[]).length||UNIV):UNIV;
   var validN=(ING&&ING.valid!=null)?ING.valid:Math.max(0,(ROWS||0)-QN);
@@ -633,9 +633,15 @@ async function actZero(){
   var okFunds=(A.funds||[]).filter(function(f){return f.eligible!==false}).slice(0,3);
   if(!okFunds.length)okFunds=(A.funds||[]).slice(0,3);
   var sample=okFunds.map(function(f,i){var rr=_firstRet(f);return {d:_mdate(i),id:f.id,v:(rr==null?'—':pct(rr)),bad:false}});
-  // real BAD rows expanded from the ACTUAL quarantine reasons — NONE if the file was clean
-  var qr=quarSrc.reasons||{};var badRows=[];
-  Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});
+  // real BAD rows — the ACTUAL malformed rows (real date/id/value that failed), not
+  // placeholder dashes; NONE if the file was clean. Fall back to reason-only rows only
+  // if we somehow have counts without sample content.
+  var qr=quarSrc.reasons||{};var qsamp=quarSrc.samples||[];var badRows=[];
+  if(qsamp.length){
+    qsamp.slice(0,3).forEach(function(s){badRows.push({d:s.date||'—',id:s.id||'—',v:s.ret||'—',bad:true,reason:s.reason})});
+  }else{
+    Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});
+  }
   var rowsSample=sample.concat(badRows);
   stage.innerHTML=
    "<div class='az-parse'>"
@@ -984,6 +990,17 @@ function _pos(v,ax){var t=(v-ax.lo)/((ax.hi-ax.lo)||1),C=0.05,SP=0.90;
   if(t<0)return C-C*((-t)/((-t)+0.6));         // below the bulk → bottom margin (saturating)
   if(t>1)return (C+SP)+C*((t-1)/((t-1)+0.6));   // above the bulk → top margin (saturating)
   return C+t*SP;}                                // in the bulk → fill 5%..95% of the field
+// reference line guaranteed to pass through the marker: the ray from the mapped
+// origin (0-risk/0-return) through (mx,my), clipped to the plot box. Since _pos
+// saturates outliers, a line between axis endpoints would miss the marker.
+function _rayThrough(ox,oy,mx,my){var lo=8,hi=92,dx=mx-ox,dy=my-oy,cand=[];
+  if(Math.abs(dx)>1e-9)cand.push((lo-ox)/dx,(hi-ox)/dx);
+  if(Math.abs(dy)>1e-9)cand.push((lo-oy)/dy,(hi-oy)/dy);
+  var inb=function(t){var x=ox+t*dx,y=oy+t*dy;return x>=lo-0.05&&x<=hi+0.05&&y>=lo-0.05&&y<=hi+0.05};
+  var v=cand.filter(inb);if(v.length<2)return null;
+  var t1=Math.min.apply(null,v),t2=Math.max.apply(null,v);
+  return {x1:Math.round((ox+t1*dx)*10)/10,y1:Math.round((oy+t1*dy)*10)/10,
+          x2:Math.round((ox+t2*dx)*10)/10,y2:Math.round((oy+t2*dy)*10)/10};}
 /* ── one client-side scoring core, shared by screenAndScore, reweigh and the CSV
    recompute so the z-score basis can't drift between them. acc(item,key) reads a
    metric off whatever the caller holds (a fund object or a metrics dict); callers
@@ -1079,18 +1096,20 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
   return out;}
 // apply a confirmed mapping → append to ret{}/order[]; returns quarantined count
 function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.order,ret=acc.ret;
-  var qreasons={},minD=null,okN=0;   // track WHY rows fail, the valid count + earliest date, so the ingest animation reflects THIS file
-  function _q(reason){qreasons[reason]=(qreasons[reason]||0)+1;quar++;}
-  function push(id,dstr,val){var iso=_isoStr(dstr,det.dateOrder);
-    if(!id){_q('missing fund id');return}
-    if(val==null){_q('unparseable return');return}
-    if(iso==null){_q('bad date');return}
+  var qreasons={},minD=null,okN=0,qsamples=[];   // track WHY rows fail, the valid count, earliest date + a few REAL bad rows
+  function _cell(v){var s=String(v==null?'':v).trim();return /^(nan|none|nat)$/i.test(s)?'':s}
+  function _q(reason,dstr,id,rawRet){qreasons[reason]=(qreasons[reason]||0)+1;quar++;
+    if(qsamples.length<4)qsamples.push({date:_cell(dstr),id:_cell(id),ret:_cell(rawRet),reason:reason});}
+  function push(id,dstr,rawRet){var val=_normVal(rawRet,det.unit),iso=_isoStr(dstr,det.dateOrder);
+    if(!id){_q('missing fund id',dstr,id,rawRet);return}
+    if(val==null){_q('unparseable return',dstr,id,rawRet);return}
+    if(iso==null){_q('bad date',dstr,id,rawRet);return}
     if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val});okN++;
     if(minD==null||iso<minD)minD=iso;}
   if(det.shape==='wide'){var use=det.series.filter(function(s){return !s.excludedByUser});
-    body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,_normVal(r[s.idx],det.unit))})});
+    body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,r[s.idx])})});
   }else if(det.shape==='long'){var m=det.map;
-    body.forEach(function(r){push(String(r[m.id]||'').trim(),r[m.date],_normVal(r[m.ret],det.unit))});
+    body.forEach(function(r){push(String(r[m.id]||'').trim(),r[m.date],r[m.ret])});
     if(m.name>=0||m.strategy>=0)body.forEach(function(r){var id=String(r[m.id]||'').trim();if(id&&!acc.funds[id])acc.funds[id]={name:(m.name>=0?String(r[m.name]||id).trim():id),strategy:(m.strategy>=0?String(r[m.strategy]||'').trim():'')}});}
   // remember this file's real column mapping so the ingest animation reflects IT
   // (not the canonical baked schema) when the story replays after the upload.
@@ -1099,7 +1118,7 @@ function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.ord
   if(det.shape==='long'){var mm=det.map;ingCols=[{name:_cn(mm.date),role:'date'},{name:_cn(mm.id),role:'id'},{name:_cn(mm.ret),role:'return'}];
     if(mm.name>=0)optional.push(_cn(mm.name));if(mm.strategy>=0)optional.push(_cn(mm.strategy));}
   else{ingCols=[{name:_cn(det.dateCol),role:'date'},{name:'fund columns',role:'id'},{name:'values',role:'return'}];}
-  A.ingest={cols:ingCols,unit:det.unit,optional:optional,file:det._file,quar:{reasons:qreasons,count:quar},valid:okN,start:minD};
+  A.ingest={cols:ingCols,unit:det.unit,optional:optional,file:det._file,quar:{reasons:qreasons,count:quar,samples:qsamples},valid:okN,start:minD};
   return quar;}
 function finalizeIngest(acc){var ids=Object.keys(acc.ret);
   if(ids.length<2){showIngestError(acc._failed&&acc._failed[0],acc);return}   // not enough usable returns → explain, don't silently toast

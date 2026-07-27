@@ -86,5 +86,31 @@ def build_readiness(funds, series_by_fund, benchmark, quarantined, rf_used, rf_s
         "date_ranges_consistent": date_ranges_consistent,
         "benchmark": bench_block,
         "risk_free": {"value": rf_used, "source": rf_source},
-        "ingest": ingest_schema,   # real file name + column roles + optional fields, for the ingest UI
+        "ingest": _with_quar_samples(ingest_schema, quarantined),  # file/columns + a few REAL bad rows for the UI
     }
+
+
+def _cell(v) -> str:
+    """Display a raw cell as the UI would show it — blanks/NaN become empty, not 'nan'."""
+    if v is None:
+        return ""
+    s = str(v).strip()
+    return "" if s.lower() in ("nan", "none", "nat") else s
+
+
+def _with_quar_samples(schema: Optional[dict], quarantined) -> Optional[dict]:
+    """Attach a few ACTUAL quarantined rows (real malformed values, not placeholder
+    dashes) so the ingest animation shows real data that failed, only when there is
+    something to show. Rows are mapped to date/id/return via the detected columns."""
+    if not schema:
+        return schema
+    role_col = {c["role"]: c["name"] for c in schema.get("cols", [])}
+    dc, ic, rc = role_col.get("date"), role_col.get("id"), role_col.get("return")
+    samples = []
+    for q in (quarantined or [])[:4]:
+        raw = q.get("raw") or {}
+        samples.append({
+            "date": _cell(raw.get(dc)), "id": _cell(raw.get(ic)),
+            "ret": _cell(raw.get(rc)), "reason": q.get("reason", ""),
+        })
+    return {**schema, "quar_samples": samples}
