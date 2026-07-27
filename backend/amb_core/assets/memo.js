@@ -298,7 +298,7 @@ function fetchLiveMarket(manual){
     if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
     relayoutScatter();  // keep the main risk/return graph consistent with the (live) benchmark
     var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
-    if(document.body.classList.contains('settled')){rerender();}
+    if(document.body.classList.contains('settled')){rerender(_snapStory);}   // a live refresh changed only the benchmark, not the data/ingest — snap from screening, don't replay Act 0
     if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+esc(b.name)+" · as-of "+esc(b.asOf));
     else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+esc(b.name)+" ("+esc(b.kind)+")");
   }).catch(function(e){
@@ -472,7 +472,7 @@ function buildGuides(){var g=$('#guides');
   var _brf=(A.rfUsed!=null?A.rfUsed:0.02);var _bsr=(A.bench.vol>0)?((A.bench.ret-_brf)/A.bench.vol):null;
   var bnum=(A.bench.ret!=null?("ret "+pct(A.bench.ret)+(_bsr!=null?" · SR "+num(_bsr):"")):"");
   var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';var blab=$('.bl',mk);if(blab)blab.innerHTML=shortNm+(bnum?"<span class='bl-m'>"+bnum+"</span>":"")}
-  var bl=$('#beatlbl');if(bl){bl.innerHTML=shortNm+' · reference index ·<br>passive beta · out of mandate';
+  var bl=$('#beatlbl');if(bl){bl.innerHTML=shortNm+' · reference index';
     if(A.benchLine){bl.style.bottom=A.benchLine.y2+'%';}   // align the label to the up-right END of the line
   }
   drawBenchLine();if(g)g.classList.add('on');
@@ -895,7 +895,7 @@ async function cutLowest(){var c=A.funds.filter(function(d){return d.cut})[0];if
   n.classList.remove('focus','cutfocus');n.classList.add('cutout','dimmed');clearRtags();updateCounter('Shortlist');await wait(700);}
 function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
   setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
-function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();refreshAudit();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
+function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();refreshAudit();benchBadge();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
   if(bigN())shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});   // big universe: only the shortlist keeps an always-on label
   schedule(function(){layoutRows();redrawTraj()},680);}
 
@@ -1158,11 +1158,23 @@ function openSourcePop(anchor){var pop=$('#srcpop');if(!pop)return;var r=anchor.
     +"</div>";
   pop.style.top=(r.bottom+8)+'px';pop.style.right=(window.innerWidth-r.right)+'px';pop.classList.add('on');
   $$('.srcdl',pop).forEach(function(d){d.addEventListener('click',function(e){e.stopPropagation();downloadSource(+d.dataset.dl)})});
-  $$('.srcrow',pop).forEach(function(row){row.addEventListener('click',function(e){e.stopPropagation();openSourceTab(+row.dataset.i)})});
+  $$('.srcrow',pop).forEach(function(row){row.addEventListener('click',function(e){e.stopPropagation();openSourceTable(+row.dataset.i)})});
   var up=$('#srcup',pop);if(up)up.addEventListener('click',function(){pop.classList.remove('on');var ui=$('#upInput');if(ui)ui.click()});}
-function openSourceTab(i){var sc=(A.sources||[])[i];if(!sc)return;
-  var blob=new Blob([sc.text||''],{type:'text/plain'});var url=URL.createObjectURL(blob);
-  window.open(url,'_blank');setTimeout(function(){URL.revokeObjectURL(url)},8000);}
+// open a source CSV as a proper column-aligned table in the centre drawer — the same
+// surface the audit's 'from the source file' uses — instead of dumping raw text in a new tab
+function openSourceTable(i){var sc=(A.sources||[])[i];if(!sc||!sc.text){toast("<span class='tk' style='color:var(--loss)'>!</span>No embedded text for this file");return;}
+  var pop=$('#srcpop');if(pop)pop.classList.remove('on');
+  var rows;try{rows=parseCSV(sc.text)}catch(e){rows=null}
+  if(!rows||rows.length<1){toast("<span class='tk' style='color:var(--loss)'>!</span>Could not read that source");return;}
+  var hdr=rows[0];
+  var thead="<tr><th class='ln'>#</th>"+hdr.map(function(h){return "<th>"+esc(h)+"</th>"}).join('')+"</tr>";
+  var tb='';for(var r=1;r<rows.length;r++){tb+="<tr><td class='ln'>"+r+"</td>"+hdr.map(function(_,ci){var c=(rows[r]&&rows[r][ci]!=null)?rows[r][ci]:'';return "<td>"+esc(c)+"</td>"}).join('')+"</tr>";}
+  openDrawer("<div class='d-pre'>CSV data source</div><div class='d-name'>"+esc(sc.name||'source.csv')+"</div>"
+    +"<div class='srcview-cap'><b>"+esc(sc.name||'')+"</b> · "+(rows.length-1)+" data rows · "+hdr.length+" columns</div>"
+    +"<div class='srcview'><table>"+thead+tb+"</table></div>"
+    +"<button class='av-back' id='srcDl'>⤓ Download this CSV</button>");
+  var d=$('#drawer');if(d)d.classList.add('wide');
+  var dl=$('#srcDl');if(dl)dl.addEventListener('click',function(e){e.stopPropagation();downloadSource(i)});}
 function downloadSource(i){var sc=(A.sources||[])[i];if(!sc)return;
   var blob=new Blob([sc.text||''],{type:'text/csv'});var url=URL.createObjectURL(blob);
   var a=document.createElement('a');a.href=url;a.download=sc.name||('source'+i+'.csv');document.body.appendChild(a);a.click();

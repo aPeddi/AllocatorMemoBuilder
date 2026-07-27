@@ -191,6 +191,18 @@ def test_client_has_one_metric_implementation():
     assert "peak=1,mdd" not in synth, "inline drawdown reintroduced in synth — must use fundMetrics"
 
 
+def test_reruns_snap_from_screening_not_full_replay():
+    """A mandate change and a live-market refresh both change only downstream state
+    (screening/scoring, or the benchmark) — not the data, ingest or universe — so they
+    must re-run from screening via _snapStory, NOT replay Act 0 (acquire → normalize).
+    The live-refresh-while-settled branch is the one the user hit; pin both."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())
+    assert js.count("rerender(_snapStory)") >= 2, "mandate apply AND live refresh must snap via _snapStory"
+    assert "contains('settled')){rerender(_snapStory)" in js, "a live refresh while settled must snap, not full-replay Act 0"
+    # the CSV data panel opens an in-app table, not a raw new browser tab
+    assert "openSourceTable(" in js and "window.open(url" not in js, "CSV source must open as an in-drawer table, not window.open"
+
+
 def test_js_python_metric_parity():
     """FOUNDATIONAL guard against the whole class of bug we kept hitting: the client's
     JavaScript metric engine (fundMetrics) drifting from the Python engine (metrics.py).
