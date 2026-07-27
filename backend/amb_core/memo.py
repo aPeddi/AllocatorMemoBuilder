@@ -264,8 +264,7 @@ def _cli(argv=None) -> int:
     from .pipeline import load_mandate, run
 
     args = list(sys.argv[1:] if argv is None else argv)
-    funds_csv = args[0] if len(args) > 0 else "data/samples/funds.csv"
-    returns_csv = args[1] if len(args) > 1 else "data/samples/returns.csv"
+    dataset_csv = args[0] if len(args) > 0 else "data/samples/dataset.csv"
     mandate = load_mandate("data/mandates/default.yaml")
     s = get_settings()
     provider = None
@@ -276,7 +275,7 @@ def _cli(argv=None) -> int:
             provider = select_claims_provider()  # None -> deterministic template
         except Exception:  # noqa: BLE001
             provider = None
-    memo, ctx = run(funds_csv, returns_csv, mandate, provider)
+    memo, ctx = run(dataset_csv, mandate, provider)
     paths = export_all(memo, ctx, "exports")
     a = memo.audit
     print(f"✓ memo by {memo.generated_by}: {a['verified_count']}/{a['claim_count']} claims verified")

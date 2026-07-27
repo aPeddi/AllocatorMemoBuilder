@@ -13,6 +13,7 @@ def _fresh_settings():
     get_settings.cache_clear()
 
 
+SAMPLE_DATASET = "data/samples/dataset.csv"
 SAMPLE_FUNDS = "data/samples/funds.csv"
 SAMPLE_RETURNS = "data/samples/returns.csv"
 MANDATE = "data/mandates/default.yaml"
@@ -20,7 +21,7 @@ MANDATE = "data/mandates/default.yaml"
 
 @pytest.fixture(scope="session")
 def sample_run():
-    """Full deterministic pipeline on bundled sample data (template provider)."""
+    """Full deterministic pipeline on the bundled single-file sample (template provider)."""
     mandate = load_mandate(MANDATE)
-    memo, ctx = run(SAMPLE_FUNDS, SAMPLE_RETURNS, mandate)  # template provider
+    memo, ctx = run(SAMPLE_DATASET, mandate)  # single combined dataset · template provider
     return memo, ctx

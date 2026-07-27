@@ -12,7 +12,7 @@ from typing import Callable, Optional
 import yaml
 
 from .config import Settings, get_settings
-from .ingest import load_funds, load_returns
+from .ingest import load_dataset, load_funds, load_returns
 from .marketdata import fetch_risk_free_annual, resolve_benchmark
 from .memo import ClaimsProvider, generate, template_claims_provider
 from .metrics import compute_for_fund
@@ -27,14 +27,14 @@ def load_mandate(path: str | Path) -> Mandate:
 
 
 def run(
-    funds_csv: str | Path,
-    returns_csv: str | Path,
+    dataset: str | Path,
     mandate: Mandate,
     claims_provider: Optional[ClaimsProvider] = None,
     data_dir: str | Path = "data",
     benchmark_mode: Optional[str] = None,
     settings: Optional[Settings] = None,
     on_step: Optional[Callable[[str], None]] = None,
+    returns_csv: Optional[str | Path] = None,
 ) -> tuple[Memo, AnalysisContext]:
     # optional stage reporter so a caller (the CLI) can render live progress
     # without this module knowing anything about the terminal UI.
@@ -42,9 +42,16 @@ def run(
     # composition root: read config ONCE here and inject the values downstream,
     # rather than have deep modules reach into a global settings singleton.
     settings = settings or get_settings()
-    step("Ingesting funds & returns")
-    funds = load_funds(funds_csv)
-    series, quarantined = load_returns(returns_csv)
+    step("Ingesting dataset")
+    # single combined file is canonical; a separate returns_csv keeps the legacy
+    # two-file path working for callers that still have split exports.
+    if returns_csv is None:
+        funds, series, quarantined = load_dataset(dataset)
+        _src_paths: tuple = (dataset,)
+    else:
+        funds = load_funds(dataset)
+        series, quarantined = load_returns(returns_csv)
+        _src_paths = (dataset, returns_csv)
 
     step("Resolving benchmark")
     mode = benchmark_mode or settings.benchmark_mode
@@ -79,7 +86,7 @@ def run(
         metric_results=metric_results, shortlist=shortlist, mandate=mandate,
         quarantined=quarantined, series_by_fund=series,
         readiness=readiness, rf_used=rf_used, rf_source=rf_source,
-        sources=_read_sources(funds_csv, returns_csv),
+        sources=_read_sources(*_src_paths),
     )
     step("Drafting & verifying memo")
     memo = generate(ctx, claims_provider or template_claims_provider)

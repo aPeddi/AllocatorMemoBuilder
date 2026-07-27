@@ -1,0 +1,328 @@
+date,fund_id,monthly_return,name,strategy,aum_mm,inception_date,mgmt_fee_pct,redemption_freq,lockup_months,notice_days,notes
+2023-07-01,EQ-LS,0.019516,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-08-01,EQ-LS,-0.028345,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-09-01,EQ-LS,0.024979,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-10-01,EQ-LS,0.000698,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-11-01,EQ-LS,0.001199,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-12-01,EQ-LS,-0.040976,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-01-01,EQ-LS,0.018633,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-02-01,EQ-LS,0.020048,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-03-01,EQ-LS,0.016902,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-04-01,EQ-LS,0.018676,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-05-01,EQ-LS,0.029321,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-06-01,EQ-LS,0.050178,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-07-01,EQ-LS,0.008855,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-08-01,EQ-LS,-0.008151,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-09-01,EQ-LS,-0.024884,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-10-01,EQ-LS,-0.008113,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-11-01,EQ-LS,0.007198,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2024-12-01,EQ-LS,0.100593,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-01-01,EQ-LS,-0.012558,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-02-01,EQ-LS,-0.023543,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-03-01,EQ-LS,0.04037,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-04-01,EQ-LS,0.003101,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-05-01,EQ-LS,0.011011,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-06-01,EQ-LS,0.040935,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-07-01,EQ-LS,0.066041,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-08-01,EQ-LS,-0.002048,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-09-01,EQ-LS,-0.018606,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-10-01,EQ-LS,0.0002,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-11-01,EQ-LS,0.051745,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2025-12-01,EQ-LS,-0.059349,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-01-01,EQ-LS,0.022981,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-02-01,EQ-LS,-0.027761,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-03-01,EQ-LS,-0.071828,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-04-01,EQ-LS,0.008505,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-05-01,EQ-LS,-0.003407,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2026-06-01,EQ-LS,0.088488,Hudson Long/Short,Long/Short Equity,420,2016-03-01,1.5,Monthly,12,30,"Concentrated single-name L/S, net ~50%."
+2023-07-01,MAC,0.022402,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-08-01,MAC,-0.014738,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-09-01,MAC,-0.012756,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-10-01,MAC,-0.01353,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-11-01,MAC,0.03252,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-12-01,MAC,-0.025381,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-01-01,MAC,0.005983,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-02-01,MAC,0.025173,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-03-01,MAC,-0.018557,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-04-01,MAC,-0.002667,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-05-01,MAC,-0.048048,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-06-01,MAC,-0.016902,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-07-01,MAC,-0.006022,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-08-01,MAC,0.018567,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-09-01,MAC,0.03426,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-10-01,MAC,-0.004586,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-11-01,MAC,0.015158,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2024-12-01,MAC,0.021939,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-01-01,MAC,0.038017,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-02-01,MAC,0.030944,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-03-01,MAC,0.018097,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-04-01,MAC,-0.03831,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-05-01,MAC,0.029391,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-06-01,MAC,0.020945,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-07-01,MAC,0.049769,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-08-01,MAC,0.002037,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-09-01,MAC,0.067082,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-10-01,MAC,-0.003432,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-11-01,MAC,0.059933,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2025-12-01,MAC,-0.001465,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-01-01,MAC,-0.005274,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-02-01,MAC,-0.042384,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-03-01,MAC,-0.02301,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-04-01,MAC,0.042338,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-05-01,MAC,0.021349,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-06-01,MAC,0.033651,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2023-07-01,MN,-0.025935,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-08-01,MN,0.011043,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-09-01,MN,0.00932,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-10-01,MN,-0.00212,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-11-01,MN,-0.004916,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-12-01,MN,-0.000497,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-01-01,MN,0.024346,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-02-01,MN,-0.010363,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-03-01,MN,-0.002722,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-04-01,MN,0.019502,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-05-01,MN,-0.001931,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-06-01,MN,0.001147,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-07-01,MN,0.005551,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-08-01,MN,-0.011747,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-09-01,MN,0.003878,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-10-01,MN,-0.013898,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-11-01,MN,0.014077,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2024-12-01,MN,0.005888,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-01-01,MN,0.030395,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-02-01,MN,0.006031,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-03-01,MN,0.020485,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-04-01,MN,-0.01601,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-05-01,MN,0.000732,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-06-01,MN,0.007881,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-07-01,MN,0.025814,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-08-01,MN,-0.017812,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-09-01,MN,0.015635,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-10-01,MN,0.010555,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-11-01,MN,0.023063,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2025-12-01,MN,0.008944,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-01-01,MN,0.004803,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-02-01,MN,-0.006767,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-03-01,MN,-0.017973,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-04-01,MN,0.00388,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-05-01,MN,-0.001461,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2026-06-01,MN,0.029114,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+2023-07-01,ED,-0.010114,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-08-01,ED,0.007996,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-09-01,ED,-0.028684,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-10-01,ED,0.009426,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-11-01,ED,0.007626,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-12-01,ED,-0.005773,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-01-01,ED,0.039644,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-02-01,ED,-0.000995,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-03-01,ED,-0.02155,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-04-01,ED,0.015943,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-05-01,ED,0.019221,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-06-01,ED,0.035477,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-07-01,ED,0.002514,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-08-01,ED,0.029357,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-09-01,ED,-0.006832,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-10-01,ED,0.000433,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-11-01,ED,0.034616,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2024-12-01,ED,0.040485,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-01-01,ED,0.01118,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-02-01,ED,0.045842,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-03-01,ED,0.019146,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-04-01,ED,-0.027383,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-05-01,ED,0.001318,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-06-01,ED,0.043182,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-07-01,ED,0.022796,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-08-01,ED,0.010756,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-09-01,ED,0.035393,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-10-01,ED,-0.001089,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-11-01,ED,-0.01575,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2025-12-01,ED,-0.00935,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-01-01,ED,0.019523,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-02-01,ED,-0.034722,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-03-01,ED,-0.025037,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-04-01,ED,0.005927,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-05-01,ED,-0.031684,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2026-06-01,ED,0.030833,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.
+2023-07-01,CR,-0.000563,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-08-01,CR,-0.020191,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-09-01,CR,0.009542,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-10-01,CR,0.011219,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-11-01,CR,-0.008615,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-12-01,CR,-0.005001,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-01-01,CR,0.01506,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-02-01,CR,-0.007671,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-03-01,CR,0.007564,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-04-01,CR,0.02053,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-05-01,CR,-0.004077,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-06-01,CR,0.022803,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-07-01,CR,0.011428,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-08-01,CR,0.039233,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-09-01,CR,-0.032241,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-10-01,CR,0.003014,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-11-01,CR,0.002178,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2024-12-01,CR,0.017247,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-01-01,CR,0.032992,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-02-01,CR,0.002675,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-03-01,CR,0.043597,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-04-01,CR,-0.018985,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-05-01,CR,0.005745,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-06-01,CR,0.002154,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-07-01,CR,0.003465,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-08-01,CR,0.00223,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-09-01,CR,0.003998,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-10-01,CR,0.00983,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-11-01,CR,-0.018774,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2025-12-01,CR,0.021513,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-01-01,CR,0.007888,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-02-01,CR,0.013105,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-03-01,CR,-0.040581,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-04-01,CR,0.001561,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-05-01,CR,0.041171,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2026-06-01,CR,0.000809,Tribeca Structured Credit,Structured Credit,540,2013-11-01,1.5,Quarterly,24,60,Securitized + corporate credit.
+2023-07-01,MS,-0.017404,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-08-01,MS,-0.004574,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-09-01,MS,0.010662,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-10-01,MS,0.026563,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-11-01,MS,0.021856,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-12-01,MS,-0.021381,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-01-01,MS,-0.011397,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-02-01,MS,-0.004501,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-03-01,MS,0.019746,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-04-01,MS,0.014144,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-05-01,MS,-0.017938,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-06-01,MS,0.023635,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-07-01,MS,0.035716,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-08-01,MS,0.037312,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-09-01,MS,0.002035,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-10-01,MS,-0.005851,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-11-01,MS,-0.007683,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2024-12-01,MS,0.014644,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-01-01,MS,0.007113,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-02-01,MS,0.01117,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-03-01,MS,0.022298,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-04-01,MS,-0.023788,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-05-01,MS,-0.015246,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-06-01,MS,0.002634,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-07-01,MS,0.003358,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-08-01,MS,0.011018,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-09-01,MS,-0.02064,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-10-01,MS,0.005043,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-11-01,MS,0.02442,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2025-12-01,MS,0.009575,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-01-01,MS,0.015748,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-02-01,MS,-0.004036,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-03-01,MS,-0.04105,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-04-01,MS,-0.01418,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-05-01,MS,-0.018066,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2026-06-01,MS,0.04098,Manhattan Multi-Strategy,Multi-Strategy,900,2012-04-01,2.0,Quarterly,12,45,"Multi-PM platform, tight risk."
+2023-07-01,VEN,0.065018,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-08-01,VEN,0.033441,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-09-01,VEN,0.206508,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-10-01,VEN,0.03769,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-11-01,VEN,0.043254,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-12-01,VEN,-0.030987,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-01-01,VEN,0.011346,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-02-01,VEN,0.139343,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-03-01,VEN,0.092809,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-04-01,VEN,-0.068075,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-05-01,VEN,-0.003383,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-06-01,VEN,0.084024,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-07-01,VEN,0.084785,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-08-01,VEN,-0.065231,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-09-01,VEN,-0.154036,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-10-01,VEN,-0.144276,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-11-01,VEN,0.01691,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2024-12-01,VEN,0.058107,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-01-01,VEN,0.0336,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-02-01,VEN,-0.039287,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-03-01,VEN,-0.040717,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-04-01,VEN,-0.169051,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-05-01,VEN,0.018304,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-06-01,VEN,0.053263,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-07-01,VEN,0.106152,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-08-01,VEN,0.048902,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-09-01,VEN,0.015009,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-10-01,VEN,0.102208,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-11-01,VEN,0.034702,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2025-12-01,VEN,-0.073536,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-01-01,VEN,0.002979,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-02-01,VEN,-0.085227,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-03-01,VEN,-0.224852,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-04-01,VEN,-0.004,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-05-01,VEN,-0.010897,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2026-06-01,VEN,0.024943,SoHo Venture I,Venture,180,2019-02-01,2.5,Illiquid,60,90,"Early-stage; illiquid, quarterly marks."
+2023-07-01,RA,-0.012822,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-08-01,RA,0.008502,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-09-01,RA,0.036235,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-10-01,RA,0.013642,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-11-01,RA,-0.008475,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-12-01,RA,-0.028643,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-01-01,RA,0.006491,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-02-01,RA,-0.025504,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-03-01,RA,-0.002034,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-04-01,RA,0.006188,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-05-01,RA,0.04343,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-06-01,RA,0.037978,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-07-01,RA,0.032945,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-08-01,RA,-0.009367,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-09-01,RA,0.006831,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-10-01,RA,-0.033086,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-11-01,RA,0.012965,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2024-12-01,RA,0.029474,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-01-01,RA,-0.011366,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-02-01,RA,0.041952,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-03-01,RA,0.021926,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-04-01,RA,-0.054277,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-05-01,RA,0.010241,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-06-01,RA,0.001872,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-07-01,RA,0.015218,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-08-01,RA,0.009467,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-09-01,RA,0.016295,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-10-01,RA,-0.034032,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-11-01,RA,-0.009205,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2025-12-01,RA,0.003824,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-01-01,RA,0.037095,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-02-01,RA,0.021017,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-03-01,RA,0.004094,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-04-01,RA,-0.045904,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-05-01,RA,0.006426,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2026-06-01,RA,-0.0231,Battery Real Assets,Real Assets,350,2017-08-01,1.5,Annual,36,90,Infra + real estate.
+2023-07-01,DA,0.181315,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2023-08-01,DA,0.030132,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2023-09-01,DA,-0.11994,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2023-10-01,DA,0.270596,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2023-11-01,DA,0.075547,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2023-12-01,DA,-0.277283,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-01-01,DA,0.061827,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-02-01,DA,-0.083262,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-03-01,DA,0.012127,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-04-01,DA,-0.033314,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-05-01,DA,0.175228,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-06-01,DA,-0.082129,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-07-01,DA,0.081973,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-08-01,DA,0.217128,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-09-01,DA,-0.119235,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-10-01,DA,-0.02002,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-11-01,DA,0.047123,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2024-12-01,DA,0.006531,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-01-01,DA,0.085118,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-02-01,DA,0.016534,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-03-01,DA,-0.063499,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-04-01,DA,0.12693,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-05-01,DA,0.081815,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-06-01,DA,0.019698,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-07-01,DA,-0.01127,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-08-01,DA,-0.087674,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-09-01,DA,0.16734,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-10-01,DA,0.008891,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-11-01,DA,0.104384,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2025-12-01,DA,-0.068804,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-01-01,DA,0.110091,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-02-01,DA,-0.082942,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-03-01,DA,-0.045853,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-04-01,DA,-0.041325,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-05-01,DA,0.053401,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+2026-06-01,DA,0.132867,Chelsea Digital Assets,Digital Assets,120,2020-10-01,2.0,Daily,0,5,Liquid crypto; very high vol.
+,MAC,0.01,Gotham Global Macro,Global Macro,610,2014-09-01,2.0,Monthly,0,15,Discretionary rates + FX.
+2026-06-01,MN,,Empire Market Neutral,Market Neutral,300,2018-01-01,1.25,Monthly,0,30,Beta-neutral quant equity.
+not-a-date,ED,,Liberty Event-Driven,Event-Driven,275,2015-06-01,1.75,Quarterly,12,45,Merger arb + special situations.

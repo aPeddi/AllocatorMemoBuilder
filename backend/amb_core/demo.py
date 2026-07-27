@@ -41,9 +41,9 @@ def _human_size(p: Path) -> str:
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     s = get_settings()
-    funds_csv, returns_csv = SAMPLES / "funds.csv", SAMPLES / "returns.csv"
-    if not (funds_csv.exists() and returns_csv.exists()):
-        print(f"! sample data missing (expected {funds_csv}). Run: python data/samples/generate.py")
+    dataset_csv = SAMPLES / "dataset.csv"
+    if not dataset_csv.exists():
+        print(f"! sample data missing (expected {dataset_csv}). Run: python data/samples/generate.py")
         return 1
     mandate = load_mandate(MANDATE) if MANDATE.exists() else None
     if mandate is None:
@@ -63,12 +63,12 @@ def main(argv=None) -> int:
             print(f"! LLM unavailable ({e}); falling back to template.")
 
     try:
-        return _rich_run(mandate, funds_csv, returns_csv, provider, label, s)
+        return _rich_run(mandate, dataset_csv, provider, label, s)
     except ImportError:
-        return _plain_run(mandate, funds_csv, returns_csv, provider, label, s)
+        return _plain_run(mandate, dataset_csv, provider, label, s)
 
 
-def _rich_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
+def _rich_run(mandate, dataset_csv, provider, label, s) -> int:
     from rich.console import Console, Group
     from rich.panel import Panel
     from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
@@ -100,7 +100,7 @@ def _rich_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
         def on_step(lbl: str) -> None:
             prog.update(task, description=lbl)
 
-        memo, ctx = run(funds_csv, returns_csv, mandate, provider, on_step=on_step)
+        memo, ctx = run(dataset_csv, mandate, provider, on_step=on_step)
         prog.update(task, description="Exporting artifacts")
         exports = export_all(memo, ctx, "exports")
 
@@ -156,10 +156,10 @@ def _rich_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
     return 0
 
 
-def _plain_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
+def _plain_run(mandate, dataset_csv, provider, label, s) -> int:
     """Fallback when rich is unavailable — the original plain output."""
     print(f"▸ Generating memo — {label}\n")
-    memo, ctx = run(funds_csv, returns_csv, mandate, provider)
+    memo, ctx = run(dataset_csv, mandate, provider)
     print(f"Mandate: {mandate.name}")
     b = ctx.benchmark
     if b is not None:

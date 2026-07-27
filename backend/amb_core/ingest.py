@@ -107,57 +107,115 @@ def redemption_to_days(freq: Optional[str], lockup_months: Optional[float] = Non
     return round(float(base) + float(notice_days or 0), 1)
 
 
+# fund-metadata column synonyms — one source, shared by load_funds and load_dataset
+_FUND_COLS = {
+    "id": ["fund_id", "fund", "id", "ticker", "symbol"],
+    "name": ["name", "fund_name"],
+    "strategy": ["strategy", "style", "asset_class", "category"],
+    "aum": ["aum_mm", "aum", "assets"],
+    "inc": ["inception", "inception_date", "since"],
+    "fee": ["mgmt_fee_pct", "fee", "management_fee", "expense"],
+    "notes": ["notes", "note", "comment", "description"],
+    "redf": ["redemption_freq", "redemption", "liquidity", "liquidity_terms", "dealing"],
+    "lock": ["lockup_months", "lockup", "lock_up", "lock"],
+    "notice": ["notice_days", "notice", "notice_period"],
+}
+
+
+def _fund_colmap(cols: list[str]) -> dict[str, Optional[str]]:
+    return {role: _find_col(cols, cands) for role, cands in _FUND_COLS.items()}
+
+
+def _fund_from_row(r, cm: dict[str, Optional[str]], source_ref: str) -> Fund:
+    def g(role: str):
+        c = cm.get(role)
+        return None if (c is None or pd.isna(r[c])) else r[c]
+
+    def gf(role: str) -> Optional[float]:
+        v = g(role)
+        try:
+            return float(v) if v is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    idv = g("id")
+    redf = (str(g("redf")).strip() if g("redf") is not None else None)
+    lock, notice = gf("lock"), gf("notice")
+    fee, aum = g("fee"), g("aum")
+    inc = _parse_date(g("inc")) if cm.get("inc") else None
+    return Fund(
+        fund_id=str(idv).strip(),
+        name=str(g("name") or idv).strip(),
+        strategy=str(g("strategy") or "Unclassified").strip(),
+        aum_mm=float(aum) if aum is not None else None,
+        inception=inc,
+        mgmt_fee_pct=float(fee) if fee is not None else None,
+        notes=(str(g("notes")) if g("notes") is not None else None),
+        redemption_freq=redf,
+        lockup_months=lock,
+        notice_days=notice,
+        redemption_days=redemption_to_days(redf, lock, notice),
+        source_ref=source_ref,
+    )
+
+
 def load_funds(path: str | Path) -> list[Fund]:
     df = pd.read_csv(path)
+    cm = _fund_colmap(list(df.columns))
+    if cm["id"] is None:
+        raise ValueError(f"funds CSV needs a fund id column; got {list(df.columns)}")
+    return [_fund_from_row(r, cm, f"funds.csv:row={int(i)}") for i, r in df.iterrows()]
+
+
+def load_dataset(path: str | Path) -> tuple[list[Fund], dict[str, ReturnSeries], list[dict]]:
+    """One combined CSV → (funds, return-series, quarantined). The single-file
+    canonical input: a long file with date/fund/return columns plus optional
+    per-fund metadata columns (name, strategy, fee, liquidity terms …). Metadata is
+    read from the first row seen per fund; returns are parsed and quarantined exactly
+    as the two-file path does, so a merged sample reproduces it identically."""
+    df = pd.read_csv(path)
     cols = list(df.columns)
-    c_id = _find_col(cols, ["fund_id", "fund", "id", "ticker", "symbol"])
-    c_name = _find_col(cols, ["name", "fund_name"])
-    c_strat = _find_col(cols, ["strategy", "style", "asset_class", "category"])
-    c_aum = _find_col(cols, ["aum_mm", "aum", "assets"])
-    c_inc = _find_col(cols, ["inception", "inception_date", "since"])
-    c_fee = _find_col(cols, ["mgmt_fee_pct", "fee", "management_fee", "expense"])
-    c_notes = _find_col(cols, ["notes", "note", "comment", "description"])
-    c_redf = _find_col(cols, ["redemption_freq", "redemption", "liquidity", "liquidity_terms", "dealing"])
-    c_lock = _find_col(cols, ["lockup_months", "lockup", "lock_up", "lock"])
-    c_notice = _find_col(cols, ["notice_days", "notice", "notice_period"])
-    if not c_id:
-        raise ValueError(f"funds CSV needs a fund id column; got {cols}")
+    date_col = _find_col(cols, ["date", "period", "month", "asof", "as_of"])
+    fund_col = _find_col(cols, ["fund_id", "fund", "ticker", "symbol", "id"])
+    ret_col = _find_col(cols, ["monthly_return", "return", "ret", "performance", "value"])
+    if not (date_col and fund_col and ret_col):
+        raise ValueError(
+            f"dataset CSV needs date/fund/return columns; detected "
+            f"date={date_col}, fund={fund_col}, return={ret_col} from {cols}"
+        )
+    cm = _fund_colmap(cols)
+    name = Path(path).name
 
     funds: list[Fund] = []
+    seen: set[str] = set()
     for i, r in df.iterrows():
-        def g(c):
-            return None if (c is None or pd.isna(r[c])) else r[c]
+        fid = str(r[fund_col]).strip()
+        if not fid or fid.lower() == "nan" or fid in seen:
+            continue
+        seen.add(fid)
+        funds.append(_fund_from_row(r, cm, f"{name}:row={int(i)}"))
 
-        def gf(c):
-            v = g(c)
-            try:
-                return float(v) if v is not None else None
-            except (TypeError, ValueError):
-                return None
+    rows: list[tuple[str, date, float]] = []
+    quarantined: list[dict] = []
+    for i, r in df.iterrows():
+        d = _parse_date(r[date_col])
+        f = str(r[fund_col]).strip()
+        v = normalize_return(r[ret_col])
+        if d is None or v is None or f == "" or f.lower() == "nan":
+            quarantined.append({"row": int(i), "reason": "unparseable date/fund/return", "raw": dict(r)})
+            continue
+        rows.append((f, d, v))
 
-        fee = g(c_fee)
-        aum = g(c_aum)
-        inc = _parse_date(g(c_inc)) if c_inc else None
-        redf = (str(g(c_redf)).strip() if g(c_redf) is not None else None)
-        lock = gf(c_lock)
-        notice = gf(c_notice)
-        funds.append(
-            Fund(
-                fund_id=str(r[c_id]).strip(),
-                name=str(g(c_name) or r[c_id]).strip(),
-                strategy=str(g(c_strat) or "Unclassified").strip(),
-                aum_mm=float(aum) if aum is not None else None,
-                inception=inc,
-                mgmt_fee_pct=float(fee) if fee is not None else None,
-                notes=(str(g(c_notes)) if g(c_notes) is not None else None),
-                redemption_freq=redf,
-                lockup_months=lock,
-                notice_days=notice,
-                redemption_days=redemption_to_days(redf, lock, notice),
-                source_ref=f"funds.csv:row={int(i)}",
-            )
+    by_fund: dict[str, ReturnSeries] = {}
+    for f in sorted({x[0] for x in rows}):
+        pts = sorted([(d, v) for (ff, d, v) in rows if ff == f])
+        freq, ppy = infer_frequency([d for d, _ in pts])
+        by_fund[f] = ReturnSeries(
+            fund_id=f, frequency=freq, periods_per_year=ppy,
+            points=[ReturnPoint(period=d, value=v) for d, v in pts],
+            source_hash=content_hash([v for _, v in pts]),
         )
-    return funds
+    return funds, by_fund, quarantined
 
 
 def _cli(argv=None) -> int:

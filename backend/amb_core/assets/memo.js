@@ -822,7 +822,8 @@ function openSourcePop(anchor){var pop=$('#srcpop');if(!pop)return;var r=anchor.
   var list=srcs.length?srcs.map(function(sc,i){
       return "<div class='srcrow' data-i='"+i+"' title='Open "+esc(sc.name)+" in a new tab'>"
         +"<span class='srcic'>▤</span><div class='srctx'><b>"+esc(sc.name)+"</b><i>"+(sc.rows!=null?sc.rows+" data rows":"csv")+"</i></div>"
-        +"<span class='srcopen' data-i='"+i+"'>↗ open</span></div>";
+        +"<span class='srcopen' data-i='"+i+"'>↗ open</span>"
+        +"<span class='srcdl' data-dl='"+i+"' title='Download "+esc(sc.name)+"'>⤓</span></div>";
     }).join('')
     :"<div class='srcempty'>This view was re-run from an uploaded file, so no embedded source is attached. Load CSVs below to make them the source of truth.</div>";
   pop.innerHTML="<div class='pop-card srccard'>"
@@ -831,11 +832,16 @@ function openSourcePop(anchor){var pop=$('#srcpop');if(!pop)return;var r=anchor.
     +"<div class='pop-opt' id='srcup'><span class='pi'>⤒</span><div class='pt'><b>Load your own CSVs</b><i>select one or more · funds &amp; returns</i></div></div>"
     +"</div>";
   pop.style.top=(r.bottom+8)+'px';pop.style.right=(window.innerWidth-r.right)+'px';pop.classList.add('on');
+  $$('.srcdl',pop).forEach(function(d){d.addEventListener('click',function(e){e.stopPropagation();downloadSource(+d.dataset.dl)})});
   $$('.srcrow',pop).forEach(function(row){row.addEventListener('click',function(e){e.stopPropagation();openSourceTab(+row.dataset.i)})});
   var up=$('#srcup',pop);if(up)up.addEventListener('click',function(){pop.classList.remove('on');var ui=$('#upInput');if(ui)ui.click()});}
 function openSourceTab(i){var sc=(A.sources||[])[i];if(!sc)return;
   var blob=new Blob([sc.text||''],{type:'text/plain'});var url=URL.createObjectURL(blob);
   window.open(url,'_blank');setTimeout(function(){URL.revokeObjectURL(url)},8000);}
+function downloadSource(i){var sc=(A.sources||[])[i];if(!sc)return;
+  var blob=new Blob([sc.text||''],{type:'text/csv'});var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download=sc.name||('source'+i+'.csv');document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove()},600);}
 /* ── minimal vector-PDF writer (crisp, dependency-free, downloads directly) ── */
 function _pesc(s){return String(s).replace(/[—–]/g,'-').replace(/·/g,'|').replace(/≤/g,'<=').replace(/≥/g,'>=').replace(/[→▸]/g,'>').replace(/✓/g,'').replace(/[^\x20-\x7e]/g,'').replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')}
 function _cw(s,sz,mono){return mono?String(s).length*sz*0.6:String(s).length*sz*0.5}
@@ -906,6 +912,14 @@ function downloadPDF(){
 function _pmean(a){return a.reduce(function(s,x){return s+x},0)/a.length}
 function _ppstd(a){var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/a.length)}
 function _psstd(a){if(a.length<2)return 0;var m=_pmean(a);return Math.sqrt(a.reduce(function(s,x){return s+(x-m)*(x-m)},0)/(a.length-1))}
+// robust axis range (Tukey fences) so one outlier fund can't crush the cluster to an
+// edge — the bulk spreads across the field and extremes clamp to the margins.
+function _axis(vals){var a=vals.filter(function(v){return v!=null&&isFinite(v)}).slice().sort(function(x,y){return x-y});var n=a.length;
+  if(!n)return {lo:0,hi:1};if(n<4)return {lo:a[0],hi:(a[n-1]>a[0]?a[n-1]:a[0]+1)};
+  function q(p){var i=(n-1)*p,lo=Math.floor(i),h=Math.ceil(i);return a[lo]+(a[h]-a[lo])*(i-lo)}
+  var q1=q(0.25),q3=q(0.75),iqr=(q3-q1)||Math.abs(q(0.5))||1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
+  return {lo:lo,hi:(hi>lo?hi:lo+1)};}
+function _pos(v,ax){var t=(v-ax.lo)/((ax.hi-ax.lo)||1);return t<0?0:(t>1?1:t)}
 /* ── one client-side scoring core, shared by screenAndScore, reweigh and the CSV
    recompute so the z-score basis can't drift between them. acc(item,key) reads a
    metric off whatever the caller holds (a fund object or a metrics dict); callers
@@ -925,31 +939,205 @@ function parseCSV(t){var out=[];t.replace(/\r/g,'').split('\n').forEach(function
 function _findCol(hdr,cands){for(var i=0;i<cands.length;i++){var j=hdr.indexOf(cands[i]);if(j>=0)return j}for(var k=0;k<hdr.length;k++){for(var c=0;c<cands.length;c++){if(hdr[k].indexOf(cands[c])>=0)return k}}return -1}
 function _normRet(raw){if(raw==null)return null;var s=String(raw).trim();if(!s||['na','n/a','nan','null','none','-'].indexOf(s.toLowerCase())>=0)return null;var pct=s.indexOf('%')>=0;s=s.replace(/%/g,'').replace(/,/g,'').replace(/\s/g,'');var v=parseFloat(s);if(isNaN(v)||!isFinite(v))return null;if(pct)return v/100;return Math.abs(v)>1.5?v/100:v}
 function _validDate(s){if(s==null)return false;s=String(s).trim();if(!s||s.toLowerCase()==='nan')return false;return !isNaN(Date.parse(s))}
+/* ══ schema detection + normalization ══════════════════════════════════════════
+   Turns an arbitrary CSV into the canonical long records, handling long OR wide
+   matrices, messy value units (decimal/percent/bps) and ambiguous date formats.
+   Detection is deterministic and lives ONLY here; the AI (served mode) merely
+   refines these same proposals — it never parses values. Clean files skip the UI
+   entirely (see ingestFiles); ambiguous/wide ones open the mapping-review panel. */
+var _NAVOC=['na','n/a','nan','null','none','-','--',''];
+function _looksNum(s){s=String(s==null?'':s);if(!/\d/.test(s))return false;var v=parseFloat(s.replace(/[%,\s]/g,''));return !isNaN(v)&&isFinite(v)}
+function _looksDate(s){s=String(s==null?'':s).trim();if(!s)return false;
+  if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(s))return true;
+  if(/^\d{4}[\/\-]\d{1,2}([\/\-]\d{1,2})?$/.test(s))return true;
+  if(/[A-Za-z]{3}/.test(s)&&/\d{4}/.test(s)){var t0=Date.parse(s);if(!isNaN(t0))return true}
+  return false;}
+function _isoStr(s,order){s=String(s==null?'':s).trim();if(!s)return null;
+  var m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){var a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=2000;var mo=(order==='dmy')?b:a,da=(order==='dmy')?a:b;
+    if(mo>=1&&mo<=12&&da>=1&&da<=31)return y+'-'+('0'+mo).slice(-2)+'-'+('0'+da).slice(-2);return null;}
+  var t=Date.parse(s);if(isNaN(t))return null;var d=new Date(t);
+  return d.getUTCFullYear()+'-'+('0'+(d.getUTCMonth()+1)).slice(-2)+'-'+('0'+d.getUTCDate()).slice(-2);}
+function _normVal(raw,unit){if(raw==null)return null;var s=String(raw).trim();
+  if(_NAVOC.indexOf(s.toLowerCase())>=0)return null;var hadPct=s.indexOf('%')>=0;
+  s=s.replace(/%/g,'').replace(/,/g,'').replace(/\s/g,'');var v=parseFloat(s);if(isNaN(v)||!isFinite(v))return null;
+  if(hadPct||unit==='percent')return v/100;if(unit==='bps')return v/10000;
+  return unit==='decimal'?v:(Math.abs(v)>1.5?v/100:v);}   // 'auto' fallback mirrors _normRet
+// unit sniff over a bag of raw numeric cells → {unit, confident}
+function _sniffUnit(cells){var pctN=0,tot=0,mags=[];cells.forEach(function(c){c=String(c);var v=parseFloat(c.replace(/[%,\s]/g,''));if(isNaN(v)||!isFinite(v))return;tot++;if(c.indexOf('%')>=0)pctN++;mags.push(Math.abs(v))});
+  if(!mags.length)return {unit:'auto',confident:false};
+  if(pctN/tot>=0.5)return {unit:'percent',confident:true};   // MOST cells carry % (a lone stray % is handled per-cell)
+  mags.sort(function(a,b){return a-b});var med=mags[Math.floor(mags.length/2)];
+  if(med<0.4)return {unit:'decimal',confident:true};
+  if(med>=40)return {unit:'bps',confident:false};
+  return {unit:'percent',confident:false};}   // 0.4–40 → percent points, but worth confirming
+function _colStats(rows){var header=rows[0]||[],body=rows.slice(1).filter(function(r){return r.some(function(c){return String(c).trim()!==''})}).slice(0,80);
+  return header.map(function(h,c){var vals=body.map(function(r){return r[c]==null?'':String(r[c]).trim()}).filter(function(v){return v!==''});
+    var dn=vals.filter(_looksDate).length,nn=vals.filter(_looksNum).length;
+    var kind=!vals.length?'empty':(dn/vals.length>=0.7?'date':(nn/vals.length>=0.7?'num':'text'));
+    return {idx:c,name:String(h||('col'+(c+1))).trim(),kind:kind,n:vals.length,sample:vals.slice(0,3),raw:vals};});}
+var _AGG=/^(total|sum|average|avg|mean|benchmark|index|all\s|composite)/i;
+function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h){return String(h||'').toLowerCase().trim()});
+  var dateCols=cols.filter(function(c){return c.kind==='date'}),numCols=cols.filter(function(c){return c.kind==='num'}),textCols=cols.filter(function(c){return c.kind==='text'});
+  // header-keyword hints (long)
+  var iRet=_findCol(hdr,['monthly_return','return','ret','performance','perf','net']),iId=_findCol(hdr,['fund_id','fund','ticker','symbol','id']),iDt=_findCol(hdr,['date','period','month','asof','as_of','nav']),iNm=_findCol(hdr,['name']),iSt=_findCol(hdr,['strategy','style','asset_class','category']);
+  var out={cols:cols,warnings:[]};
+  // a keyword can match the wrong column ('month' inside 'monthly_return'); only trust
+  // the date/return keywords when that column is actually the right cell TYPE.
+  var _dtOk=(iDt>=0&&cols[iDt]&&cols[iDt].kind==='date');
+  var _retOk=(iRet>=0&&cols[iRet]&&cols[iRet].kind==='num');
+  var dateCol=dateCols.length?dateCols[0].idx:(_dtOk?iDt:-1);
+  // ambiguous DD/MM vs MM/DD?
+  out.dateOrder='mdy';out.dateAmbiguous=false;
+  if(dateCol>=0){var dc=cols[dateCol]||cols.filter(function(c){return c.idx===dateCol})[0];var dsamp=(dc&&dc.raw)||[];
+    if(dsamp.some(function(v){var m=String(v).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-]/);return m&&+m[1]<=12&&+m[2]<=12}))out.dateAmbiguous=true;}
+  var _idText=(iId>=0&&cols[iId]&&cols[iId].kind!=='num');   // a real per-row fund-id column ⇒ long file, not a matrix
+  if(dateCol>=0&&numCols.length>=2&&!(_idText&&_retOk)){   // ── WIDE matrix (date + many numeric, no fund-id column) ──
+    out.shape='wide';out.dateCol=dateCol;
+    out.series=numCols.filter(function(c){return c.idx!==dateCol}).map(function(c){return {idx:c.idx,name:c.name,agg:_AGG.test(c.name)}});
+    out.excluded=textCols.filter(function(c){return c.idx!==dateCol}).map(function(c){return {idx:c.idx,name:c.name,reason:'non-numeric'}});
+    var bag=[];out.series.forEach(function(s){(cols.filter(function(c){return c.idx===s.idx})[0].raw||[]).forEach(function(v){bag.push(v)})});
+    var u=_sniffUnit(bag);out.unit=u.unit;out.unitConfident=u.confident;
+    if(out.series.some(function(s){return s.agg}))out.warnings.push('Some columns ('+out.series.filter(function(s){return s.agg}).map(function(s){return s.name}).join(', ')+') look like aggregates/benchmarks, not funds.');
+    out.confident=false;   // wide always confirms (which columns are funds, what unit)
+    return out;}
+  if((iId>=0||textCols.length>=1)&&(iRet>=0||numCols.length>=1)&&dateCol>=0){   // ── LONG ──
+    out.shape='long';out.map={date:dateCol,id:(iId>=0?iId:(textCols[0]?textCols[0].idx:-1)),ret:(iRet>=0?iRet:(numCols.filter(function(c){return c.idx!==dateCol})[0]||{}).idx),name:(iNm>=0?iNm:-1),strategy:(iSt>=0?iSt:-1)};
+    var rc=cols.filter(function(c){return c.idx===out.map.ret})[0];var u2=_sniffUnit((rc&&rc.raw)||[]);out.unit=u2.unit;out.unitConfident=u2.confident;
+    // confident (skip panel) only when the date & return keywords land on the right
+    // column TYPES, the id is named, and unit/date are unambiguous.
+    out.confident=(_dtOk&&_retOk&&iId>=0&&out.unitConfident&&!out.dateAmbiguous);
+    return out;}
+  if(iNm>=0&&iSt>=0&&(iId>=0||textCols.length)&&iRet<0&&numCols.length<=1){   // ── METADATA only ──
+    out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt};out.confident=true;return out;}
+  out.shape='unknown';out.confident=false;
+  out.warnings.push('Could not find a date column and at least one return series.');
+  return out;}
+// apply a confirmed mapping → append to ret{}/order[]; returns quarantined count
+function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.order,ret=acc.ret;
+  function push(id,dstr,val){if(!id||val==null){quar++;return}var iso=_isoStr(dstr,det.dateOrder);if(iso==null){quar++;return}if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val})}
+  if(det.shape==='wide'){var use=det.series.filter(function(s){return !s.excludedByUser});
+    body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,_normVal(r[s.idx],det.unit))})});
+  }else if(det.shape==='long'){var m=det.map;
+    body.forEach(function(r){push(String(r[m.id]||'').trim(),r[m.date],_normVal(r[m.ret],det.unit))});
+    if(m.name>=0||m.strategy>=0)body.forEach(function(r){var id=String(r[m.id]||'').trim();if(id&&!acc.funds[id])acc.funds[id]={name:(m.name>=0?String(r[m.name]||id).trim():id),strategy:(m.strategy>=0?String(r[m.strategy]||'').trim():'')}});}
+  return quar;}
+function finalizeIngest(acc){var ids=Object.keys(acc.ret);
+  if(ids.length<2){showIngestError(acc._failed&&acc._failed[0],acc);return}   // not enough usable returns → explain, don't silently toast
+  ids.forEach(function(id){acc.ret[id].sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0})});
+  A.sources=acc.srcFiles||[];   // ONLY successfully-ingested files become the panel's source of truth
+  recompute(acc.funds,acc.ret,acc.order,acc.quar);}
 function ingestFiles(list){var files=[].slice.call(list||[]);if(!files.length)return;
   toast("reading "+files.length+" file"+(files.length>1?'s':'')+"…");
   Promise.all(files.map(function(f){return f.text()})).then(function(all){
-    // uploaded files become the new source of truth shown in the CSV panel
-    A.sources=files.map(function(f,i){var t=all[i]||'';return {name:f.name,text:t,rows:Math.max(0,t.replace(/\n+$/,'').split('\n').length-1)}});
-    var funds={},ret={},order=[],quar=0;
-    all.forEach(function(txt){var rows=parseCSV(txt);if(rows.length<2)return;var hdr=rows[0].map(function(h){return h.toLowerCase().trim()});
-      var iId=_findCol(hdr,['fund_id','fund','ticker','symbol','id']),iNm=_findCol(hdr,['name']),iSt=_findCol(hdr,['strategy']);
-      var iRet=_findCol(hdr,['monthly_return','return','ret','performance']),iDt=_findCol(hdr,['date','period','month','asof','as_of']);
-      if(iNm>=0&&iSt>=0&&iId>=0&&iRet<0){rows.slice(1).forEach(function(r){var id=(r[iId]||'').trim();if(id)funds[id]={name:(r[iNm]||id).trim(),strategy:(r[iSt]||'').trim()}})}
-      else if(iId>=0&&iRet>=0){rows.slice(1).forEach(function(r){var id=(r[iId]||'').trim();var dt=iDt>=0?(r[iDt]||'').trim():'x';var v=_normRet(r[iRet]);
-        if(!id||id.toLowerCase()==='nan'||v==null||(iDt>=0&&!_validDate(dt))){quar++;return}   // mirror the engine: quarantine, never silently keep bad rows
-        if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:dt,v:v})})}
+    var srcMeta=files.map(function(f,i){var t=all[i]||'';return {name:f.name,text:t,rows:Math.max(0,t.replace(/\n+$/,'').split('\n').length-1)}});
+    var acc={funds:{},ret:{},order:[],quar:0,srcFiles:[],_failed:[]};var ambiguous=[];
+    all.forEach(function(txt,fi){var rows=parseCSV(txt);if(rows.length<2){acc._failed.push({shape:'unknown',cols:[],_file:files[fi].name,warnings:['File has no data rows.']});return}
+      var det=detectSchema(rows);det._file=files[fi].name;det._rows=rows;det._src=srcMeta[fi];
+      if(det.shape==='meta'){rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.funds[id]={name:String(r[det.map.name]||id).trim(),strategy:String(r[det.map.strategy]||'').trim()}});acc.srcFiles.push(srcMeta[fi]);}
+      else if(det.shape==='long'&&det.confident){acc.quar+=_applyMapping(rows,det,acc);acc.srcFiles.push(srcMeta[fi]);}   // clean file → straight through, no panel
+      else if(det.shape==='wide'||det.shape==='long'){ambiguous.push(det);}                                              // needs the mapping-review flow
+      else{acc._failed.push(det);}                                                                                       // 'unknown' → explained in the failure modal
     });
-    var ids=Object.keys(ret);if(!ids.length){toast("<span class='tk' style='color:var(--loss)'>!</span>No returns found — expected columns like fund_id, date, monthly_return");return}
-    ids.forEach(function(id){ret[id].sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0})});
-    recompute(funds,ret,order,quar);
-  }).catch(function(e){toast("<span class='tk' style='color:var(--loss)'>!</span>Couldn't parse that CSV")});}
+    if(ambiguous.length){reviewMapping(ambiguous[0],acc);return;}   // confirm the (typically single) ambiguous source, then finalize
+    finalizeIngest(acc);
+  }).catch(function(e){showIngestError({shape:'unknown',cols:[],_file:(files[0]&&files[0].name),warnings:['Couldn’t parse the file: '+(e&&e.message||'unexpected format')+'.']},{})});}
+// ── mapping-review flow ──────────────────────────────────────────────────────
+// Served mode: ask the LLM to refine the (deterministic) proposals — structure only,
+// header + a few sample rows sent, never the full file, never the values. Then ALWAYS
+// present the proposals for the user to confirm/correct. Offline: deterministic only.
+function reviewMapping(det,acc){
+  if(servedLive()){aiRefine(det).then(function(rd){renderMapModal(rd,acc)},function(){renderMapModal(det,acc)});}
+  else renderMapModal(det,acc);
+}
+function aiRefine(det){
+  return fetch('/api/map-columns',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({header:det._rows[0],samples:det._rows.slice(1,6),shape:det.shape})})
+    .then(function(r){return r.ok?r.json():Promise.reject()})
+    .then(function(j){if(!j||!j.ok)return det;
+      if(j.unit)det.unit=j.unit;if(j.dateOrder)det.dateOrder=j.dateOrder;
+      if(det.shape==='long'&&j.map){['date','id','ret','name','strategy'].forEach(function(k){if(typeof j.map[k]==='number')det.map[k]=j.map[k]})}
+      if(det.shape==='wide'&&Array.isArray(j.exclude)){det.series.forEach(function(s){if(j.exclude.indexOf(s.idx)>=0)s.agg=true})}
+      det._ai=true;return det;});
+}
+function _mrow(label,role,cols,sel,req){
+  return "<div class='mrow'><div class='mrl'><b>"+label+(req?" <span class='mreq'>required</span>":" <span class='mopt'>optional</span>")+"</b><i>which column is this?</i></div>"
+    +"<select data-role='"+role+"'>"+(req?"":"<option value='-1'"+((sel==null||sel<0)?' selected':'')+">— none —</option>")
+    +cols.map(function(c){return "<option value='"+c.idx+"'"+(c.idx===sel?" selected":"")+">"+esc(c.name)+" · "+c.kind+"</option>"}).join('')+"</select></div>";
+}
+function renderMapModal(det,acc){
+  var mm=$('#mapmodal');if(!mm)return;var cols=det.cols;
+  var shapeTxt=det.shape==='wide'?"Wide matrix — dates down the rows, one column per fund":"Long — one row per fund per period";
+  var body='';
+  if(det.shape==='long'){
+    body="<div class='mrows'>"+_mrow('Date','date',cols,det.map.date,true)+_mrow('Fund ID','id',cols,det.map.id,true)
+        +_mrow('Return value','ret',cols,det.map.ret,true)+_mrow('Fund name','name',cols,det.map.name,false)
+        +_mrow('Strategy','strategy',cols,det.map.strategy,false)+"</div>";
+  }else{
+    body="<div class='mrows'>"+_mrow('Date column','date',cols,det.dateCol,true)+"</div>"
+        +"<div class='mser'><div class='mserh'>Fund series <i>uncheck any column that isn’t a fund (totals, benchmarks)</i></div>"
+        +det.series.map(function(s,i){return "<label class='mchk"+(s.agg?' agg':'')+"'><input type='checkbox' data-si='"+i+"'"+(s.agg?'':' checked')+"><b>"+esc(s.name)+"</b>"+(s.agg?"<span class='mtag'>looks aggregate</span>":"")+"</label>"}).join('')+"</div>";
+  }
+  var unitSel="<select id='mapUnit'><option value='decimal'"+(det.unit==='decimal'?' selected':'')+">Decimal · 0.012 = 1.2%</option>"
+    +"<option value='percent'"+(det.unit==='percent'?' selected':'')+">Percent · 1.2 = 1.2%</option>"
+    +"<option value='bps'"+(det.unit==='bps'?' selected':'')+">Basis points · 120 = 1.2%</option></select>";
+  var dord=det.dateAmbiguous?("<div class='mrow'><div class='mrl'><b>Date format</b><i>ambiguous — is 03/04 Mar 4 or Apr 3?</i></div><select id='mapOrder'><option value='mdy'"+(det.dateOrder!=='dmy'?' selected':'')+">MM/DD/YYYY (US)</option><option value='dmy'"+(det.dateOrder==='dmy'?' selected':'')+">DD/MM/YYYY (Intl)</option></select></div>"):"";
+  var warn=(det.warnings&&det.warnings.length)?"<div class='mwarn'>"+det.warnings.map(function(w){return esc(w)}).join('<br>')+"</div>":"";
+  mm.innerHTML="<div class='mm-back' id='mapBack'></div><div class='mm-card'>"
+    +"<div class='mm-h'><div><div class='mm-pre'>Map your data"+(det._ai?" <span class='mai'>✦ AI-assisted</span>":"")+"</div><div class='mm-t'>Confirm how to read “"+esc(det._file||'your CSV')+"”</div></div><div class='mm-x' id='mapX'>✕</div></div>"
+    +"<div class='mm-shape'>"+esc(shapeTxt)+"</div>"+warn+body
+    +"<div class='mrow'><div class='mrl'><b>Return units</b><i>how the numbers are expressed</i></div>"+unitSel+"</div>"+dord
+    +"<div class='mm-act'><button class='mf-reset' id='mapCancel'>Cancel</button><button class='mf-apply' id='mapRun'>Run analysis →</button></div></div>";
+  mm.classList.add('on');
+  function close(){mm.classList.remove('on');mm.innerHTML='';}
+  function bail(){close();toast('Kept the current analysis')}
+  $('#mapX',mm).addEventListener('click',bail);$('#mapCancel',mm).addEventListener('click',bail);$('#mapBack',mm).addEventListener('click',bail);
+  $('#mapRun',mm).addEventListener('click',function(){
+    det.unit=$('#mapUnit',mm).value;var ord=$('#mapOrder',mm);if(ord)det.dateOrder=ord.value;
+    if(det.shape==='long'){['date','id','ret','name','strategy'].forEach(function(role){var sel=$("select[data-role='"+role+"']",mm);if(sel)det.map[role]=parseInt(sel.value,10)});}
+    else{$$("input[data-si]",mm).forEach(function(cb){det.series[+cb.dataset.si].excludedByUser=!cb.checked})}
+    var okReq=det.shape==='wide'?(det.dateCol>=0&&det.series.some(function(s){return !s.excludedByUser})):(det.map.date>=0&&det.map.id>=0&&det.map.ret>=0);
+    if(!okReq){toast("<span class='tk' style='color:var(--loss)'>!</span>Map the required fields first (date + at least one return series)");return}
+    if(det._src&&acc.srcFiles)acc.srcFiles.push(det._src);   // confirmed → this file is now a source of truth
+    acc.quar+=_applyMapping(det._rows,det,acc);close();
+    finalizeIngest(acc);   // finalize handles the <2-fund case via the failure modal
+  });
+}
+// a centered, reasoned explainer when a file can't be read — replaces the old toast.
+function showIngestError(det,acc){
+  var mm=$('#mapmodal');if(!mm)return;
+  var file=(det&&det._file)||'your file';var cols=(det&&det.cols)||[];
+  var hasDate=cols.some(function(c){return c.kind==='date'}),nums=cols.filter(function(c){return c.kind==='num'});
+  var missing=[];
+  if(!cols.length){missing.push('a date/period column and at least one column of returns');}
+  else{if(!hasDate)missing.push('a <b>date</b> column — without one there’s no time series to compute returns over');
+       if(!nums.length)missing.push('at least one <b>numeric returns</b> column');}
+  if(!missing.length)missing.push('at least two funds with two or more periods of returns');
+  var found=cols.length?("<div class='ie-found'><div class='ie-lbl'>Columns detected in “"+esc(file)+"”</div><div class='ie-cols'>"
+      +cols.map(function(c){return "<span class='ie-col ie-"+c.kind+"'>"+esc(c.name)+"<i>"+c.kind+"</i></span>"}).join('')+"</div></div>"):"";
+  var xtra=(det&&det.warnings&&det.warnings.length)?"<div class='ie-note'>"+det.warnings.map(function(w){return esc(w)}).join('<br>')+"</div>":"";
+  mm.innerHTML="<div class='mm-back' id='ieBack'></div><div class='mm-card ie-card'>"
+    +"<div class='mm-h'><div><div class='mm-pre ie-pre'>Can’t read this file</div><div class='mm-t'>“"+esc(file)+"” isn’t a fund-returns CSV</div></div><div class='mm-x' id='ieX'>✕</div></div>"
+    +"<div class='ie-why'><div class='ie-lbl'>Why it failed</div><ul class='ie-miss'>"+missing.map(function(m){return "<li>Missing "+m+".</li>"}).join('')+"</ul></div>"
+    +found+xtra
+    +"<div class='ie-exp'><div class='ie-lbl'>What a valid file looks like</div>"
+    +"<pre class='ie-ex'>fund_id,date,monthly_return\nORV,2024-01-01,0.012\nORV,2024-02-01,-0.004</pre>"
+    +"<div class='ie-hint'>…or a dates×funds matrix (a Date column, one column per fund). Metadata like name & strategy is optional and can live in the same file.</div></div>"
+    +"<div class='mm-act'><button class='mf-apply' id='ieClose'>Got it</button></div></div>";
+  mm.classList.add('on');
+  function close(){mm.classList.remove('on');mm.innerHTML='';}
+  $('#ieX',mm).addEventListener('click',close);$('#ieBack',mm).addEventListener('click',close);$('#ieClose',mm).addEventListener('click',close);
+}
 function recompute(funds,ret,order,quar){ try{
   var ms=A.mandateSpec||{exclStrats:[],volCap:null,rf:0.02,topN:5};var W=A.weights,DIR=A.dir||{};
+  var priorBench=A.bench;   // the FRED/snapshot S&P already loaded — reused if the upload has no benchmark column
   var benchId=null;['SP500','SPX','BENCH','BENCHMARK'].forEach(function(b){Object.keys(ret).forEach(function(id){if(id.toUpperCase()===b)benchId=id})});
   var ids=order.filter(function(id){return id!==benchId&&ret[id].length>=2});
   var mbf={},names={},strat={};ids.forEach(function(id){var series=ret[id].map(function(x){return x.v});var mm=fundMetrics(series);if(!mm)return;mbf[id]=mm;var fdef=funds[id]||{};names[id]=fdef.name||id;strat[id]=fdef.strategy||'—'});
   ids=ids.filter(function(id){return mbf[id]});if(ids.length<2){toast("<span class='tk' style='color:var(--loss)'>!</span>Need at least 2 funds with 2+ periods");return}
   var bench=null;if(benchId&&ret[benchId]&&ret[benchId].length>=2){var bs=ret[benchId].map(function(x){return x.v});var bm=fundMetrics(bs);if(bm)bench={name:names[benchId]||funds[benchId]&&funds[benchId].name||'Benchmark',vol:bm.ann_vol,ret:bm.ann_return,wealth:bm.wealth}}
+  if(!bench&&priorBench&&priorBench.vol!=null&&priorBench.ret!=null){   // no benchmark column → fall back to the loaded market benchmark so the reference line still shows
+    bench={name:priorBench.name,vol:priorBench.vol,ret:priorBench.ret,wealth:priorBench.wealth,kind:priorBench.kind,srcName:priorBench.srcName,asOf:priorBench.asOf,n:priorBench.n};}
   // mandate: eligible = strategy allowed AND vol <= cap
   function eligibleOf(id){var okS=ms.exclStrats.indexOf(strat[id])<0;var okV=(ms.volCap==null)||(mbf[id].ann_vol==null)||(mbf[id].ann_vol<=ms.volCap);return okS&&okV}
   var elig=ids.filter(eligibleOf);
@@ -960,9 +1148,9 @@ function recompute(funds,ret,order,quar){ try{
   var ranked=elig.slice().sort(function(a,b){return scoreE[b]-scoreE[a]});var shortIds=ranked.slice(0,ms.topN);var rankOf={};shortIds.forEach(function(id,i){rankOf[id]=i+1});
   // visual components on the SAME eligible-z basis as the ranking, so bars == rank order
   function comps(id){return _zComps(id,_accMbf,W,DIR,stE)}
-  // universe scatter range (all funds with metrics)
+  // universe scatter range — robust so an outlier winner doesn't crush the cloud
   var vols=ids.map(function(id){return mbf[id].ann_vol}),rets=ids.map(function(id){return mbf[id].ann_return});
-  var vmin=Math.min.apply(null,vols),vmax=Math.max.apply(null,vols),rmin=Math.min.apply(null,rets),rmax=Math.max.apply(null,rets);var vr=(vmax-vmin)||1,rr=(rmax-rmin)||1;
+  var volAx=_axis(vols),retAx=_axis(rets);
   var fd=ids.map(function(id){var m=mbf[id];var rk=rankOf[id]||null;var elig1=eligibleOf(id);var cut=(rk==null&&elig1);
     var reasons=[];if(!elig1){
       if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
@@ -972,16 +1160,16 @@ function recompute(funds,ret,order,quar){ try{
     var reason=(reasons.length?reasons[0].text:null);
     var cp=elig1?comps(id):[];var cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;
     return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
-      srank:(rk||(cut?90:99)),x:Math.round((12+(m.ann_vol-vmin)/vr*76)*10)/10,y:Math.round((12+(m.ann_return-rmin)/rr*76)*10)/10,
+      srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,detail:''};});
   // zoom coords over eligible + bench
   var surv=fd.filter(function(d){return d.eligible});var benchLine=null,gateX=null;
   if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
-    var zvmin=Math.min.apply(null,zv),zvmax=Math.max.apply(null,zv),zrmin=Math.min.apply(null,zr),zrmax=Math.max.apply(null,zr);var zvr=(zvmax-zvmin)||1,zrr=(zrmax-zrmin)||1;
-    surv.forEach(function(d){d.xz=Math.round((14+(d.vol-zvmin)/zvr*72)*10)/10;d.yz=Math.round((14+(d.ret-zrmin)/zrr*72)*10)/10});
-    if(bench){bench.xz=Math.round((14+(bench.vol-zvmin)/zvr*72)*10)/10;bench.yz=Math.round((14+(bench.ret-zrmin)/zrr*72)*10)/10;
-      if(bench.vol>0){var s=bench.ret/bench.vol;var mp=function(vol){return [Math.round((14+(vol-zvmin)/zvr*72)*10)/10,Math.round((14+(s*vol-zrmin)/zrr*72)*10)/10]};var p1=mp(zvmin),p2=mp(zvmax);benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
-    if(ms.volCap!=null){var gx=12+(ms.volCap-vmin)/vr*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
+    var zvAx=_axis(zv),zrAx=_axis(zr);
+    surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
+    if(bench){bench.xz=Math.round((14+_pos(bench.vol,zvAx)*72)*10)/10;bench.yz=Math.round((14+_pos(bench.ret,zrAx)*72)*10)/10;
+      if(bench.vol>0){var s=bench.ret/bench.vol;var mp=function(vol){return [Math.round((14+_pos(vol,zvAx)*72)*10)/10,Math.round((14+_pos(s*vol,zrAx)*72)*10)/10]};var p1=mp(zvAx.lo),p2=mp(zvAx.hi);benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
+    if(ms.volCap!=null){var gx=12+_pos(ms.volCap,volAx)*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
   fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // detail html for the drawer
   fd.forEach(function(d){var cells=[['ann_return','ann return',pct(d.ret)],['ann_vol','ann vol',pct(d.vol)],['sharpe','sharpe',num(d.sharpe)],['sortino','sortino',num(d.sortino)],['calmar','calmar',num(d.calmar)],['max_drawdown','max drawdown',pct(d.maxdd)]].map(function(c){return "<div class='cell' data-mk='"+c[0]+"'><b>"+c[2]+"</b><i>"+c[1]+"</i></div>"}).join('');
@@ -1013,5 +1201,6 @@ window.addEventListener('DOMContentLoaded',function(){document.documentElement.d
 // pure, side-effect-free core exposed for testing (and cross-language golden checks
 // against the Python metrics engine). Rendering/animation stay closure-private.
 A.core={fundMetrics:fundMetrics,zStats:_zStats,zComps:_zComps,zRaw:_zRaw,accFund:_accFund,
-        pmean:_pmean,ppstd:_ppstd,psstd:_psstd,mix:mix,esc:esc,metricField:metricField,effWeights:effWeights};
+        pmean:_pmean,ppstd:_ppstd,psstd:_psstd,mix:mix,esc:esc,metricField:metricField,effWeights:effWeights,
+        detectSchema:detectSchema,parseCSV:parseCSV,normVal:_normVal,isoStr:_isoStr};
 })();
