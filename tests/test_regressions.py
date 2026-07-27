@@ -349,6 +349,36 @@ def test_client_pdf_and_memo_carry_shortlist_rationale():
     assert "/Kids [3 0 R] /Count 1" not in Path("backend/amb_core/assets/memo.js").read_text(), "single-page PDF hard-coding must be gone"
 
 
+def test_client_audit_recomputes_benchmark_and_peer_metrics():
+    """The audit's promise is claim-by-claim VERIFICATION by recomputation. It used to
+    recompute only the six scalar metrics; beta/alpha/correlation/peer_corr were in the
+    audited list but were never re-derived, so they defaulted to 'verified' while only
+    being trusted. Pin that the audit now rebuilds the benchmark-relative and peer
+    metrics from the same series and matches them, so every audited metric is genuinely
+    recomputed (not merely accepted)."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    # `_bret`/`_peerAvg` are locals unique to buildAudit's recompute additions
+    assert "_benchStats(r,_bret" in js, "audit must re-derive beta/alpha/correlation from benchmark returns"
+    assert "mm.beta=_bs.beta" in js and "mm.correlation=_bs.corr" in js, "audit must fold benchmark metrics into the recomputed set"
+    assert "mm.peer_corr=_pc" in js, "audit must re-derive peer correlation"
+    assert "function_peerAvg(" in js, "audit must have its own peer-correlation re-derivation"
+
+
+def test_client_mandate_enforces_all_four_hard_limits_uniformly():
+    """The mandate form exposes liquidity, volatility, drawdown and strategy limits, and
+    screenAndScore enforced all four — but the initial-upload recompute path gated only
+    on strategy+volatility (no liquidity, no drawdown), so an uploaded illiquid/deep-DD
+    fund slipped through until the user re-opened the mandate. Pin: one client mirror of
+    redemption_to_days, and ALL FOUR limits enforced in every screening path."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    assert js.count("function_redToDays(") == 1, "one client mirror of redemption_to_days"
+    assert "var_REDDAYS=" in js, "the redemption-cadence→days table must exist client-side"
+    # both the returns-recompute and the stats-recompute eligibility gates enforce all four
+    assert js.count("okS&&okV&&okD&&okL") >= 2, "every screening path must gate on strategy+vol+drawdown+liquidity"
+    # each fund carries its computed days-to-liquidity so a later mandate edit can screen it
+    assert js.count("redd:_reddOf(id)") >= 2, "every rebuilt fund must carry its redemption-days for liquidity screening"
+
+
 def test_client_summary_statistics_input_mode():
     """The spec's input format is 'multiple CSVs with monthly returns OR summary
     statistics'. A file of per-fund precomputed metrics (no date/return series) must be

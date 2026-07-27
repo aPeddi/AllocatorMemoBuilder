@@ -349,6 +349,11 @@ function rebuildGates(){var ms=A.mandateSpec||{};var g=[];
 // break close calls toward the mandate's preferences without overriding the metrics.
 var PREF_BONUS=0.25;
 function _prefBonus(d){return (((A.mandateSpec&&A.mandateSpec.prefStrats)||[]).indexOf(d.strategy)>=0)?PREF_BONUS:0}
+// steady-state days-to-liquidity from a named redemption cadence + notice — the client
+// mirror of ingest.redemption_to_days, so an UPLOADED fund is screened on the liquidity
+// limit exactly like a baked one (lockup is a separate entry gate, not folded in here).
+var _REDDAYS={daily:1,weekly:7,biweekly:14,'semi-monthly':15,monthly:30,'bi-monthly':60,quarterly:90,'semi-annual':180,semiannual:180,annual:365,annually:365,yearly:365,biennial:730,illiquid:3650,locked:3650,closed:3650};
+function _redToDays(freq,notice){if(freq==null)return null;var b=_REDDAYS[String(freq).trim().toLowerCase()];if(b==null)return null;return Math.round((b+(+notice||0))*10)/10}
 function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.weights;
   A.funds.forEach(function(d){var rs=[];
     if(ms.liqCap!=null&&d.redd!=null&&d.redd>ms.liqCap)rs.push({text:"illiquid · "+(d.redf||'')+" ("+Math.round(d.redd)+"d)",kind:"LIQUIDITY"});
@@ -1055,8 +1060,24 @@ function buildAudit(){
     {fk:'notice',label:'Notice period',cands:['notice_days','notice','notice_period'],fmt:function(v){return v+' days'}},
     {fk:'notes',label:'Notes',cands:['notes','note','comment','description'],fmt:function(v){return String(v)}}
   ];
+  // re-derive the benchmark-relative + peer metrics too, so the audit VERIFIES them by
+  // recomputation (not just trusts the engine value). Benchmark returns come from the
+  // loaded index; peer correlation is each fund's avg pairwise corr to the others — both
+  // rebuilt from the SAME series the figures were computed from.
+  var _bret=(A.bench&&A.bench.wealth&&A.bench.wealth.length>2)?_reconstructReturns(A.bench.wealth):null;
+  var _benchAnn=(A.bench&&A.bench.ret!=null)?A.bench.ret:null;
+  var _fret={};(A.funds||[]).forEach(function(f){var rr=_reconstructReturns(f.wealth);if(rr&&rr.length>2)_fret[f.id]=rr});
+  var _fids=Object.keys(_fret);
+  function _peerAvg(id){var base=_fret[id];if(!base)return null;var cs=[];
+    _fids.forEach(function(j){if(j===id)return;var o=_fret[j];var n=Math.min(base.length,o.length);if(n<3)return;
+      var c=_pearson(base.slice(base.length-n),o.slice(o.length-n));if(c!=null)cs.push(c)});
+    return cs.length?cs.reduce(function(s,x){return s+x},0)/cs.length:null;}
   pool.forEach(function(d){
     var r=_reconstructReturns(d.wealth);var mm=r?fundMetrics(r):null;
+    if(mm){
+      if(_bret){var _bs=_benchStats(r,_bret,mm.ann_return,_benchAnn);mm.beta=_bs.beta;mm.alpha=_bs.alpha;mm.correlation=_bs.corr;}
+      var _pc=_peerAvg(d.id);if(_pc!=null)mm.peer_corr=_pc;
+    }
     var retTr=trace(d.id,['monthly_return','return','ret','performance','value']);
     var retSrc=retTr?("column ‘"+retTr.col+"’ · "+retTr.file):"monthly return series";
     METRICS.forEach(function(p){var mk=p[0],fk=p[1];var v=d[fk];if(v==null||!isFinite(v))return;
@@ -1640,7 +1661,12 @@ function recompute(funds,ret,order,quar){ try{
   if(!bench&&priorBench&&priorBench.vol!=null&&priorBench.ret!=null){   // no benchmark column → fall back to the loaded market benchmark so the reference line still shows
     bench={name:priorBench.name,vol:priorBench.vol,ret:priorBench.ret,wealth:priorBench.wealth,kind:priorBench.kind,srcName:priorBench.srcName,asOf:priorBench.asOf,n:priorBench.n};}
   // mandate: eligible = strategy allowed AND vol <= cap
-  function eligibleOf(id){var okS=ms.exclStrats.indexOf(strat[id])<0;var okV=(ms.volCap==null)||(mbf[id].ann_vol==null)||(mbf[id].ann_vol<=ms.volCap);return okS&&okV}
+  function _reddOf(id){return _redToDays(meta[id]&&meta[id].redf,meta[id]&&meta[id].notice)}
+  function eligibleOf(id){var m=mbf[id];var okS=ms.exclStrats.indexOf(strat[id])<0;
+    var okV=(ms.volCap==null)||(m.ann_vol==null)||(m.ann_vol<=ms.volCap);
+    var okD=(ms.maxddFloor==null)||(m.max_drawdown==null)||(m.max_drawdown>=ms.maxddFloor);
+    var rd=_reddOf(id);var okL=(ms.liqCap==null)||(rd==null)||(rd<=ms.liqCap);
+    return okS&&okV&&okD&&okL}   // ALL four hard limits (liquidity, vol, drawdown, strategy) — same as screenAndScore
   var elig=ids.filter(eligibleOf);
   // rank eligible: z across eligible
   var _accMbf=function(id,k){return mbf[id][k]};
@@ -1657,7 +1683,8 @@ function recompute(funds,ret,order,quar){ try{
   var _br=(bench&&bench.wealth&&bench.wealth.length>1)?bench.wealth.map(function(w,i){return i?w/bench.wealth[i-1]-1:w-1}):null;   // benchmark returns for beta/alpha/corr
   var fd=ids.map(function(id){var m=mbf[id];var rk=rankOf[id]||null;var elig1=eligibleOf(id);var cut=(rk==null&&elig1);
     var _bs=_br?_benchStats(ret[id].map(function(x){return x.v}),_br,m.ann_return,bench.ret):{beta:null,alpha:null,corr:null};
-    var reasons=[];if(!elig1){
+    var reasons=[];if(!elig1){var rd=_reddOf(id);
+      if(ms.liqCap!=null&&rd!=null&&rd>ms.liqCap)reasons.push({text:'illiquid · '+((meta[id]&&meta[id].redf)||'')+' ('+Math.round(rd)+'d)',kind:'LIQUIDITY'});
       if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
       if(ms.maxddFloor!=null&&m.max_drawdown!=null&&m.max_drawdown<ms.maxddFloor)reasons.push({text:'drawdown · '+Math.round(m.max_drawdown*100)+'% beyond '+Math.round(ms.maxddFloor*100)+'% floor',kind:'DRAWDOWN'});
       if(ms.exclStrats.indexOf(strat[id])>=0)reasons.push({text:'off-strategy · '+strat[id],kind:'STRATEGY'});
@@ -1668,7 +1695,7 @@ function recompute(funds,ret,order,quar){ try{
       srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,
       beta:_bs.beta,alpha:_bs.alpha,corr:_bs.corr,peer_corr:(_peer[id]!=null?_peer[id]:null),
-      fee:(meta[id]&&meta[id].fee!=null?meta[id].fee:null),redf:(meta[id]&&meta[id].redf)||null,lockup:(meta[id]&&meta[id].lockup!=null?meta[id].lockup:null),notice:(meta[id]&&meta[id].notice!=null?meta[id].notice:null),notes:(meta[id]&&meta[id].notes)||null,
+      fee:(meta[id]&&meta[id].fee!=null?meta[id].fee:null),redf:(meta[id]&&meta[id].redf)||null,redd:_reddOf(id),lockup:(meta[id]&&meta[id].lockup!=null?meta[id].lockup:null),notice:(meta[id]&&meta[id].notice!=null?meta[id].notice:null),notes:(meta[id]&&meta[id].notes)||null,
       netret:(meta[id]&&meta[id].fee!=null?m.ann_return-meta[id].fee/100:null),detail:''};});
   // zoom coords over eligible + bench
   var surv=fd.filter(function(d){return d.eligible});var benchLine=null,gateX=null;
@@ -1704,7 +1731,8 @@ function recomputeStats(sf){ try{
   var ids=sf.map(function(f){return f.id}).filter(function(id){var m=mbf[id];return m.ann_return!=null&&m.ann_vol!=null});
   if(ids.length<2){toast("<span class='tk' style='color:var(--loss)'>!</span>Need at least 2 funds with return + volatility");return}
   function strat(id){return byId[id].strategy||'—'}
-  function eligibleOf(id){var m=mbf[id];var okS=ms.exclStrats.indexOf(strat(id))<0;var okV=(ms.volCap==null)||(m.ann_vol==null)||(m.ann_vol<=ms.volCap);var okD=(ms.maxddFloor==null)||(m.max_drawdown==null)||(m.max_drawdown>=ms.maxddFloor);return okS&&okV&&okD}
+  function _reddOf(id){var f=byId[id];return _redToDays(f&&f.redf,f&&f.notice)}
+  function eligibleOf(id){var m=mbf[id];var okS=ms.exclStrats.indexOf(strat(id))<0;var okV=(ms.volCap==null)||(m.ann_vol==null)||(m.ann_vol<=ms.volCap);var okD=(ms.maxddFloor==null)||(m.max_drawdown==null)||(m.max_drawdown>=ms.maxddFloor);var rd=_reddOf(id);var okL=(ms.liqCap==null)||(rd==null)||(rd<=ms.liqCap);return okS&&okV&&okD&&okL}
   var elig=ids.filter(eligibleOf),_accMbf=function(id,k){return mbf[id][k]};
   var stE=_zStats(elig,_accMbf,Object.keys(W));
   var scoreE={};elig.forEach(function(id){scoreE[id]=_zRaw(id,_accMbf,W,DIR,stE)+_pb(strat(id))});
@@ -1712,7 +1740,8 @@ function recomputeStats(sf){ try{
   function comps(id){return _zComps(id,_accMbf,W,DIR,stE)}
   var volAx=_axis(ids.map(function(id){return mbf[id].ann_vol})),retAx=_axis(ids.map(function(id){return mbf[id].ann_return}));
   var fd=ids.map(function(id){var m=mbf[id],f=byId[id],rk=rankOf[id]||null,elig1=eligibleOf(id),cut=(rk==null&&elig1);
-    var reasons=[];if(!elig1){
+    var reasons=[];if(!elig1){var rd=_reddOf(id);
+      if(ms.liqCap!=null&&rd!=null&&rd>ms.liqCap)reasons.push({text:'illiquid · '+((f&&f.redf)||'')+' ('+Math.round(rd)+'d)',kind:'LIQUIDITY'});
       if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
       if(ms.maxddFloor!=null&&m.max_drawdown!=null&&m.max_drawdown<ms.maxddFloor)reasons.push({text:'drawdown · '+Math.round(m.max_drawdown*100)+'% beyond '+Math.round(ms.maxddFloor*100)+'% floor',kind:'DRAWDOWN'});
       if(ms.exclStrats.indexOf(strat(id))>=0)reasons.push({text:'off-strategy · '+strat(id),kind:'STRATEGY'});
@@ -1722,7 +1751,7 @@ function recomputeStats(sf){ try{
       srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:[],reason:(reasons.length?reasons[0].text:null),components:cp,comp:cm,score:sc,
       beta:null,alpha:null,corr:null,peer_corr:null,preferred:(_pb(strat(id))>0),
-      fee:f.fee,redf:f.redf,lockup:f.lockup,notice:f.notice,notes:f.notes,netret:(f.fee!=null&&m.ann_return!=null?m.ann_return-f.fee/100:null),_stats:true,detail:''};});
+      fee:f.fee,redf:f.redf,redd:_reddOf(id),lockup:f.lockup,notice:f.notice,notes:f.notes,netret:(f.fee!=null&&m.ann_return!=null?m.ann_return-f.fee/100:null),_stats:true,detail:''};});
   var surv=fd.filter(function(d){return d.eligible}),benchLine=null,gateX=null,bench=A.bench;
   if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
     var zvAx=_axis(zv),zrAx=_axis(zr);if(bench){zvAx=_axisWith(zvAx,bench.vol);zrAx=_axisWith(zrAx,bench.ret);}
