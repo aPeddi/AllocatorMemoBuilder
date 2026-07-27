@@ -665,7 +665,8 @@ body.settled #play{display:inline-flex}
 #benchray{position:absolute;height:0;border-top:1px dashed var(--warm-line);transform-origin:0 0;left:0;top:0;width:0}
 #benchmk{position:absolute;transform:translate(-50%,50%);z-index:2}
 #benchmk .dm{width:9px;height:9px;background:var(--panel2);border:1px solid var(--accent-warm);transform:rotate(45deg);box-shadow:0 0 0 3px var(--warm-soft)}
-#benchmk .bl{position:absolute;left:50%;top:calc(100% + 7px);transform:translateX(-50%);white-space:nowrap;font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+#benchmk .bl{position:absolute;left:50%;top:calc(100% + 7px);transform:translateX(-50%);white-space:nowrap;font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:center}
+#benchmk .bl .bl-m{display:block;margin-top:2px;letter-spacing:.04em;text-transform:none;color:var(--ink2);font-size:8.5px}
 #beatlbl{position:absolute;right:1.5%;bottom:23%;font-family:var(--mono);font-size:8px;letter-spacing:.11em;text-transform:uppercase;color:var(--accent-warm);max-width:130px;line-height:1.55;text-align:right}
 /* ===== cinematic decision layer ===== */
 /* focus vignette while scoring */

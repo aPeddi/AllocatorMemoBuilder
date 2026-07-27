@@ -28,6 +28,14 @@ def _axis(vals):
     if len(inl)<2: inl=a
     lo,hi=inl[0],inl[-1]
     return (lo,(hi if hi>lo else lo+1))
+def _axis_with(ax,v):
+    """Widen an axis so `v` sits inside its non-saturating range — used to anchor the
+    benchmark onto the shared scale so it is never plotted as a saturated point (a
+    reference above the fund cluster would otherwise read as an outlier fund's return)."""
+    if v is None:
+        return ax
+    lo,hi=ax
+    return (min(lo,v),max(hi,v))
 def _pos(v,ax):
     lo,hi=ax;t=(v-lo)/((hi-lo) or 1);C=0.05;SP=0.90
     if t<0: return C-C*((-t)/((-t)+0.6))
@@ -262,6 +270,7 @@ def render_html(memo, ctx=None):
         zv=[d["vol"] for d in surv];zr=[d["ret"] for d in surv]
         if bench: zv=zv+[bench["vol"]];zr=zr+[bench["ret"]]
         zvAx=_axis(zv);zrAx=_axis(zr)
+        if bench: zvAx=_axis_with(zvAx,bench["vol"]);zrAx=_axis_with(zrAx,bench["ret"])   # anchor the reference onto the shared scale
         for d in surv: d["xz"]=round(14+_pos(d["vol"],zvAx)*72,1);d["yz"]=round(14+_pos(d["ret"],zrAx)*72,1)
         if bench:
             bench["xz"]=round(14+_pos(bench["vol"],zvAx)*72,1)

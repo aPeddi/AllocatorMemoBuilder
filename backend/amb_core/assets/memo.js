@@ -448,6 +448,7 @@ function relayoutScatter(){  // recompute the risk/return frontier so it include
   var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});
   if(b){zv=zv.concat([b.vol]);zr=zr.concat([b.ret])}
   var zvAx=_axis(zv),zrAx=_axis(zr);
+  if(b){zvAx=_axisWith(zvAx,b.vol);zrAx=_axisWith(zrAx,b.ret);}   // the reference is an anchor of the shared scale, never a saturated point
   surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
   A.benchLine=_benchMark(zvAx,zrAx,b);
   A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
@@ -462,7 +463,11 @@ function buildGuides(){var g=$('#guides');
   // short tag on the diamond (which now sits ON the beta line); the full annotation
   // lives at the line's end so the reader's eye follows the line to its label.
   var shortNm=esc(A.bench.name.split(' (')[0].replace(/\s*total return\s*/i,'').trim()||'S&P 500');
-  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';var blab=$('.bl',mk);if(blab)blab.innerHTML=shortNm}
+  // label the diamond with its ACTUAL return + Sharpe (like every fund) so the reference
+  // is read from its number, never inferred from a compressed vertical position
+  var _brf=(A.rfUsed!=null?A.rfUsed:0.02);var _bsr=(A.bench.vol>0)?((A.bench.ret-_brf)/A.bench.vol):null;
+  var bnum=(A.bench.ret!=null?("ret "+pct(A.bench.ret)+(_bsr!=null?" · SR "+num(_bsr):"")):"");
+  var mk=$('#benchmk');if(mk&&A.bench.xz!=null){mk.style.left=A.bench.xz+'%';mk.style.bottom=A.bench.yz+'%';var blab=$('.bl',mk);if(blab)blab.innerHTML=shortNm+(bnum?"<span class='bl-m'>"+bnum+"</span>":"")}
   var bl=$('#beatlbl');if(bl){bl.innerHTML=shortNm+' · reference index ·<br>passive beta · out of mandate';
     if(A.benchLine){bl.style.bottom=A.benchLine.y2+'%';}   // align the label to the up-right END of the line
   }
@@ -1238,6 +1243,11 @@ function _axis(vals){var a=vals.filter(function(v){return v!=null&&isFinite(v)})
   var q1=q(0.25),q3=q(0.75),iqr=(q3-q1)||Math.abs(q(0.5))||1,fl=q1-1.5*iqr,fh=q3+1.5*iqr;
   var inl=a.filter(function(v){return v>=fl&&v<=fh});if(inl.length<2)inl=a;
   var lo=inl[0],hi=inl[inl.length-1];return {lo:lo,hi:(hi>lo?hi:lo+1)};}
+// widen an axis so a value sits INSIDE its non-saturating range. The benchmark must
+// be anchored this way before positioning: otherwise a reference return above the fund
+// cluster saturates into the top band next to an outlier fund (reads as ~35% when it's
+// ~12%), and one below the cluster slams to the floor — both misrepresent the reference.
+function _axisWith(ax,v){return (v==null||!isFinite(v))?ax:{lo:Math.min(ax.lo,v),hi:Math.max(ax.hi,v)};}
 function _pos(v,ax){var t=(v-ax.lo)/((ax.hi-ax.lo)||1),C=0.05,SP=0.90;
   if(t<0)return C-C*((-t)/((-t)+0.6));         // below the bulk → bottom margin (saturating)
   if(t>1)return (C+SP)+C*((t-1)/((t-1)+0.6));   // above the bulk → top margin (saturating)
@@ -1539,6 +1549,7 @@ function recompute(funds,ret,order,quar){ try{
   var surv=fd.filter(function(d){return d.eligible});var benchLine=null,gateX=null;
   if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
     var zvAx=_axis(zv),zrAx=_axis(zr);
+    if(bench){zvAx=_axisWith(zvAx,bench.vol);zrAx=_axisWith(zrAx,bench.ret);}   // the reference is an anchor of the shared scale, never a saturated point
     surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
     benchLine=_benchMark(zvAx,zrAx,bench);   // ray THROUGH the marker — same builder as every other path, so the diamond can never drift off its line again
     if(ms.volCap!=null){var gx=12+_pos(ms.volCap,volAx)*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}

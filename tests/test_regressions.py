@@ -92,6 +92,30 @@ def test_axis_outlier_does_not_crush_the_cluster():
     assert 0.0 <= _pos(-0.5, ax) <= 0.1, "below-range value must clamp to the floor"
 
 
+def test_benchmark_is_anchored_not_saturated():
+    """The reported bug: with a big outlier fund (Cedar ~37%) and a tight low cluster,
+    the S&P reference (~12%) saturated into the SAME top band as the outlier, so it read
+    as a ~35% return. The benchmark must anchor the shared axis so it lands in the
+    proportional bulk (clearly above the cluster, clearly BELOW the outlier), not pinned
+    to a saturating margin. A reference below the cluster must likewise not pin to the
+    floor. Mirrors the client's _axisWith; the two must stay identical."""
+    from amb_core.export import _axis_with
+    cluster = [0.053, 0.054, 0.064, 0.072, 0.082]     # the 5–8% fund cluster
+    ax = _axis(cluster + [0.375])                      # + Cedar, the extreme outlier
+    bench_hi = 0.12                                     # S&P above the cluster fence
+    # WITHOUT anchoring it saturates into the top band with the outlier …
+    assert _pos(bench_hi, ax) > 0.95, "precondition: an above-fence bench would saturate"
+    # … WITH anchoring it lands in the proportional bulk, and strictly below the outlier
+    axb = _axis_with(ax, bench_hi)
+    p_bench = _pos(bench_hi, axb)
+    p_out = _pos(0.375, axb)
+    assert 0.05 < p_bench <= 0.9501, f"anchored benchmark must be proportional, got {p_bench:.3f}"
+    assert p_out - p_bench > 0.02, "outlier fund must sit clearly ABOVE the reference, not on top of it"
+    # a reference below the cluster anchors the axis floor (bulk bottom), not a saturated margin
+    axlo = _axis_with(ax, 0.02)
+    assert _pos(0.02, axlo) == pytest.approx(0.05, abs=1e-6)
+
+
 # ── HUD data: marker sits on its reference line; cluster stays balanced ───────
 def _extract_data(html: str) -> dict:
     m = re.search(r"window\.AMB=(\{.*?\});</script>", html, re.S)
