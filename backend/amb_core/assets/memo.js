@@ -359,7 +359,7 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
   A.verdict=(win?first(win.name)+" leads on risk-adjusted return.":"No fund met the mandate.");
   A.verdictHtml=(win?"<b>"+esc(first(win.name))+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
   A._snap=null;rebuildGates();}
-function applyMandate(){screenAndScore();var d=$('#drawer');if(d)d.classList.remove('open');rerender();}
+function applyMandate(){screenAndScore();var d=$('#drawer');if(d)d.classList.remove('open');rerender(_snapStory);}
 var HOUSE=null;
 function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSpec,w:A.weights}));
   var ms=A.mandateSpec||{};var str016=[];A.funds.forEach(function(d){if(str016.indexOf(d.strategy)<0)str016.push(d.strategy)});
@@ -1410,12 +1410,56 @@ function recompute(funds,ret,order,quar){ try{
   rerender();
   toast("<span class='tk'>&#10003;</span>Re-ran the analysis · "+A.nTotal+" funds → "+A.nShort+" shortlisted"+(quar?" · "+quar+" bad rows quarantined":""));
  }catch(err){toast("<span class='tk' style='color:var(--loss)'>!</span>Analysis failed on that data")}}
-function rerender(){aborted=true;bumpGen();A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
+function rerender(next){aborted=true;bumpGen();A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
   document.body.classList.remove('settled','scoring','screening');$('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('#weighlegend').innerHTML='';$('#weighlegend').classList.remove('in');$('#traj').innerHTML='';$$('.tt,.tx,.ty').forEach(function(t){t.remove()});
   $('.rail').classList.remove('in');$('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');$('.sweetz').classList.remove('on');clearCue();
   // rebuild the shortlist rail
   var rc=$('.rail .chips');if(rc){rc.innerHTML=shortlisted().map(function(s){return "<div class='chip"+(s.rank==1?' r1':'')+"' data-fid='"+esc(s.id)+"' title='Open fund detail'><span class='n'>"+String(s.rank).padStart(2,'0')+"</span><span class='nm'>"+esc(s.name)+"</span><span class='rt'>"+pct(s.ret)+"</span><span class='cx'>⤢</span></div>"}).join('')}
-  buildField();buildIntro();setPrintDate();_lastLive=null;setTimeout(function(){aborted=false;story()},60);}
+  buildField();buildIntro();setPrintDate();_lastLive=null;setTimeout(function(){aborted=false;(next||story)()},60);}
+// A mandate-only re-run (a slider moved) does NOT touch the data, the ingest, the
+// per-fund metrics or the universe — only the hard limits and weights changed. So we
+// skip Act 0 (acquire → map → normalize → assemble) and the Act 1 reveal entirely:
+// snap the full universe onto the canvas, PULSE which hard limit each newly-cut fund
+// breached (so it's clear WHY the shortlist moved), then settle straight into the
+// updated result. Full-from-the-top replay stays reserved for the cases where it's
+// honest — a new uploaded file, a live benchmark refetch, or the explicit Play button.
+async function _snapStory(){
+  document.body.classList.add('playing');var _pb=$('#pausebtn');if(_pb){_pb.innerHTML='❚❚&nbsp;pause';_pb.classList.remove('on')}
+  var big=bigN();
+  // universe, instant — every candidate already known, no acquisition to re-show
+  A.funds.forEach(function(d,i){var n=nodes[d.id];if(!n)return;var p=universePos(i);n.style.left=p.x+'%';n.style.bottom=p.y+'%';n.classList.add('shown');if(!big)n.classList.add('labeled')});
+  rebuildGates();
+  chapter('02 · Screening','Re-screening the universe','applying the updated mandate live');
+  $('#gates').classList.add('on');document.body.classList.add('screening');$('#counter').classList.add('on');updateCounter();
+  await wait(300);if(aborted)return;
+  // quick breach pulse — a fast cascade lighting each cut fund's breached limit(s)
+  var gates=$$('.gate');var rj=rejects();
+  var stagger=Math.max(45,Math.min(95,Math.round(560/(rj.length||1))));
+  rj.forEach(function(ex,j){schedule(function(){
+    var en=nodes[ex.id];if(!en)return;
+    var rs=(ex.reasons&&ex.reasons.length)?ex.reasons:[{text:ex.reason,kind:ex.rkind}];
+    var kinds=rs.map(function(r){return r.kind});
+    var lit=function(el){var on=(kinds.indexOf(el.dataset.k)>=0);el.classList.toggle('act',on);el.classList.toggle('hot',on)};
+    gates.forEach(lit);$$('#ip-gates .ipg').forEach(lit);
+    var tg=$('.stags',en);if(tg)tg.innerHTML=rs.map(function(r){return "<span class='stag "+r.kind+"'>"+r.kind.toLowerCase()+"</span>"}).join('');
+    var sr=$('.sr',en);if(sr)sr.innerHTML=(rs.length>1?("breaches "+rs.length+" hard limits"):esc(rs[0].text));
+    en.classList.add('focus','reject');
+    schedule(function(){en.classList.remove('focus');en.classList.add('gone');updateCounter();gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')})},300);
+  },j*stagger)});
+  await wait(rj.length*stagger+560);if(aborted)return;
+  gates.forEach(function(g){g.classList.remove('act')});$$('#ip-gates .ipg').forEach(function(g){g.classList.remove('hot')});
+  document.body.classList.remove('screening');$('#gates').classList.remove('on');
+  A.funds.forEach(function(d){if(d.reason){var n=nodes[d.id];if(n)n.classList.add('gone')}});   // every reject settles out
+  // snap to the updated scoring + recommendation — reuse the static settled layout, no weigh cinematics
+  var ip=$('#intropane');if(ip)ip.classList.add('out');
+  frontier();document.body.classList.add('scoring');updateCounter();
+  $('#scorepane').classList.add('in');buildWeigh();renderFinal();layoutRows();
+  $('.sweetz').classList.add('on');
+  var win=shortlisted()[0];
+  if(win){focusWinner(win);$('#trajpane').classList.add('in');buildTraj();}
+  await wait(380);if(aborted)return;
+  settle();
+}
 function doShare(){var txt=A.shareText||document.title;
   var ok=function(){toast("<span class='tk'>✓</span>Recommendation summary copied to clipboard")};
   try{if(navigator.share){navigator.share({title:A.title||document.title,text:txt}).then(function(){},function(){});toast("<span class='tk'>✓</span>Opening share…");return}}catch(e){}
