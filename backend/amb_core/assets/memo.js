@@ -707,7 +707,9 @@ async function actZero(){
   else if(ING&&ING.unit==='bps')tf.push({a:'120 bps',r:'bps → decimal',b:'0.0120',k:'ok'});
   else tf.push({a:okDecStr,r:'recognized · decimal',b:okDecStr,k:'ok'});
   tf.push({a:okDate,r:'parsed · ISO-8601',b:okDate,k:'ok'});
-  if(badRows.length){var b0=badRows[0];var btok=(b0.d&&b0.d!=='—')?b0.d:((b0.v&&b0.v!=='—')?b0.v:'(blank)');tf.push({a:btok,r:b0.reason||'unparseable',b:'null · quarantined',k:'bad'});}
+  // NB: the failure story is no longer a transform chip — it lives in its own
+  // QUARANTINED unit below (real cells + reason), so these chips stay purely about
+  // what normalize does to GOOD values.
   var flanes=(A.funds||[]).slice(0,12),laneN=flanes.length||1;
   // Tiles are DERIVED from the real totals so the field always sums to rowsN: spread
   // the valid rows evenly across the fund lanes (an aligned window ⇒ ~equal per fund),
@@ -725,6 +727,27 @@ async function actZero(){
     for(c=0;c<g;c++){html+="<i class='az-tile' style='transition-delay:"+(c*13+li*8)+"ms'></i>";}
     for(c=0;c<r;c++){html+="<i class='az-tile q' style='transition-delay:"+((g+c)*13+li*8)+"ms'></i>";}
     return html;}
+  // ── the rejects, as their OWN unit: for each quarantined row show the ACTUAL cells
+  // that failed (a MISSING cell reads "missing"; a present-but-malformed one shows the
+  // raw value in loss-red) plus the specific reason. Which cell is at fault is inferred
+  // from the reason text, so date / id / return light up correctly even for combos. ──
+  function _qflags(reason){var r=(reason||'').toLowerCase();return {
+    d:/date/.test(r), i:/fund id|missing id/.test(r), v:/return|value/.test(r),
+    dm:/missing date/.test(r), im:/missing (fund )?id/.test(r), vm:/missing return/.test(r)};}
+  function _qcell(val,bad,miss,extra){
+    if(miss)return "<span class='az-qcv bad miss'>missing</span>";
+    var s=(val==null||val===''||val==='—')?'—':String(val);
+    return "<span class='az-qcv"+(bad?' bad':'')+(extra?' '+extra:'')+"'>"+esc(s)+"</span>";}
+  function _qcard(b){var f=_qflags(b.reason);
+    return "<div class='az-qc'><div class='az-qc-top'><i class='az-qc-dot'></i><span class='az-qc-vals'>"
+      +_qcell(b.d,f.d,f.dm)+"<em>·</em>"+_qcell(b.id,f.i,f.im,'id')+"<em>·</em>"+_qcell(b.v,f.v,f.vm)
+      +"</span></div><span class='az-qc-why'>"+esc(b.reason||'quarantined')+"</span></div>";}
+  var qcards = qN>0 ? (
+    "<div class='az-sh az-qsh'>QUARANTINED · "+qN+" · KEPT ROW-LEVEL</div>"
+    +"<div class='az-quar' id='azquar'>"
+    + badRows.map(_qcard).join('')
+    + (qN>badRows.length?"<div class='az-qmore'>+ "+(qN-badRows.length)+" more · same handling</div>":"")
+    +"</div>") : "";
   stage.innerHTML=
    "<div class='az-parse az-parse-n'>"
    +"<div class='az-field'>"
@@ -738,6 +761,7 @@ async function actZero(){
    +"<div class='az-side'>"
      +"<div class='az-sh'>VALUE NORMALIZATION</div><div class='az-tf' id='tf'></div>"
      +"<div class='az-sh'>SHARED WINDOW</div><div class='az-win2'>every fund aligned to <b>"+esc(ov.start||'')+" → "+esc(ov.end||'')+"</b></div>"
+     +qcards
    +"</div></div>";
   log('normalizing all '+rowsN+' rows · '+fundsN+' funds × '+mpf+' months');
   // reveal fund lanes, top-to-bottom
@@ -754,6 +778,18 @@ async function actZero(){
   for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t2=tf[ti];var tr=el('div','az-tfr'+(t2.k==='bad'?' bad':''));
     tr.innerHTML="<span class='az-tfa'>"+esc(String(t2.a||'—'))+"</span><span class='az-tfrule'>"+esc(t2.r)+"</span><span class='az-tfb'>"+esc(String(t2.b))+"</span>";
     tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(360)}
+  // surface the rejects as their own unit: lift the red tiles out of their lanes so the
+  // eye tracks them, then reveal one card per quarantined row — real cells + why it failed
+  if(qN>0){
+    var qtiles=$$('.az-field-lanes .az-tile.q',az);
+    for(var qti=0;qti<qtiles.length;qti++){schedule(function(x){x.classList.add('eject')}.bind(null,qtiles[qti]),qti*70);}
+    await wait(Math.min(qtiles.length,12)*70+180);if(aborted)return;
+    var qshEl=$('.az-qsh',az);if(qshEl)qshEl.classList.add('in');
+    await wait(150);
+    var qcEls=$$('#azquar .az-qc',az);
+    for(var qei=0;qei<qcEls.length;qei++){if(aborted)return;qcEls[qei].classList.add('in');await wait(330)}
+    await wait(500);if(aborted)return;
+  }
   var qsummary=Object.keys(qr).map(function(k){return qr[k]+' '+k}).join(' · ')||'none';
   if(qN>0)log('normalized '+rowsN+' rows · '+(rowsN-qN)+' valid · '+qN+' quarantined ('+qsummary+') · row-level, no fund dropped');
   else log('normalized '+rowsN+' rows · all parsed cleanly · none quarantined');
@@ -1189,11 +1225,16 @@ function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.ord
     if(qsamples.length<4)qsamples.push({date:_cell(dstr),id:_cell(id),ret:_cell(rawRet),reason:reason});}
   function _blank(x){var s=String(x==null?'':x).trim().toLowerCase();return s===''||s==='nan'||s==='none'||s==='nat'||s==='n/a'||s==='na'}
   function push(id,dstr,rawRet){var val=_normVal(rawRet,det.unit),iso=_isoStr(dstr,det.dateOrder);
-    if(!id){_q('missing fund id',dstr,id,rawRet);return}
-    if(val==null){_q(_blank(rawRet)?'missing return':'unparseable return',dstr,id,rawRet);return}
-    if(iso==null){_q(_blank(dstr)?'missing date':'unparseable date',dstr,id,rawRet);return}
-    if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val});okN++;
-    if(minD==null||iso<minD)minD=iso;}
+    if(id&&val!=null&&iso!=null){if(!ret[id]){ret[id]=[];order.push(id)}ret[id].push({d:iso,v:val});okN++;
+      if(minD==null||iso<minD)minD=iso;return;}
+    // accumulate EVERY failing field (date, id, return) in the same order the Python
+    // engine does, so an uploaded row's reason reads identically to a baked one — a row
+    // bad on two counts says both, not just the first one hit
+    var parts=[];
+    if(iso==null)parts.push(_blank(dstr)?'missing date':'unparseable date');
+    if(!id)parts.push('missing fund id');
+    if(val==null)parts.push(_blank(rawRet)?'missing return':'unparseable return');
+    _q(parts.join(', ')||'unparseable row',dstr,id,rawRet);}
   if(det.shape==='wide'){var use=det.series.filter(function(s){return !s.excludedByUser});
     body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,r[s.idx])})});
   }else if(det.shape==='long'){var m=det.map;
