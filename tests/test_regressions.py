@@ -282,6 +282,51 @@ def test_js_python_metric_parity():
             )
 
 
+def test_client_strategy_preferences_tilt_both_scoring_paths():
+    """The mandate spec allows 'strategy preferences OR exclusions'. Exclusions already
+    hid funds; preferences must TILT ranking toward a preferred strategy — a soft bonus,
+    not a hard gate. The bug class we're pinning: a bonus applied in only ONE of the two
+    scoring paths (the initial screenAndScore vs. the live recompute after a mandate
+    edit), so the same fund ranks differently depending on how the story got there.
+    Lock in: one shared bonus constant, and the SAME tilt in both paths."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    # one canonical bonus magnitude, defined once
+    assert js.count("PREF_BONUS=0.25") == 1, "the preference bonus must have a single canonical definition"
+    # the initial screen/score path adds the tilt to BOTH the rank key and the score
+    assert "_zRaw(d,_accFund,W,DIR,stE)+_prefBonus(d)" in js, "initial ranking must add the strategy-preference tilt"
+    assert "_prefBonus(d))*1000)/1000" in js, "initial score must include the preference tilt"
+    assert "d.preferred=(_prefBonus(d)>0)" in js, "a preferred fund must be flagged so the UI can mark it"
+    # the live recompute path (after a mandate edit) applies the SAME PREF_BONUS tilt
+    assert js.count("_pref.indexOf(") >= 2, "recompute must re-derive the preferred set the same way"
+    assert js.count("?PREF_BONUS:0") >= 2, "the recompute path must reuse the same bonus magnitude, not a second constant"
+    # the mandate chips are TRISTATE (prefer / exclude / neutral) — preferences and
+    # exclusions are mutually exclusive per strategy and cycle through neutral.
+    assert "prefStrats=" in js and "exclStrats=" in js, "mandate must capture BOTH preferred and excluded strategy sets"
+    assert "mf-chip.pref" in js and "mf-chip.off" in js, "chips must express both a preferred and an excluded visual state"
+
+
+def test_client_summary_statistics_input_mode():
+    """The spec's input format is 'multiple CSVs with monthly returns OR summary
+    statistics'. A file of per-fund precomputed metrics (no date/return series) must be
+    detected as its own shape and ranked WITHOUT fabricating a series. Pin: the 'stats'
+    shape detection (no date column + an id + >=2 recognised stat columns), the per-fund
+    parser, and a dedicated recompute that never touches the return-series path."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    # a dedicated schema shape, gated on NO date column + an id + >=2 stat columns
+    assert "out.shape='stats'" in js, "summary-statistics files must detect as their own 'stats' shape"
+    assert "dateCol<0&&(iId>=0||textCols.length>=1)&&nStat>=2" in js, (
+        "stats detection must require no date column and at least two recognised stat columns"
+    )
+    # a per-fund parser and a dedicated recompute that bypasses the series pipeline
+    assert js.count("function_statFund(") == 1, "there must be one summary-stats row parser"
+    assert js.count("functionrecomputeStats(") == 1, "there must be one summary-stats recompute path"
+    # stats funds route to recomputeStats and short-circuit the series-based finalize
+    assert "recomputeStats(acc.statFunds);return" in js, "stats input must route to recomputeStats and not fall through to the series path"
+    assert "_stats:true" in js, "stats-derived funds must be flagged so downstream (series-only visuals) can adapt"
+    # percent-or-decimal tolerance and drawdown sign normalisation live in the parser
+    assert "if(dd!=null&&dd>0)dd=-dd" in js, "a positive max-drawdown from a stats file must be normalised to negative"
+
+
 def test_outlier_does_not_crush_the_plotted_cluster(tmp_path):
     memo, ctx = _outlier_ctx(tmp_path)
     data = _extract_data(render_html(memo, ctx))

@@ -345,6 +345,10 @@ function rebuildGates(){var ms=A.mandateSpec||{};var g=[];
   if(ms.maxddFloor!=null)g.push({label:'DRAWDOWN',detail:'≥ '+Math.round(ms.maxddFloor*100)+'%'});
   if((ms.exclStrats||[]).length)g.push({label:'STRATEGY',detail:'excl. '+ms.exclStrats.join(', ')});
   if(!g.length)g=[{label:'MANDATE',detail:'screen'}];A.gates=g;}
+// a PREFERRED strategy earns a modest scoring tilt (not a hard screen) — enough to
+// break close calls toward the mandate's preferences without overriding the metrics.
+var PREF_BONUS=0.25;
+function _prefBonus(d){return (((A.mandateSpec&&A.mandateSpec.prefStrats)||[]).indexOf(d.strategy)>=0)?PREF_BONUS:0}
 function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.weights;
   A.funds.forEach(function(d){var rs=[];
     if(ms.liqCap!=null&&d.redd!=null&&d.redd>ms.liqCap)rs.push({text:"illiquid · "+(d.redf||'')+" ("+Math.round(d.redd)+"d)",kind:"LIQUIDITY"});
@@ -354,14 +358,14 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
     d.reasons=rs;d.reason=(rs.length?rs[0].text:null);d.rkind=(rs.length?rs[0].kind:null);d.eligible=(rs.length===0);d.excluded=(rs.length>0);});
   var elig=A.funds.filter(function(d){return d.eligible});
   var stE=_zStats(elig,_accFund,Object.keys(W));
-  elig.forEach(function(d){d._rs=_zRaw(d,_accFund,W,DIR,stE)});   // rank on the raw (unrounded) weighted-z sum
+  elig.forEach(function(d){d._rs=_zRaw(d,_accFund,W,DIR,stE)+_prefBonus(d)});   // rank on the raw weighted-z sum + any strategy-preference tilt
   var ranked=elig.slice().sort(function(a,b){return b._rs-a._rs});var nS=ms.topN||5;var shortIds=ranked.slice(0,nS).map(function(d){return d.id});
   A.funds.forEach(function(d){
     if(!d.eligible){d.rank=null;d.cut=false;d.srank=99;d.components=[];d.comp={};d.score=0;if(d._rs!=null)delete d._rs;return}
     var si=shortIds.indexOf(d.id);var rk=si>=0?si+1:null;d.rank=rk;d.cut=(rk==null);d.srank=(rk||(d.cut?90:99));
     // components on the SAME eligible-z basis as the ranking, so bars == rank order
     var cp=_zComps(d,_accFund,W,DIR,stE);
-    var cm={};cp.forEach(function(x){cm[x.k]=x.c});d.components=cp;d.comp=cm;d.score=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;delete d._rs;});
+    var cm={};cp.forEach(function(x){cm[x.k]=x.c});d.components=cp;d.comp=cm;d.score=Math.round((cp.reduce(function(s,x){return s+x.c},0)+_prefBonus(d))*1000)/1000;d.preferred=(_prefBonus(d)>0);delete d._rs;});
   A.nShort=shortIds.length;A.nEligible=elig.length;A.nReject=A.funds.filter(function(d){return d.reason}).length;A.nTotal=A.funds.length;
   var win=A.funds.filter(function(d){return d.rank==1})[0];
   A.verdict=(win?first(win.name)+" leads on risk-adjusted return.":"No fund met the mandate.");
@@ -374,7 +378,7 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
   var liq=ms.liqCap==null?400:ms.liqCap, vol=ms.volCap==null?0.5:ms.volCap, mdd=ms.maxddFloor==null?-0.5:ms.maxddFloor;
   var fs=weightFactors();
   function sld(id,lbl,val,min,max,step,fmt){return "<div class='mf-row'><label>"+lbl+"<b id='"+id+"v'>"+fmt(val)+"</b></label><input type='range' id='"+id+"' min='"+min+"' max='"+max+"' step='"+step+"' value='"+val+"'></div>"}
-  var chips=str016.map(function(s){var on=(ms.exclStrats||[]).indexOf(s)<0;return "<span class='mf-chip"+(on?'':' off')+"' data-s=\""+esc(s)+"\">"+esc(s)+"</span>"}).join('');
+  var chips=str016.map(function(s){var ex=(ms.exclStrats||[]).indexOf(s)>=0,pr=(ms.prefStrats||[]).indexOf(s)>=0;var cls=ex?' off':(pr?' pref':'');return "<span class='mf-chip"+cls+"' data-s=\""+esc(s)+"\">"+esc(s)+"</span>"}).join('');
   var wsl=fs.map(function(k,i){var pv=Math.round((A.weights[k]||0)*100);return "<div class='mf-row'><label><span class='wdot' style='background:"+segColor(i,false)+"'></span>"+k.replace(/_/g,' ')+"<b id='w_"+k+"v'>"+pv+"%</b></label><input type='range' class='mf-w' data-k='"+k+"' min='0' max='50' step='1' value='"+pv+"'></div>"}).join('');
   var h="<div class='d-pre'>Mandate · investable constraints</div><div class='d-name'>Edit the house view</div>"
    +"<p class='mm-p'>Re-screen and re-score the loaded universe live. Changes are stamped against the default mandate.</p>"
@@ -382,18 +386,22 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
    +sld('mf_liq','Liquidity · redeem within',liq,15,400,5,function(v){return Math.round(v)+' days'})
    +sld('mf_vol','Target vol ceiling',vol,0.05,0.6,0.01,function(v){return Math.round(v*100)+'%'})
    +sld('mf_mdd','Max drawdown tolerance',mdd,-0.6,-0.05,0.01,function(v){return Math.round(v*100)+'%'})
-   +(str016.length?("<div class='mf-h'>Strategy exclusions <span class='mf-hint'>tap to exclude</span></div><div class='mf-chips'>"+chips+"</div>"):"")
+   +(str016.length?("<div class='mf-h'>Strategy preferences <span class='mf-hint'>tap: prefer → exclude → neutral</span></div><div class='mf-chips'>"+chips+"</div>"):"")
    +"<div class='mf-h'>Scoring weights</div>"+wsl
    +"<div class='mf-act'><button class='mf-apply' id='mfApply'>Apply &amp; re-decide</button><button class='mf-reset' id='mfReset'>Reset to house view</button></div>";
   openDrawer(h);
   var upd=function(){$('#mf_liqv').textContent=Math.round(+$('#mf_liq').value)+' days';$('#mf_volv').textContent=Math.round($('#mf_vol').value*100)+'%';$('#mf_mddv').textContent=Math.round($('#mf_mdd').value*100)+'%';};
   ['mf_liq','mf_vol','mf_mdd'].forEach(function(id){var e2=$('#'+id);if(e2)e2.addEventListener('input',upd)});
   $$('.mf-w').forEach(function(s){s.addEventListener('input',function(){$('#w_'+s.dataset.k+'v').textContent=Math.round(+s.value)+'%'})});
-  $$('.mf-chip').forEach(function(c){c.addEventListener('click',function(){c.classList.toggle('off')})});
+  $$('.mf-chip').forEach(function(c){c.addEventListener('click',function(){   // cycle neutral → prefer → exclude → neutral
+    if(c.classList.contains('off')){c.classList.remove('off')}
+    else if(c.classList.contains('pref')){c.classList.remove('pref');c.classList.add('off')}
+    else{c.classList.add('pref')}})});
   var ap=$('#mfApply');if(ap)ap.addEventListener('click',function(){
     var ms2=Object.assign({},A.mandateSpec);
     ms2.liqCap=+$('#mf_liq').value;ms2.volCap=+$('#mf_vol').value;ms2.maxddFloor=+$('#mf_mdd').value;
     ms2.exclStrats=$$('.mf-chip.off').map(function(c){return c.dataset.s});
+    ms2.prefStrats=$$('.mf-chip.pref').map(function(c){return c.dataset.s});
     A.mandateSpec=ms2;
     var nw={};var raw={};var tot=0;$$('.mf-w').forEach(function(s){raw[s.dataset.k]=+s.value;tot+=+s.value});
     if(tot>0){Object.keys(raw).forEach(function(k){nw[k]=raw[k]/tot});A.weights=nw;A.weights0=Object.assign({},nw);A.activeMetrics=weightFactors().slice();}
@@ -1021,6 +1029,7 @@ function buildAudit(){
   var rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02));
   var benchNm=(A.bench&&A.bench.name)||'benchmark';
   var METRICS=[['ann_return','ret'],['ann_vol','vol'],['sharpe','sharpe'],['sortino','sortino'],['calmar','calmar'],['max_drawdown','maxdd'],['beta','beta'],['alpha','alpha'],['correlation','corr'],['peer_corr','peer_corr']];
+  var STATCANDS={ann_return:['ann_return','annualized_return','annual_return','cagr','return','ret','performance'],ann_vol:['ann_vol','annualized_vol','volatility','vol','stdev','std'],sharpe:['sharpe_ratio','sharpe'],sortino:['sortino_ratio','sortino'],calmar:['calmar_ratio','calmar'],max_drawdown:['max_drawdown','maxdd','max_dd','drawdown']};
   var FIELDS=[
     {fk:'strategy',label:'Strategy',cands:['strategy','style','asset_class','category'],fmt:function(v){return String(v)}},
     {fk:'fee',label:'Management fee',cands:['mgmt_fee_pct','fee','management_fee','expense'],fmt:function(v){return num(v)+'%'}},
@@ -1040,8 +1049,10 @@ function buildAudit(){
       if(mk==='sharpe'||mk==='sortino')inp.push('risk-free '+pct(rf));
       if(mk==='beta'||mk==='alpha'||mk==='correlation')inp.push('vs '+benchNm);
       if(mk==='peer_corr')inp=['pairwise vs the other '+((A.funds||[]).length-1)+' funds'];
+      var src=retSrc;
+      if(d._stats){var stc=STATCANDS[mk]?trace(d.id,STATCANDS[mk]):null;src=stc?("column ‘"+stc.col+"’ · row "+stc.row+" · "+stc.file):"summary-statistics file";inp=['provided value'];}
       claims.push({fund:d.name,id:d.id,kind:'metric',mk:mk,mode:mode,ok:ok,label:metricLabel(mk),value:fmtMetricVal(mk,v),
-        def:(METRIC_INFO[mk]||{}).def||'',inputs:inp,src:retSrc});
+        def:(METRIC_INFO[mk]||{}).def||'',inputs:inp,src:src});
     });
     FIELDS.forEach(function(F){var v=d[F.fk];if(v==null||v===''||v==='—')return;
       var tr=trace(d.id,F.cands);
@@ -1421,6 +1432,13 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
     return out;}
   if(iNm>=0&&iSt>=0&&(iId>=0||textCols.length)&&iRet<0&&numCols.length<=1){   // ── METADATA only ──
     out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt,fee:iFee,redf:iRd,lockup:iLk,notice:iNt,notes:iNo};out.confident=true;return out;}
+  // ── SUMMARY STATISTICS — per-fund precomputed metrics, no date/return series ──
+  var iVol=_findCol(hdr,['ann_vol','annualized_vol','volatility','vol','stdev','std_dev','std']),iSh=_findCol(hdr,['sharpe_ratio','sharpe']),iSoS=_findCol(hdr,['sortino_ratio','sortino']),iCaS=_findCol(hdr,['calmar_ratio','calmar']),iDd=_findCol(hdr,['max_drawdown','maxdd','max_dd','drawdown']),iRr=_findCol(hdr,['ann_return','annualized_return','annual_return','cagr','return','ret','performance']);
+  var nStat=[iSh,iSoS,iCaS,iDd,iVol,iRr].filter(function(c){return c>=0}).length;
+  if(dateCol<0&&(iId>=0||textCols.length>=1)&&nStat>=2){
+    out.shape='stats';out.confident=true;
+    out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt,ret:iRr,vol:iVol,sharpe:iSh,sortino:iSoS,calmar:iCaS,maxdd:iDd,fee:iFee,redf:iRd,lockup:iLk,notice:iNt,notes:iNo};
+    return out;}
   out.shape='unknown';out.confident=false;
   out.warnings.push('Could not find a date column and at least one return series.');
   return out;}
@@ -1456,7 +1474,19 @@ function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.ord
   else{ingCols=[{name:_cn(det.dateCol),role:'date'},{name:'fund columns',role:'id'},{name:'values',role:'return'}];}
   A.ingest={cols:ingCols,unit:det.unit,optional:optional,file:det._file,quar:{reasons:qreasons,count:quar,samples:qsamples},valid:okN,start:minD};
   return quar;}
-function finalizeIngest(acc){var ids=Object.keys(acc.ret);
+// parse one summary-stats row → a fund with precomputed metrics (no return series).
+// return/vol/drawdown may be percent or decimal; ratios pass through.
+function _statFund(r,m,id){
+  function s(i){return (i!=null&&i>=0&&r[i]!=null)?String(r[i]).trim():''}
+  function pn(i){var t=s(i);if(!t)return null;var pc=t.indexOf('%')>=0;var v=parseFloat(t.replace(/[%,]/g,''));if(!isFinite(v))return null;return pc?v/100:(Math.abs(v)>1.5?v/100:v)}
+  function rat(i){var t=s(i).replace(/,/g,'');var v=parseFloat(t);return isFinite(v)?v:null}
+  var meta=_fmeta(r,m,id),dd=pn(m.maxdd);if(dd!=null&&dd>0)dd=-dd;
+  return {id:id,name:meta.name,strategy:meta.strategy,fee:meta.fee,redf:meta.redf,lockup:meta.lockup,notice:meta.notice,notes:meta.notes,
+    ret:pn(m.ret),vol:pn(m.vol),sharpe:rat(m.sharpe),sortino:rat(m.sortino),calmar:rat(m.calmar),maxdd:dd};
+}
+function finalizeIngest(acc){
+  if(acc.statFunds&&acc.statFunds.length>=2){A.sources=acc.srcFiles||[];recomputeStats(acc.statFunds);return}   // summary-statistics input
+  var ids=Object.keys(acc.ret);
   if(ids.length<2){showIngestError(acc._failed&&acc._failed[0],acc);return}   // not enough usable returns → explain, don't silently toast
   ids.forEach(function(id){acc.ret[id].sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0})});
   A.sources=acc.srcFiles||[];   // ONLY successfully-ingested files become the panel's source of truth
@@ -1468,7 +1498,8 @@ function ingestFiles(list){var files=[].slice.call(list||[]);if(!files.length)re
     var acc={funds:{},ret:{},order:[],quar:0,srcFiles:[],_failed:[]};var ambiguous=[];
     all.forEach(function(txt,fi){var rows=parseCSV(txt);if(rows.length<2){acc._failed.push({shape:'unknown',cols:[],_file:files[fi].name,warnings:['File has no data rows.']});return}
       var det=detectSchema(rows);det._file=files[fi].name;det._rows=rows;det._src=srcMeta[fi];
-      if(det.shape==='meta'){rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.funds[id]=_fmeta(r,det.map,id)});acc.srcFiles.push(srcMeta[fi]);}
+      if(det.shape==='stats'){acc.statFunds=(acc.statFunds||[]);rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.statFunds.push(_statFund(r,det.map,id))});acc.srcFiles.push(srcMeta[fi]);}
+      else if(det.shape==='meta'){rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.funds[id]=_fmeta(r,det.map,id)});acc.srcFiles.push(srcMeta[fi]);}
       else if(det.shape==='long'&&det.confident){acc.quar+=_applyMapping(rows,det,acc);acc.srcFiles.push(srcMeta[fi]);}   // clean file → straight through, no panel
       else if(det.shape==='wide'||det.shape==='long'){ambiguous.push(det);}                                              // needs the mapping-review flow
       else{acc._failed.push(det);}                                                                                       // 'unknown' → explained in the failure modal
@@ -1578,7 +1609,8 @@ function recompute(funds,ret,order,quar){ try{
   // rank eligible: z across eligible
   var _accMbf=function(id,k){return mbf[id][k]};
   var stE=_zStats(elig,_accMbf,Object.keys(W));
-  var scoreE={};elig.forEach(function(id){scoreE[id]=_zRaw(id,_accMbf,W,DIR,stE)});   // rank on the raw (unrounded) sum
+  var _pref=ms.prefStrats||[];function _pbonus(id){return _pref.indexOf(strat[id])>=0?PREF_BONUS:0}   // strategy-preference tilt
+  var scoreE={};elig.forEach(function(id){scoreE[id]=_zRaw(id,_accMbf,W,DIR,stE)+_pbonus(id)});   // rank on the raw sum + preference tilt
   var ranked=elig.slice().sort(function(a,b){return scoreE[b]-scoreE[a]});var shortIds=ranked.slice(0,ms.topN);var rankOf={};shortIds.forEach(function(id,i){rankOf[id]=i+1});
   // visual components on the SAME eligible-z basis as the ranking, so bars == rank order
   function comps(id){return _zComps(id,_accMbf,W,DIR,stE)}
@@ -1595,7 +1627,7 @@ function recompute(funds,ret,order,quar){ try{
       if(ms.exclStrats.indexOf(strat[id])>=0)reasons.push({text:'off-strategy · '+strat[id],kind:'STRATEGY'});
       if(!reasons.length)reasons.push({text:'excluded by mandate',kind:'MANDATE'});}
     var reason=(reasons.length?reasons[0].text:null);
-    var cp=elig1?comps(id):[];var cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;
+    var cp=elig1?comps(id):[];var cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round((cp.reduce(function(s,x){return s+x.c},0)+(elig1?_pbonus(id):0))*1000)/1000;
     return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
       srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,
@@ -1626,6 +1658,52 @@ function recompute(funds,ret,order,quar){ try{
   rerender();
   toast("<span class='tk'>&#10003;</span>Re-ran the analysis · "+A.nTotal+" funds → "+A.nShort+" shortlisted"+(quar?" · "+quar+" bad rows quarantined":""));
  }catch(err){toast("<span class='tk' style='color:var(--loss)'>!</span>Analysis failed on that data")}}
+// ── SUMMARY-STATISTICS input: build the universe directly from precomputed per-fund
+// metrics (no return series). Screens + scores + settles exactly like a returns upload;
+// series-only views (trajectory, peer/benchmark correlation) are simply absent (N/A). ──
+function recomputeStats(sf){ try{
+  var ms=A.mandateSpec||{exclStrats:[],prefStrats:[],volCap:null,maxddFloor:null,topN:5};var W=A.weights,DIR=A.dir||{};
+  var _pref=ms.prefStrats||[];function _pb(st){return _pref.indexOf(st)>=0?PREF_BONUS:0}
+  var byId={},mbf={};sf.forEach(function(f){byId[f.id]=f;mbf[f.id]={ann_return:f.ret,ann_vol:f.vol,sharpe:f.sharpe,sortino:f.sortino,calmar:f.calmar,max_drawdown:f.maxdd}});
+  var ids=sf.map(function(f){return f.id}).filter(function(id){var m=mbf[id];return m.ann_return!=null&&m.ann_vol!=null});
+  if(ids.length<2){toast("<span class='tk' style='color:var(--loss)'>!</span>Need at least 2 funds with return + volatility");return}
+  function strat(id){return byId[id].strategy||'—'}
+  function eligibleOf(id){var m=mbf[id];var okS=ms.exclStrats.indexOf(strat(id))<0;var okV=(ms.volCap==null)||(m.ann_vol==null)||(m.ann_vol<=ms.volCap);var okD=(ms.maxddFloor==null)||(m.max_drawdown==null)||(m.max_drawdown>=ms.maxddFloor);return okS&&okV&&okD}
+  var elig=ids.filter(eligibleOf),_accMbf=function(id,k){return mbf[id][k]};
+  var stE=_zStats(elig,_accMbf,Object.keys(W));
+  var scoreE={};elig.forEach(function(id){scoreE[id]=_zRaw(id,_accMbf,W,DIR,stE)+_pb(strat(id))});
+  var ranked=elig.slice().sort(function(a,b){return scoreE[b]-scoreE[a]});var shortIds=ranked.slice(0,ms.topN||5);var rankOf={};shortIds.forEach(function(id,i){rankOf[id]=i+1});
+  function comps(id){return _zComps(id,_accMbf,W,DIR,stE)}
+  var volAx=_axis(ids.map(function(id){return mbf[id].ann_vol})),retAx=_axis(ids.map(function(id){return mbf[id].ann_return}));
+  var fd=ids.map(function(id){var m=mbf[id],f=byId[id],rk=rankOf[id]||null,elig1=eligibleOf(id),cut=(rk==null&&elig1);
+    var reasons=[];if(!elig1){
+      if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
+      if(ms.maxddFloor!=null&&m.max_drawdown!=null&&m.max_drawdown<ms.maxddFloor)reasons.push({text:'drawdown · '+Math.round(m.max_drawdown*100)+'% beyond '+Math.round(ms.maxddFloor*100)+'% floor',kind:'DRAWDOWN'});
+      if(ms.exclStrats.indexOf(strat(id))>=0)reasons.push({text:'off-strategy · '+strat(id),kind:'STRATEGY'});
+      if(!reasons.length)reasons.push({text:'excluded by mandate',kind:'MANDATE'});}
+    var cp=elig1?comps(id):[],cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round((cp.reduce(function(s,x){return s+x.c},0)+(elig1?_pb(strat(id)):0))*1000)/1000;
+    return {id:id,name:f.name,strategy:f.strategy,rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
+      srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
+      ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:[],reason:(reasons.length?reasons[0].text:null),components:cp,comp:cm,score:sc,
+      beta:null,alpha:null,corr:null,peer_corr:null,preferred:(_pb(strat(id))>0),
+      fee:f.fee,redf:f.redf,lockup:f.lockup,notice:f.notice,notes:f.notes,netret:(f.fee!=null&&m.ann_return!=null?m.ann_return-f.fee/100:null),_stats:true,detail:''};});
+  var surv=fd.filter(function(d){return d.eligible}),benchLine=null,gateX=null,bench=A.bench;
+  if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
+    var zvAx=_axis(zv),zrAx=_axis(zr);if(bench){zvAx=_axisWith(zvAx,bench.vol);zrAx=_axisWith(zrAx,bench.ret);}
+    surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
+    benchLine=_benchMark(zvAx,zrAx,bench);
+    if(ms.volCap!=null){var gx=12+_pos(ms.volCap,volAx)*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
+  fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}
+    var cd=[['ann_return','ann return',pct(d.ret)],['ann_vol','ann vol',pct(d.vol)],['sharpe','sharpe',num(d.sharpe)],['sortino','sortino',num(d.sortino)],['calmar','calmar',num(d.calmar)],['max_drawdown','max drawdown',pct(d.maxdd)]];
+    d.detail="<p class='d-p'>"+esc(d.name)+" "+(d.rank?("ranks #"+d.rank):(d.reason?("excluded — "+esc(d.reason)):"outscored below the shortlist"))+". Metrics as provided in the summary-statistics file.</p><div class='mgrid'>"+cd.map(function(c){return "<div class='cell' data-mk='"+c[0]+"'><b>"+c[2]+"</b><i>"+c[1]+"</i></div>"}).join('')+"</div><div class='src-lbl'>Provided summary statistics · no return series</div>";});
+  var win=fd.filter(function(d){return d.rank==1})[0];
+  A.funds=fd;A.benchLine=benchLine;A.gateX=gateX;A.volcap=(ms.volCap!=null?Math.round(ms.volCap*100)+'%':null);A._statsMode=true;
+  A.nTotal=fd.length;A.nEligible=surv.length;A.nShort=shortIds.length;A.nReject=fd.filter(function(d){return d.reason}).length;
+  A.verdict=(win?win.name+" leads on risk-adjusted return.":"No fund met the mandate.");A.verdictHtml=(win?"<b>"+esc(win.name)+"</b> leads on risk-adjusted return.":"No fund met the mandate.");
+  A.shareText=(win?win.name+" — recommended (summary-statistics input).":"No fund met the mandate.");
+  toast("<span class='tk'>&#10003;</span>Summary statistics · "+fd.length+" funds → "+shortIds.length+" shortlisted");
+  rerender(_snapStory);
+ }catch(err){toast("<span class='tk' style='color:var(--loss)'>!</span>Could not read those summary statistics")}}
 function rerender(next){aborted=true;bumpGen();A.weights0=Object.assign({},A.weights);A.activeMetrics=weightFactors().slice();A._snap=null;A._reran=true;var f=$('#field');$$('.node',f).forEach(function(n){n.remove()});nodes={};rows={};segState={};trajBuilt=false;
   document.body.classList.remove('settled','scoring','screening');$('#scorebars').innerHTML='';$('#weighticker').innerHTML='';$('#whynote').innerHTML='';$('#weighlegend').innerHTML='';$('#weighlegend').classList.remove('in');$('#traj').innerHTML='';$$('.tt,.tx,.ty').forEach(function(t){t.remove()});
   $('.rail').classList.remove('in');$('#trajpane').classList.remove('in');$('#scorepane').classList.remove('in');$('.sweetz').classList.remove('on');clearCue();
