@@ -449,8 +449,7 @@ function relayoutScatter(){  // recompute the risk/return frontier so it include
   if(b){zv=zv.concat([b.vol]);zr=zr.concat([b.ret])}
   var zvAx=_axis(zv),zrAx=_axis(zr);
   surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
-  if(b){b.xz=Math.round((14+_pos(b.vol,zvAx)*72)*10)/10;b.yz=Math.round((14+_pos(b.ret,zrAx)*72)*10)/10;
-    if(b.vol>0){var ox=14+_pos(0,zvAx)*72,oy=14+_pos(0,zrAx)*72;A.benchLine=_rayThrough(ox,oy,b.xz,b.yz)}}
+  A.benchLine=_benchMark(zvAx,zrAx,b);
   A.funds.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // repaint the ranked nodes + benchmark marker + ray from the SAME coords, so the
   // marker always sits on the line and nodes don't lag a stale layout.
@@ -1195,6 +1194,20 @@ function _rayThrough(ox,oy,mx,my){var lo=8,hi=92,dx=mx-ox,dy=my-oy,cand=[];
   var t1=Math.min.apply(null,v),t2=Math.max.apply(null,v);
   return {x1:Math.round((ox+t1*dx)*10)/10,y1:Math.round((oy+t1*dy)*10)/10,
           x2:Math.round((ox+t2*dx)*10)/10,y2:Math.round((oy+t2*dy)*10)/10};}
+// THE single client builder for the benchmark marker + its reference line — used by
+// EVERY path (baked relayout, CSV upload, live refetch). It places the marker on the
+// zoom axes and returns the line as the ray from the mapped origin THROUGH that marker,
+// so the marker is on the line by construction. Do NOT rebuild the bench line any other
+// way (e.g. a chord between axis endpoints): _pos saturates outliers, so an endpoint
+// chord drifts off the marker — the recurring "S&P diamond floating off the line" bug.
+function _benchMark(zvAx,zrAx,b){
+  if(!b)return null;
+  b.xz=Math.round((14+_pos(b.vol,zvAx)*72)*10)/10;
+  b.yz=Math.round((14+_pos(b.ret,zrAx)*72)*10)/10;
+  if(!(b.vol>0))return null;
+  var ox=14+_pos(0,zvAx)*72,oy=14+_pos(0,zrAx)*72;
+  return _rayThrough(ox,oy,b.xz,b.yz);
+}
 /* ── one client-side scoring core, shared by screenAndScore, reweigh and the CSV
    recompute so the z-score basis can't drift between them. acc(item,key) reads a
    metric off whatever the caller holds (a fund object or a metrics dict); callers
@@ -1468,8 +1481,7 @@ function recompute(funds,ret,order,quar){ try{
   if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
     var zvAx=_axis(zv),zrAx=_axis(zr);
     surv.forEach(function(d){d.xz=Math.round((14+_pos(d.vol,zvAx)*72)*10)/10;d.yz=Math.round((14+_pos(d.ret,zrAx)*72)*10)/10});
-    if(bench){bench.xz=Math.round((14+_pos(bench.vol,zvAx)*72)*10)/10;bench.yz=Math.round((14+_pos(bench.ret,zrAx)*72)*10)/10;
-      if(bench.vol>0){var s=bench.ret/bench.vol;var mp=function(vol){return [Math.round((14+_pos(vol,zvAx)*72)*10)/10,Math.round((14+_pos(s*vol,zrAx)*72)*10)/10]};var p1=mp(zvAx.lo),p2=mp(zvAx.hi);benchLine={x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1]}}}
+    benchLine=_benchMark(zvAx,zrAx,bench);   // ray THROUGH the marker — same builder as every other path, so the diamond can never drift off its line again
     if(ms.volCap!=null){var gx=12+_pos(ms.volCap,volAx)*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
   fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // detail html for the drawer

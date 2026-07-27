@@ -128,6 +128,26 @@ def test_benchmark_marker_stays_on_its_reference_line():
     assert dist < 6.0, f"benchmark marker is {dist:.1f}% off its reference line (should hug it)"
 
 
+def test_client_bench_line_single_ray_through_builder():
+    """The 'S&P diamond floats off its reference line' bug kept coming back because
+    each client path (baked relayout, CSV upload, live refetch) rebuilt the benchmark
+    line on its own — and the upload path used a chord between axis endpoints, which
+    drifts off the marker whenever _pos saturates an outlier fund. Lock it down: the
+    benchmark marker + line has exactly ONE client builder (_benchMark), it rays
+    THROUGH the marker (marker on the line by construction), every dynamic path routes
+    through it, and the endpoint-chord slope can never be reintroduced."""
+    js = Path("backend/amb_core/assets/memo.js").read_text()
+    assert js.count("function _benchMark(") == 1, "the benchmark line must have ONE shared client builder"
+    b0 = js.index("function _benchMark(")
+    assert "_rayThrough(" in js[b0:b0 + 800], "_benchMark must build the line as a ray THROUGH the marker"
+    # builder definition (1) + both call sites (recompute + relayoutScatter) => >= 3 refs
+    assert js.count("_benchMark(") >= 3, "recompute() and relayoutScatter() must both use the shared _benchMark builder"
+    # the axis-endpoint chord slope that caused the drift must never come back
+    assert "bench.ret/bench.vol" not in js and "b.ret/b.vol" not in js, (
+        "benchmark reference line was rebuilt as an axis-endpoint chord — the marker will drift off it again"
+    )
+
+
 def test_outlier_does_not_crush_the_plotted_cluster(tmp_path):
     memo, ctx = _outlier_ctx(tmp_path)
     data = _extract_data(render_html(memo, ctx))
