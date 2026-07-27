@@ -1,6 +1,11 @@
 # 0009 — Local-first surface: CLI + file exports, no web server
 
-**Status:** Accepted · 2026-07-22 · supersedes the API/HUD tier in SPEC §2/§4
+**Status:** Superseded by [ADR-0010](0010-minimal-local-server-for-live-data-and-hud.md) · 2026-07-22
+
+> The "no web server" stance below held until live FRED data + a browser-served
+> decision HUD needed a localhost process to hold a secret and answer `fetch()`.
+> A minimal server was re-introduced under ADR-0010; the file exports described
+> here remain the portable deliverables.
 
 ## Context
 The brainstorm centered a Next.js HUD talking to a FastAPI gateway. But this tool

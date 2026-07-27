@@ -1,19 +1,15 @@
 """Provider-agnostic LLM access for memo drafting.
 
-A *claims provider* is a callable `AnalysisContext -> structured memo payload`. The
-concrete provider (Anthropic, OpenAI, …) is selected at runtime from config via
-`select_claims_provider()`; each one forces structured output through the same tool
-schema, so the model must return validated JSON. Adding a provider means adding one
-function and one branch in the factory — nothing else in the codebase changes.
+A *claims provider* is a callable `AnalysisContext -> structured memo payload`,
+picked from config by `select_claims_provider()` (Anthropic, OpenAI, or an offline
+template). Each forces structured output through one tool schema. Adding a provider
+is one function and one branch.
 
-Guardrails
-  * Fund data is UNTRUSTED input: it is fenced inside <fund_data> markers and the
-    system prompt instructs the model to treat it strictly as data, never as
-    instructions (prompt-injection defence).
-  * The model may only cite provided numbers; downstream every claim's value is
-    re-verified against the deterministic metrics engine, so a manipulated or
-    hallucinated figure is caught and marked unverified regardless of the model.
-  * Every call is logged (provider, model, latency, usage, correlation id).
+Guardrails: fund data is UNTRUSTED — fenced in <fund_data> markers, with the system
+prompt treating it as data, never instructions (prompt-injection defence). The
+model only chooses which (fund, metric) to assert; the value is filled from the
+engine downstream (see memo.py), so a wrong or hallucinated number never reaches
+the page. Every call is logged (provider, model, latency, usage, correlation id).
 """
 from __future__ import annotations
 

@@ -1,20 +1,14 @@
-"""`./amb serve` — a tiny local API so the *browser* makes a real, live FRED call.
+"""A tiny localhost server so the *browser* can make a real, live FRED call.
 
-The browser can't call FRED directly (FRED sends no CORS header), and the API key
-must never ship in client code. So this process holds the key server-side, exposes
-`/api/market`, and the page fetches that: browser → localhost → FRED. The secret
-stays on the server; the reviewer sees a real market-data API call in the network
-tab and the server log. Falls back to the committed snapshot if the live call fails.
+The browser can't call FRED directly (no CORS) and the key must never ship in
+client code — so this process holds the key, exposes `/api/market`, and the page
+fetches that: browser → localhost → FRED. It also serves the built memo. Falls
+back to the committed snapshot if the live call fails. (ADR-0010.)
 
-Security posture (local, single-user tool):
-  * The FRED / LLM keys are read server-side only; responses expose booleans
-    (`has_fred_key`) never the secret itself.
-  * Endpoints take no client-supplied input, so there is no injection surface;
-    `mode` is validated against a whitelist as defence-in-depth.
-  * Only the built memo file is ever served — no arbitrary path is exposed.
-  * Bound to 127.0.0.1 by default (see config.serve_host) — not the network.
-  * Same-origin by default (no permissive CORS); errors return generic text
-    and the detail is logged server-side, never leaked to the client.
+Right-sized for a single-user local tool: bound to 127.0.0.1, keys read
+server-side only (responses expose booleans like `has_fred_key`, never the
+secret), no client-supplied input beyond a whitelisted `mode`, and errors return
+generic text with detail logged server-side.
 """
 from __future__ import annotations
 
