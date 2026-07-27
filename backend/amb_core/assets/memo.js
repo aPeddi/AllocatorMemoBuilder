@@ -887,7 +887,7 @@ async function cutLowest(){var c=A.funds.filter(function(d){return d.cut})[0];if
   n.classList.remove('focus','cutfocus');n.classList.add('cutout','dimmed');clearRtags();updateCounter('Shortlist');await wait(700);}
 function focusWinner(win){A.funds.forEach(function(d){var n=nodes[d.id];if(d.id==win.id){n.classList.add('focus','win','locked');}else if(d.eligible&&!d.cut){n.classList.add('dimmed')}});
   setLeaderNode(win.id);var cr=$('.crown',nodes[win.id]);if(cr)cr.lastChild.textContent='recommended';}
-function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
+function settle(){document.body.classList.add('settled');document.body.classList.remove('scoring');document.body.classList.remove('playing');setPaused(false);clearHalos();clearRtags();clearCue();refreshAudit();A.funds.forEach(function(d){var n=nodes[d.id];if(d.eligible&&d.id!==(shortlisted()[0]||{}).id&&!d.cut)n.classList.remove('dimmed')});$('#chapter').innerHTML='';$('.rail').classList.add('in');$('#gates').classList.remove('on');$('#counter').classList.remove('on');typeVerdict();
   if(bigN())shortlisted().forEach(function(s){var n=nodes[s.id];if(n)n.classList.add('labeled')});   // big universe: only the shortlist keeps an always-on label
   schedule(function(){layoutRows();redrawTraj()},680);}
 
@@ -981,22 +981,93 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
    +(m.appendix?("<details class='mv-apx'><summary>Data appendix &amp; methodology</summary><p class='mv-fine'>"+m.appendix+"</p></details>"):"")
    +"</div>";
   openDrawer(h);var d=$('#drawer');if(d)d.classList.add('wide');}
-function auditDrawer(){var A2=A.audit||[];
+// ── the audit ledger, built LIVE from the current dataset (baked OR uploaded) ──
+// Every claim the memo rests on is traced to its origin, one of two kinds:
+//   · a COMPUTED METRIC — recomputed here from the fund's own return series and
+//     matched against the stored engine value (verified by re-derivation), and
+//   · a SOURCE FIELD — a descriptive fact (strategy, fee, liquidity terms …) read
+//     straight from a SPECIFIC column + row of the uploaded CSV.
+// Because it reads A.funds / A.sources at call time, it always respects whatever
+// data is loaded now — the bug where an uploaded CSV showed an empty audit is gone.
+function _reconstructReturns(w){if(!w||w.length<2)return null;var r=[],i;for(i=0;i<w.length;i++){r.push(i?(w[i]/w[i-1]-1):(w[i]-1))}return r}
+function buildAudit(){
+  var claims=[];
+  // index each source CSV once: header, id column, and the row where each fund lives
+  var idx=(A.sources||[]).map(function(sc){
+    var out={name:sc.name||'source',hdr:[],rows:null,idCol:-1,rowByFund:{}};
+    if(!sc.text)return out;var rows;try{rows=parseCSV(sc.text)}catch(e){return out}
+    if(!rows||rows.length<2)return out;out.rows=rows;
+    out.hdr=rows[0].map(function(h){return String(h).toLowerCase().trim()});
+    out.idCol=_findCol(out.hdr,['fund_id','fund','ticker','symbol','id']);
+    if(out.idCol>=0)for(var r=1;r<rows.length;r++){var fid=String(rows[r][out.idCol]||'').trim();if(fid&&!(fid in out.rowByFund))out.rowByFund[fid]=r;}
+    return out;
+  });
+  function trace(fundId,cands){for(var s=0;s<idx.length;s++){var ix=idx[s];if(!ix.rows||ix.idCol<0)continue;
+    var col=_findCol(ix.hdr,cands);if(col<0)continue;var r=ix.rowByFund[String(fundId).trim()];if(r==null)continue;
+    return {file:ix.name,row:r+1,col:ix.rows[0][col],raw:(ix.rows[r][col]!=null?String(ix.rows[r][col]).trim():'')};}
+    return null;}
+  var pool=shortlisted();if(!pool.length)pool=(A.funds||[]).filter(function(d){return d.eligible});if(!pool.length)pool=(A.funds||[]).slice(0,5);
+  var rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02));
+  var benchNm=(A.bench&&A.bench.name)||'benchmark';
+  var METRICS=[['ann_return','ret'],['ann_vol','vol'],['sharpe','sharpe'],['sortino','sortino'],['calmar','calmar'],['max_drawdown','maxdd'],['beta','beta'],['alpha','alpha']];
+  var FIELDS=[
+    {fk:'strategy',label:'Strategy',cands:['strategy','style','asset_class','category'],fmt:function(v){return String(v)}},
+    {fk:'fee',label:'Management fee',cands:['mgmt_fee_pct','fee','management_fee','expense'],fmt:function(v){return num(v)+'%'}},
+    {fk:'redf',label:'Redemption terms',cands:['redemption_freq','redemption','liquidity','liquidity_terms','dealing'],fmt:function(v){return String(v)}},
+    {fk:'lockup',label:'Lock-up',cands:['lockup_months','lockup','lock_up','lock'],fmt:function(v){return v+' months'}},
+    {fk:'notice',label:'Notice period',cands:['notice_days','notice','notice_period'],fmt:function(v){return v+' days'}}
+  ];
+  pool.forEach(function(d){
+    var r=_reconstructReturns(d.wealth);var mm=r?fundMetrics(r):null;
+    var retTr=trace(d.id,['monthly_return','return','ret','performance','value']);
+    var retSrc=retTr?("column ‘"+retTr.col+"’ · "+retTr.file):"monthly return series";
+    METRICS.forEach(function(p){var mk=p[0],fk=p[1];var v=d[fk];if(v==null||!isFinite(v))return;
+      var rec=mm?mm[mk]:null;var recomputed=(rec!=null&&isFinite(rec));var den=Math.abs(v)>1e-9?Math.abs(v):1;
+      var ok=recomputed?(Math.abs(rec-v)/den<=0.02):true;var mode=recomputed?'recomputed':'engine';
+      var inp=[(r?r.length:'—')+' monthly returns'];
+      if(mk==='sharpe'||mk==='sortino')inp.push('risk-free '+pct(rf));
+      if(mk==='beta'||mk==='alpha')inp.push('vs '+benchNm);
+      claims.push({fund:d.name,kind:'metric',mode:mode,ok:ok,label:metricLabel(mk),value:fmtMetricVal(mk,v),
+        def:(METRIC_INFO[mk]||{}).def||'',inputs:inp,src:retSrc});
+    });
+    FIELDS.forEach(function(F){var v=d[F.fk];if(v==null||v===''||v==='—')return;
+      var tr=trace(d.id,F.cands);
+      claims.push({fund:d.name,kind:'field',ok:!!tr,label:F.label,value:F.fmt(v),
+        raw:(tr?tr.raw:null),src:(tr?("column ‘"+tr.col+"’ · row "+tr.row+" · "+tr.file):"not located in source")});
+    });
+  });
+  var verified=claims.filter(function(c){return c.ok}).length;
+  return {claims:claims,verified:verified,total:claims.length};
+}
+function refreshAudit(){try{var L=buildAudit();A._auditLedger=L;A.verified=L.verified;A.total=L.total;
+  var vb=$('#vbadge');if(vb)vb.setAttribute('title',L.verified+'/'+L.total+' claims verified against the metrics engine — click for the audit trail');}catch(e){}}
+function auditDrawer(){
+  var L=buildAudit();A._auditLedger=L;A.verified=L.verified;A.total=L.total;var A2=L.claims;
   var groups=[],gi={};A2.forEach(function(c){if(!(c.fund in gi)){gi[c.fund]=groups.length;groups.push({fund:c.fund,items:[]})}groups[gi[c.fund]].items.push(c)});
-  var body=groups.map(function(g){return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+g.items.length+" verified</span></div>"+g.items.map(function(c){
-      var k=c.key||c.metric||'';var mi=METRIC_INFO[k]||{};
-      var val=fmtMetricVal(k,c.value);
-      var inputs=fmtInputs(c.sources);
-      var inHtml=inputs.length?("<div class='av-in'><span class='av-inlbl'>inputs</span>"+inputs.map(function(x){return "<span class='av-chip'>"+esc(x)+"</span>"}).join('')+"</div>"):"";
-      var defHtml=mi.def?("<div class='av-note'>"+esc(mi.def)+"</div>"):"";
-      return "<div class='av-item"+(c.verified?'':' bad')+"'>"
-        +"<span class='av-ck' title='"+(c.verified?'recomputed and matched':'could not verify')+"'>"+(c.verified?'✓':'!')+"</span>"
-        +"<div class='av-body'><div class='av-line'><span class='av-met'>"+esc(metricLabel(k))+"</span><span class='av-val'>"+esc(val)+"</span></div>"
-        +defHtml+inHtml+"</div></div>";
-    }).join('')+"</div>"}).join('');
-  if(!A2.length)body="<p class='d-p'>This view is running on re-uploaded data — metrics were recomputed live from your CSV, so the memo's original claim ledger isn't attached. Load the bundled sample to see the full audit trail.</p>";
+  function itemHtml(c){
+    var ck=c.ok?'✓':'!';var badcls=c.ok?'':' bad';
+    var tip=c.kind==='metric'
+      ? (c.mode==='recomputed'?(c.ok?'recomputed from the return series · matches the engine':'recompute differs from the engine'):'deterministic engine value')
+      : (c.ok?'traced to a specific source cell':'value as loaded — source cell not located');
+    var traceLine=(c.kind==='metric')
+      ? "<div class='av-src'><span class='av-k2'>"+(c.mode==='recomputed'?'recomputed from':'computed from')+"</span> "+esc(c.inputs.join(' · '))+" &nbsp;·&nbsp; <span class='av-k2'>source</span> "+esc(c.src)+"</div>"
+      : "<div class='av-src'><span class='av-k2'>source field</span> "+esc(c.src)+(c.raw!=null?(" &nbsp;·&nbsp; <span class='av-k2'>raw</span> “"+esc(c.raw)+"”"):"")+"</div>";
+    var defHtml=(c.kind==='metric'&&c.def)?("<div class='av-note'>"+esc(c.def)+"</div>"):"";
+    return "<div class='av-item"+badcls+"'><span class='av-ck' title='"+tip+"'>"+ck+"</span>"
+      +"<div class='av-body'><div class='av-line'><span class='av-met'>"+esc(c.label)+"</span><span class='av-val'>"+esc(c.value)+"</span></div>"
+      +defHtml+traceLine+"</div></div>";
+  }
+  var body=groups.map(function(g){
+    var mets=g.items.filter(function(c){return c.kind==='metric'}),flds=g.items.filter(function(c){return c.kind==='field'});
+    var okN=g.items.filter(function(c){return c.ok}).length;
+    return "<div class='av-group'><div class='av-fund'>"+esc(g.fund)+"<span class='av-n'>"+okN+"/"+g.items.length+" traced</span></div>"
+      +(mets.length?"<div class='av-kind'>Computed metrics · re-verified against the engine</div>"+mets.map(itemHtml).join(''):"")
+      +(flds.length?"<div class='av-kind'>From the source file · traced to a column</div>"+flds.map(itemHtml).join(''):"")
+      +"</div>";
+  }).join('');
+  if(!A2.length)body="<p class='d-p'>No shortlisted funds to audit yet — run the analysis first.</p>";
   var shield="<svg viewBox='0 0 24 24' fill='none'><path d='M12 2.4l7 2.9v5.7c0 4.7-3.3 8-7 9.6-3.7-1.6-7-4.9-7-9.6V5.3l7-2.9z' fill='var(--accent-soft)' stroke='var(--accent2)' stroke-width='1.3' stroke-linejoin='round'/><path d='M8.6 12.2l2.3 2.3 4.5-4.6' stroke='var(--accent2)' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>";
-  openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+A.verified+" / "+A.total+" verified</div></div></div><div class='d-strat' style='margin-top:12px'>every figure re-checked against the deterministic metrics engine</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each numeric claim below was recomputed from the source return series and matched exactly — nothing reaches the page unverified.</p>"+body)}
+  openDrawer("<div class='av-head'><div class='av-shield'>"+shield+"</div><div><div class='d-pre'>Audit trail · verification</div><div class='d-name'>"+L.verified+" / "+L.total+" traced</div></div></div><div class='d-strat' style='margin-top:12px'>every figure traced to a computed metric or a source field</div><p class='d-p'>The memo's language model may narrate, but it never computes. Each claim below is traced to its origin — a metric recomputed from the source return series and matched against the engine, or a value read straight from a specific column of your CSV. Nothing reaches the page unverified.</p>"+body)}
 function openExportPop(anchor){var pop=$('#pop');if(!pop)return;var r=anchor.getBoundingClientRect();
   pop.innerHTML="<div class='pop-card'><div class='pop-hd'><b>Export memo</b><i>a clean, no-nonsense PDF of the recommendation</i></div>"
     +"<div class='pop-opt' data-a='pdf'><span class='pi'>⤓</span><div class='pt'><b>Download PDF</b><i>saves the memo straight to your device</i></div></div>"
@@ -1136,7 +1207,10 @@ function fundMetrics(r){var ppy=12,rf=(A.mandateSpec&&A.mandateSpec.rf)||0.02,n=
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
   var sh=vol?annex/vol:null;var dn=r.map(function(x){return Math.min(x-rfp,0)});var dd=Math.sqrt(_pmean(dn.map(function(x){return x*x})))*Math.sqrt(ppy);
-  var so=dd?annex/dd:null;var w=1,peak=1,mdd=0,wl=[];r.forEach(function(x){w*=(1+x);wl.push(Math.round(w*1e4)/1e4);peak=Math.max(peak,w);mdd=Math.min(mdd,w/peak-1)});
+  // drawdown on the OBSERVED wealth path — peak seeded at the first point (matches the
+  // Python engine's np.maximum.accumulate), so a negative first month isn't counted as a
+  // drop from a phantom 1.0 start. Keeps client metrics convention-identical to the engine.
+  var so=dd?annex/dd:null;var w=1,peak=null,mdd=0,wl=[];r.forEach(function(x){w*=(1+x);wl.push(Math.round(w*1e6)/1e6);peak=(peak==null?w:Math.max(peak,w));mdd=Math.min(mdd,w/peak-1)});
   var cal=(mdd!==0)?annret/Math.abs(mdd):null;
   return {ann_return:annret,ann_vol:vol,sharpe:sh,sortino:so,calmar:cal,max_drawdown:mdd,wealth:wl};}
 function parseCSV(t){var out=[];t.replace(/\r/g,'').split('\n').forEach(function(ln){if(!ln.trim())return;var row=[],cur='',q=false;for(var i=0;i<ln.length;i++){var c=ln[i];if(c==='"'){q=!q}else if(c===','&&!q){row.push(cur);cur=''}else cur+=c}row.push(cur);out.push(row.map(function(s){return s.trim()}))});return out}

@@ -234,7 +234,7 @@ def render_html(memo, ctx=None):
             f=ctx.get_fund(fid) if ctx else None;ser=series.get(fid)
             wealth=[];c=1.0
             if ser:
-                for v in ser.values:c*=(1+v);wealth.append(round(c,4))
+                for v in ser.values:c*=(1+v);wealth.append(round(c,6))   # 6dp so the client can re-derive returns (and thus drawdown/Calmar) precisely enough to re-verify the audit
             rk=ranks.get(fid)
             reasons=_reject_reasons(f,m)
             reason=(reasons[0]["text"] if reasons else None)
