@@ -1,5 +1,5 @@
 from __future__ import annotations
-import html, json, math
+import html, json, math, re
 from pathlib import Path
 from .metrics import METRIC_KEYS, annualize
 from .scoring import (
@@ -161,8 +161,18 @@ def render_html(memo, ctx=None):
     series=(ctx.series_by_fund if ctx else {}) or {}
     mbf=(ctx.metrics_by_fund if ctx else {s.fund_id:s.metrics for s in sl})
     mandate=ctx.mandate if ctx else None
+    # map each shortlisted fund to ITS per-fund analysis section by the fund_id embedded
+    # in the section heading ("Name (FID) — strategy") — positional indexing is fragile
+    # (Summary+Recommendation precede the per-fund sections, and an LLM provider may emit
+    # them in a different order), and getting it wrong shows one fund's rationale under
+    # another. The prose/orientation sections carry no "(FID)" so they're skipped.
     secs={}
-    for i,s in enumerate(sl): secs[s.fund_id]=memo.sections[1+i] if 1+i<len(memo.sections) else None
+    _slids={s.fund_id for s in sl}
+    for sec in memo.sections:
+        for gid in re.findall(r"\(([^()]+)\)", sec.heading or ""):
+            if gid in _slids and gid not in secs:
+                secs[gid]=sec
+                break
 
     # score components come straight from the scoring engine — no re-implementation.
     # The z-score basis is the eligible set (the SAME basis build_shortlist ranks on),
@@ -261,6 +271,7 @@ def render_html(memo, ctx=None):
                 "redf":(f.redemption_freq if f else None),"redd":(f.redemption_days if f else None),
                 "lockup":(f.lockup_months if f else None),"notice":(f.notice_days if f else None),"notes":(f.notes if f else None),
                 "wealth":wealth,"reason":reason,"reasons":reasons,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
+                "rationale":(secs.get(fid).body if secs.get(fid) else ""),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
     # zoom positions (all mandate-eligible funds + benchmark, shared range so the
     # frontier reads against the index and the corners carry meaning)

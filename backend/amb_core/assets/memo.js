@@ -981,6 +981,22 @@ function liveMemo(){var sl=shortlisted();var w=sl[0];
   var body=(dd?esc(first(dd.name))+' carries the deepest drawdown at '+pct(dd.maxdd)+'. ':'')+(vv?esc(first(vv.name))+' is the most volatile ('+pct(vv.vol)+'). ':'')+'Recomputed live against the current mandate.';
   var sum=w?('Recomputed live: '+A.nTotal+' funds screened, '+A.nEligible+' eligible, '+A.nShort+' shortlisted. '+esc(first(w.name))+' leads on risk-adjusted return ('+pct(w.ret)+' at '+pct(w.vol)+' vol, Sharpe '+num(w.sharpe)+').'):'No fund met the mandate.';
   return {summary:sum,recommendation:(w?'<b>'+esc(first(w.name))+'</b> leads on risk-adjusted return across the '+A.nShort+' shortlisted funds. The S&P benchmark is passive equity beta shown for reference — outside this mandate\'s strategy and risk limits.':'No fund met the mandate.'),keyRisks:{body:body,claims:claims},appendix:'Metrics recomputed client-side with the same deterministic engine (vol = sample-std annualized; Sharpe/Sortino excess over the mandate risk-free; beta/alpha OLS vs benchmark). Figures reflect the current mandate and inputs.'};}
+// Per-fund shortlist rationale — WHY the fund earns its rank. On the initial baked
+// memo this is the model/template analysis paragraph carried in d.rationale; after a
+// live re-run or an upload it is synthesized from the fund's OWN current metrics so it
+// can never go stale against a re-ranking.
+function fundRationale(d){
+  if(!d)return'';
+  if(!A._reran&&typeof d.rationale==='string'&&d.rationale.trim())return d.rationale.trim();
+  var lead=(d.rank===1?'Leads the shortlist':'Ranks #'+(d.rank!=null?d.rank:'—')+(A.nShort?' of '+A.nShort:''));
+  var m=[];
+  if(d.sharpe!=null)m.push('Sharpe '+num(d.sharpe));
+  if(d.sortino!=null)m.push('Sortino '+num(d.sortino));
+  if(d.ret!=null)m.push(pct(d.ret)+' ann. return');
+  if(d.vol!=null)m.push(pct(d.vol)+' vol');
+  if(d.maxdd!=null)m.push(pct(d.maxdd)+' max drawdown');
+  return lead+' on the weighted risk-adjusted score'+(m.length?' — '+m.join(', ')+'.':'.');
+}
 function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisks||{};var w=shortlisted()[0]||{};
   var WARN="<svg viewBox='0 0 24 24' fill='none'><path d='M12 3l9 16H3l9-16z' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round'/><path d='M12 10v4' stroke='currentColor' stroke-width='1.8' stroke-linecap='round'/><circle cx='12' cy='16.6' r='.6' fill='currentColor' stroke='currentColor'/></svg>";
   var kpis=[['Ann. return',pct(w.ret)],['Volatility',pct(w.vol)],['Sharpe',num(w.sharpe)],['Sortino',num(w.sortino)],['Max DD',pct(w.maxdd)],['Net of fee',(w.netret!=null?pct(w.netret):'—')]];
@@ -996,6 +1012,7 @@ function openMemo(){var m=(A._reran?liveMemo():(A.memo||{}));var risks=m.keyRisk
    +(w.name?("<div class='mv-band'><div class='mv-band-h'><span class='mv-rec'>Recommended</span><span class='mv-wn'>"+esc(first(w.name))+"</span><span class='mv-ws'>"+esc(w.strategy||'')+"</span></div><div class='mv-kpis'>"+kpiH+"</div></div>"):"")
    +(m.summary?("<p class='mv-lead'>"+m.summary+"</p>"):"")
    +"<div class='mv-h'>Shortlist</div><table class='mm-tbl'><thead><tr><th>#</th><th>Fund</th><th>Ret</th><th>SR</th><th>Sor</th><th>Max DD</th><th>Score</th></tr></thead><tbody>"+rows+"</tbody></table>"
+   +"<div class='mv-h'>Shortlist rationale</div><div class='mv-rat'>"+shortlisted().map(function(s){return "<div class='mv-rr"+(s.rank==1?" win":"")+"'><div class='mv-rr-h'><span class='mv-rr-n'>"+String(s.rank).padStart(2,'0')+"</span><b>"+esc(first(s.name))+"</b>"+(s.strategy?"<span class='mv-rr-s'>"+esc(s.strategy)+"</span>":"")+"</div><p>"+esc(fundRationale(s))+"</p></div>"}).join('')+"</div>"
    +"<div class='mv-h'>Key risks</div>"+(risks.body?("<p class='mv-lead sm'>"+risks.body+"</p>"):"")+"<div class='mvr-list'>"+claims+"</div>"
    +(m.appendix?("<details class='mv-apx'><summary>Data appendix &amp; methodology</summary><p class='mv-fine'>"+m.appendix+"</p></details>"):"")
    +"</div>";
@@ -1201,14 +1218,17 @@ function _cw(s,sz,mono){return mono?String(s).length*sz*0.6:String(s).length*sz*
 function _pdfrgb(name){var h=(cssv(name)||'#000000').replace('#','');
   function c(i){return (parseInt(h.substr(i,2),16)/255).toFixed(2)}
   return c(0)+' '+c(2)+' '+c(4);}                                   // theme.css --pdf-* hex -> PDF "r g b"
+function _pdfRationale(d){return String(fundRationale(d)||'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()}
 function downloadPDF(){
-  var W=595,H=842,M=46,IW=W-2*M,ns=[],y=H-M;
+  var W=595,H=842,M=46,IW=W-2*M,y=H-M,pages=[[]];
   // brand palette sourced from theme.css (the single branding component) — theme-independent print tones
   var CI=_pdfrgb('--pdf-ink'),CD=_pdfrgb('--pdf-dim'),CA=_pdfrgb('--pdf-accent'),CW=_pdfrgb('--pdf-warm'),CL=_pdfrgb('--pdf-line'),CF=_pdfrgb('--pdf-fill'),CLo=_pdfrgb('--pdf-loss');
-  function T(x,yy,s,sz,f,c){ns.push('BT /'+f+' '+sz+' Tf '+(c||CI)+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' Td ('+_pesc(s)+') Tj ET')}
+  function _pg(){return pages[pages.length-1]}
+  function feed(need){if(y-(need||0)<M+16){pages.push([]);y=H-M}}   // start a new page when the next block won't fit
+  function T(x,yy,s,sz,f,c){_pg().push('BT /'+f+' '+sz+' Tf '+(c||CI)+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' Td ('+_pesc(s)+') Tj ET')}
   function TR(xr,yy,s,sz,f,c){T(xr-_cw(s,sz,f==='F3'),yy,s,sz,f,c)}
-  function LN(x1,y1,x2,y2,c,w){ns.push((c||CL)+' RG '+(w||0.7).toFixed(2)+' w '+x1.toFixed(1)+' '+y1.toFixed(1)+' m '+x2.toFixed(1)+' '+y2.toFixed(1)+' l S')}
-  function RE(x,yy,w,h,c){ns.push(c+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1)+' re f')}
+  function LN(x1,y1,x2,y2,c,w){_pg().push((c||CL)+' RG '+(w||0.7).toFixed(2)+' w '+x1.toFixed(1)+' '+y1.toFixed(1)+' m '+x2.toFixed(1)+' '+y2.toFixed(1)+' l S')}
+  function RE(x,yy,w,h,c){_pg().push(c+' rg '+x.toFixed(1)+' '+yy.toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1)+' re f')}
   function wrap(s,sz,f,maxw){var words=String(s).split(' '),lines=[],cur='';words.forEach(function(w){var t=cur?cur+' '+w:w;if(_cw(t,sz,f==='F3')>maxw&&cur){lines.push(cur);cur=w}else cur=t});if(cur)lines.push(cur);return lines}
   var win=shortlisted()[0];var date='';try{date=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}catch(e){}
   // masthead
@@ -1223,39 +1243,55 @@ function downloadPDF(){
     var kx=M+164,kw=(W-M-kx),cwd=kw/3;
     kp.forEach(function(p,i){var col=i%3,row=Math.floor(i/3);var cx=kx+col*cwd,cy=y-8-row*38;T(cx+cwd/2-_cw(p[1],13,true)/2,cy-13,p[1],13,'F3',CI);T(cx+cwd/2-_cw(p[0],7,true)/2,cy-24,p[0],7,'F3',CD)});
     y-=cardH+22;}
-  function sec(t){T(M,y,t,9,'F3',CA);LN(M,y-6,W-M,y-6,CL,0.7);y-=20}
-  function body(t){wrap(t,10.5,'F1',IW).forEach(function(l){T(M,y,l,10.5,'F1',CD);y-=14});y-=6}
+  function sec(t){feed(42);T(M,y,t,9,'F3',CA);LN(M,y-6,W-M,y-6,CL,0.7);y-=20}
+  function body(t){wrap(t,10.5,'F1',IW).forEach(function(l){feed(14);T(M,y,l,10.5,'F1',CD);y-=14});y-=6}
   sec('MANDATE - HARD LIMITS');body(A.gates.map(function(g){return g.label+' '+g.detail}).join('    |    '));
   body('SCORING WEIGHTS:  '+weightFactors().map(function(k){return k.replace(/_/g,' ')+' '+Math.round(A.weights[k]*100)+'%'}).join('  |  '));
   if(A.bench)body('MEASURED AGAINST:  '+A.bench.name+' (reference · passive equity beta, out of mandate) - return '+pct(A.bench.ret)+' | volatility '+pct(A.bench.vol));
   // shortlist table
   sec('SHORTLIST - RANKED BY WEIGHTED RISK-ADJUSTED SCORE');
-  var cols=[{x:M,a:'l',w:'#'},{x:M+22,a:'l',w:'FUND'}];var rx=[M+150];['RETURN','VOL','SHARPE','SORTINO','CALMAR','MAX DD','SCORE'].forEach(function(h,i){var xr=M+150+ (i+1)*((W-M-(M+150))/7);rx.push(xr)});
+  var rx=[M+150];['RETURN','VOL','SHARPE','SORTINO','CALMAR','MAX DD','SCORE'].forEach(function(h,i){var xr=M+150+ (i+1)*((W-M-(M+150))/7);rx.push(xr)});
   T(M,y,'#',7.5,'F3',CD);T(M+22,y,'FUND',7.5,'F3',CD);['RETURN','VOL','SHARPE','SORTINO','CALMAR','MAX DD','SCORE'].forEach(function(h,i){TR(rx[i+1]-4,y,h,7.5,'F3',CD)});y-=6;LN(M,y,W-M,y,CL,0.7);y-=15;
-  shortlisted().forEach(function(d){if(d.rank==1){RE(M-2,y-4,IW+4,17,'0.93 0.965 0.94')}
+  shortlisted().forEach(function(d){feed(18);if(d.rank==1){RE(M-2,y-4,IW+4,17,'0.93 0.965 0.94')}
     T(M,y,String(d.rank).padStart(2,'0'),9,'F3',d.rank==1?CA:CD);T(M+22,y,d.name,10,'F2',d.rank==1?CA:CI);
     var vals=[pct(d.ret),pct(d.vol),num(d.sharpe),num(d.sortino),num(d.calmar),pct(d.maxdd),(d.score>=0?'+':'')+d.score.toFixed(2)];
     vals.forEach(function(v,i){TR(rx[i+1]-4,y,v,9.5,'F3',i===6?CA:CI)});y-=18});
   y-=10;
+  // shortlist rationale — WHY each shortlisted fund earns its rank (the LLM/template
+  // analysis on the baked memo; a live metric-grounded read after a re-run/upload)
+  sec('SHORTLIST RATIONALE');
+  shortlisted().forEach(function(d){feed(34);
+    T(M,y,String(d.rank).padStart(2,'0')+'  '+d.name+(d.strategy?'   ·   '+d.strategy:''),10,'F2',d.rank==1?CA:CI);y-=15;
+    wrap(_pdfRationale(d),9.5,'F1',IW).forEach(function(l){feed(13);T(M+9,y,l,9.5,'F1',CD);y-=13});y-=7});
+  y-=3;
   // excluded
   var exs=A.funds.filter(function(d){return d.reason});
-  if(exs.length){sec('EXCLUDED BY MANDATE');exs.forEach(function(d){T(M,y,d.name,10,'F2',CI);T(M+150,y,d.reason,9.5,'F3',CLo);TR(W-M,y,pct(d.ret)+'  vol '+pct(d.vol),9,'F3',CD);y-=17});y-=8}
-  // key risks — wrapped to page width so nothing overruns; same source as the on-screen memo
+  if(exs.length){sec('EXCLUDED BY MANDATE');exs.forEach(function(d){feed(17);T(M,y,d.name,10,'F2',CI);T(M+150,y,d.reason,9.5,'F3',CLo);TR(W-M,y,pct(d.ret)+'  vol '+pct(d.vol),9,'F3',CD);y-=17});y-=8}
+  // key risks — same source as the on-screen memo
   var _km=(A._reran?liveMemo():(A.memo||{}));var kr=(_km&&_km.keyRisks)?_km.keyRisks:null;
-  if(kr&&kr.claims&&kr.claims.length&&y>150){sec('KEY RISKS');
+  if(kr&&kr.claims&&kr.claims.length){sec('KEY RISKS');
     kr.claims.slice(0,4).forEach(function(c){var t=String(c.text||'').replace(/<[^>]+>/g,'').trim();var fn=String(c.fund||'').trim();
       if(fn&&t.toLowerCase().indexOf(fn.toLowerCase())<0)t=fn+' - '+t;   // add fund only if not already named in the text
-      wrap('- '+t,9.5,'F3',IW).forEach(function(l,i){if(y<96)return;T(i===0?M:M+9,y,l,9.5,'F3',CI);y-=13});y-=3});y-=4}
+      wrap('- '+t,9.5,'F3',IW).forEach(function(l,i){feed(13);T(i===0?M:M+9,y,l,9.5,'F3',CI);y-=13});y-=3});y-=4}
   // data appendix — one methodology + provenance line
-  if(y>110){sec('DATA APPENDIX - METHODOLOGY');
-    var bp=(A.bench?(A.bench.name+' ('+(A.bench.kind||'snapshot')+(A.bench.asOf?', as of '+A.bench.asOf:'')+')'):'none');
-    body('Metrics from cleaned monthly returns; vol = sample-std annualized; Sharpe/Sortino excess over '
-      +(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'rf')+' risk-free ('+(A.rfSource||'mandate')+'); beta/alpha OLS vs benchmark. '
-      +'Benchmark: '+bp+'.');}
+  sec('DATA APPENDIX - METHODOLOGY');
+  var bp=(A.bench?(A.bench.name+' ('+(A.bench.kind||'snapshot')+(A.bench.asOf?', as of '+A.bench.asOf:'')+')'):'none');
+  body('Metrics from cleaned monthly returns; vol = sample-std annualized; Sharpe/Sortino excess over '
+    +(A.rfUsed!=null?(A.rfUsed*100).toFixed(2)+'%':'rf')+' risk-free ('+(A.rfSource||'mandate')+'); beta/alpha OLS vs benchmark. '
+    +'Benchmark: '+bp+'.');
   // footer
-  LN(M,y,W-M,y,CL,0.7);y-=14;T(M,y,'Every figure re-verified against the deterministic metrics engine - '+A.verified+'/'+A.total+' claims verified',8.5,'F3',CD);
-  var stream=ns.join('\n');
-  var objs=['<< /Type /Catalog /Pages 2 0 R >>','<< /Type /Pages /Kids [3 0 R] /Count 1 >>','<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> >> /Contents 4 0 R >>','<< /Length '+stream.length+' >>\nstream\n'+stream+'\nendstream','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>','<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>','<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>'];
+  feed(22);LN(M,y,W-M,y,CL,0.7);y-=14;T(M,y,'Every figure re-verified against the deterministic metrics engine - '+A.verified+'/'+A.total+' claims verified',8.5,'F3',CD);
+  // ── assemble the PDF across however many pages the content took ──
+  var P=pages.length, fb=3+2*P;   // F1 object number sits after the P page/content pairs
+  var objs=['<< /Type /Catalog /Pages 2 0 R >>'];
+  var kids=[];for(var pi=0;pi<P;pi++)kids.push((3+2*pi)+' 0 R');
+  objs.push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+P+' >>');
+  for(var pj=0;pj<P;pj++){var st=pages[pj].join('\n');
+    objs.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+W+' '+H+'] /Resources << /Font << /F1 '+fb+' 0 R /F2 '+(fb+1)+' 0 R /F3 '+(fb+2)+' 0 R >> >> /Contents '+(3+2*pj+1)+' 0 R >>');
+    objs.push('<< /Length '+st.length+' >>\nstream\n'+st+'\nendstream');}
+  objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+  objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>');
   var pdf='%PDF-1.4\n',off=[];for(var i=0;i<objs.length;i++){off.push(pdf.length);pdf+=(i+1)+' 0 obj\n'+objs[i]+'\nendobj\n'}
   var xr2=pdf.length;pdf+='xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n';off.forEach(function(o){pdf+=('0000000000'+o).slice(-10)+' 00000 n \n'});
   pdf+='trailer\n<< /Size '+(objs.length+1)+' /Root 1 0 R >>\nstartxref\n'+xr2+'\n%%EOF';

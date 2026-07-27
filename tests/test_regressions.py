@@ -305,6 +305,50 @@ def test_client_strategy_preferences_tilt_both_scoring_paths():
     assert "mf-chip.pref" in js and "mf-chip.off" in js, "chips must express both a preferred and an excluded visual state"
 
 
+def test_shortlist_rationale_surfaced_and_correctly_aligned():
+    """Spec: 'ranked shortlist WITH RATIONALE'. Each shortlisted fund must carry its OWN
+    per-fund analysis paragraph into the exported payload — the bug we hit was a
+    positional map (shortlist[i] -> sections[1+i]) that put the Recommendation text on
+    rank 1 and shifted every fund's rationale onto its neighbour. Pin: rationale is
+    present, non-empty, unique per fund, and names the fund it belongs to (never the
+    generic recommendation sentence)."""
+    memo, ctx = run("data/samples/dataset.csv", load_mandate("data/mandates/default.yaml"))
+    data = _extract_data(render_html(memo, ctx))
+    ranked = sorted([f for f in data["funds"] if f.get("rank")], key=lambda f: f["rank"])
+    assert len(ranked) >= 3, "expected a ranked shortlist"
+    rats = [f.get("rationale") for f in ranked]
+    assert all(r and r.strip() for r in rats), "every shortlisted fund must carry a rationale"
+    assert len(set(rats)) == len(rats), "each fund's rationale must be distinct (off-by-one shares text)"
+    # each rationale must reference ITS fund — the alignment guard
+    for f in ranked:
+        name = f["name"]
+        first = name.split()[0]
+        assert first.lower() in f["rationale"].lower(), (
+            f"rank {f['rank']} ({name}) shows a rationale that doesn't mention it: {f['rationale'][:80]!r}"
+        )
+    # the rank-1 fund must NOT be showing the generic recommendation line
+    rec = next((s.body for s in memo.sections if s.heading == "Recommendation"), "")
+    assert ranked[0]["rationale"].strip() != (rec or "").strip(), "rank 1 is showing the Recommendation text, not its own rationale"
+
+
+def test_client_pdf_and_memo_carry_shortlist_rationale():
+    """The downloaded PDF and the on-screen memo must both render the per-fund shortlist
+    rationale (the requirement the memo view was missing). Pin the single rationale
+    helper, its use in the memo modal and the PDF, and that the PDF writer is multi-page
+    so the added rationale never truncates a '1-2 page' memo."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    assert js.count("functionfundRationale(") == 1, "one shared rationale builder"
+    # baked memo uses the model/template paragraph; a re-run/upload synthesises from live metrics
+    assert "!A._reran&&typeofd.rationale==='string'" in js, "baked rationale used only when not re-ran"
+    # rendered in the memo modal AND the PDF
+    assert "Shortlistrationale" in js, "memo modal must have a Shortlist rationale section"
+    assert "SHORTLISTRATIONALE" in js, "PDF must have a SHORTLIST RATIONALE section"
+    assert "_pdfRationale(d)" in js, "PDF must render the per-fund rationale"
+    # the PDF writer paginates (multi-page) instead of the old single hard-coded page
+    assert "pages.push([])" in js and "/Count'+P+'" in js, "PDF must grow to multiple pages"
+    assert "/Kids [3 0 R] /Count 1" not in Path("backend/amb_core/assets/memo.js").read_text(), "single-page PDF hard-coding must be gone"
+
+
 def test_client_summary_statistics_input_mode():
     """The spec's input format is 'multiple CSVs with monthly returns OR summary
     statistics'. A file of per-fund precomputed metrics (no date/return series) must be
