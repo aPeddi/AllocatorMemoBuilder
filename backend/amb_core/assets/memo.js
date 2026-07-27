@@ -705,19 +705,26 @@ async function actZero(){
   else tf.push({a:okDecStr,r:'recognized · decimal',b:okDecStr,k:'ok'});
   tf.push({a:okDate,r:'parsed · ISO-8601',b:okDate,k:'ok'});
   if(badRows.length){var b0=badRows[0];var btok=(b0.d&&b0.d!=='—')?b0.d:((b0.v&&b0.v!=='—')?b0.v:'(blank)');tf.push({a:btok,r:b0.reason||'unparseable',b:'null · quarantined',k:'bad'});}
+  var nmMonths=((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36);
   stage.innerHTML=
    "<div class='az-parse'>"
-   +"<div class='az-matrix'><div class='az-mh'><span>"+esc(dcol)+"</span><span>"+esc(icol)+"</span><span>"+esc(vcol)+"</span><span>status</span></div><div class='az-mb' id='mtx'></div></div>"
+   +"<div class='az-matrix'>"
+     +"<div class='az-mcap'>sample of <b>"+rowsN+"</b> rows &nbsp;·&nbsp; <b>"+fundsN+"</b> funds × "+nmMonths+" months</div>"
+     +"<div class='az-mh'><span>"+esc(dcol)+"</span><span>"+esc(icol)+"</span><span>"+esc(vcol)+"</span><span>status</span></div>"
+     +"<div class='az-mb' id='mtx'></div>"
+   +"</div>"
    +"<div class='az-side'>"
      +"<div class='az-sh'>VALUE NORMALIZATION</div><div class='az-tf' id='tf'></div>"
      +"<div class='az-sh'>SHARED WINDOW</div><div class='az-win2'>every fund aligned to <b>"+esc(ov.start||'')+" → "+esc(ov.end||'')+"</b></div>"
    +"</div></div>";
-  var mtx=$('#mtx',az);log('normalizing values · row by row');
+  var mtx=$('#mtx',az);log('normalizing values · row by row · sample of '+rowsN+' across '+fundsN+' funds');
   for(var r2=0;r2<rowsSample.length;r2++){if(aborted)return;var sr=rowsSample[r2];var row=el('div','az-mrow');
     var stat=sr.bad?"<span class='mstat'></span>":"<span class='mstat'><span class='okc'>✓</span></span>";
     row.dataset.reason=sr.reason||'';
     row.innerHTML=(sr.bad?"<span class='badc'>":"<span>")+esc(sr.d)+"</span><span>"+esc(String(sr.id))+"</span><span>"+esc(String(sr.v))+"</span>"+stat;
     mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(230)}
+  var moreN=rowsN-rowsSample.length;
+  if(moreN>0){var mrow=el('div','az-mrow az-more');mrow.innerHTML="<span>⋯</span><span></span><span></span><span class='mstat'>"+moreN+" more rows · "+fundsN+" funds</span>";mtx.appendChild(mrow);schedule(function(){mrow.classList.add('in')},20);}
   await wait(280);if(aborted)return;
   var tfh=$('#tf',az);
   for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t=tf[ti];var tr=el('div','az-tfr'+(t.k==='bad'?' bad':''));

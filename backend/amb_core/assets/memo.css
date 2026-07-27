@@ -374,7 +374,12 @@ body.screening .node.cand.gone{opacity:0}
 /* scene 2 · parse */
 .az-parse{display:flex;gap:26px;width:100%;max-width:840px;align-items:flex-start}
 .az-matrix{flex:1.2;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.az-mcap{padding:8px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);background:var(--panel);border-bottom:1px solid var(--border)}
+.az-mcap b{color:var(--accent2);font-weight:600}
 .az-mh,.az-mrow{display:grid;grid-template-columns:1fr .7fr .9fr 1.05fr;font-size:11px;align-items:center}
+.az-mrow.az-more{opacity:0}.az-mrow.az-more.in{opacity:.7}
+.az-mrow.az-more>span{color:var(--dim2)}
+.az-mrow.az-more .mstat{color:var(--dim2);text-transform:none;letter-spacing:.02em;font-size:9px}
 .az-mh{background:var(--panel);border-bottom:1px solid var(--border2)}
 .az-mh span{padding:9px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2)}
 .az-mrow{opacity:0;transform:translateX(-8px);transition:opacity .35s,transform .35s,background .4s;border-bottom:1px solid var(--border)}
