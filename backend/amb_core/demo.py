@@ -17,15 +17,6 @@ MANDATE = Path("data/mandates/default.yaml")
 ACCENT = "#4E9E77"
 WARM = "#B79363"
 
-_STEPS = [
-    "Ingesting funds & returns",
-    "Resolving benchmark",
-    "Computing metrics",
-    "Screening & scoring",
-    "Drafting & verifying memo",
-    "Exporting artifacts",
-]
-
 
 def _fmt_pct(x: Optional[float]) -> str:
     return "—" if x is None else f"{x * 100:.1f}%"
@@ -80,8 +71,7 @@ def main(argv=None) -> int:
 def _rich_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
     from rich.console import Console, Group
     from rich.panel import Panel
-    from rich.progress import (BarColumn, Progress, SpinnerColumn, TaskProgressColumn,
-                               TextColumn, TimeElapsedColumn)
+    from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
     from rich.table import Table
     from rich.text import Text
 
@@ -94,21 +84,25 @@ def _rich_run(mandate, funds_csv, returns_csv, provider, label, s) -> int:
     con.print(Text.assemble(("  memo drafting: ", "dim"), (label, f"bold {ACCENT}")))
     con.print()
 
+    # No percentage bar: the deterministic stages finish in milliseconds, so the only
+    # step that takes real time is the LLM memo draft — and its duration isn't knowable
+    # in advance. An animated spinner + stage label + elapsed clock is the honest signal
+    # (it keeps moving during the untrackable model call) rather than a bar stuck at ~83%.
     memo = ctx = None
     with Progress(
-        SpinnerColumn(style=ACCENT), TextColumn("[progress.description]{task.description}"),
-        BarColumn(bar_width=28, complete_style=ACCENT, finished_style=ACCENT),
-        TaskProgressColumn(), TimeElapsedColumn(), console=con, transient=True,
+        SpinnerColumn(style=ACCENT),
+        TextColumn("[progress.description]{task.description}"),
+        TextColumn("[dim]·[/]"), TimeElapsedColumn(),
+        console=con, transient=True,
     ) as prog:
-        task = prog.add_task("Starting…", total=len(_STEPS))
+        task = prog.add_task("Starting…", total=None)  # indeterminate — see note above
 
         def on_step(lbl: str) -> None:
-            prog.update(task, description=lbl, advance=1)
+            prog.update(task, description=lbl)
 
         memo, ctx = run(funds_csv, returns_csv, mandate, provider, on_step=on_step)
         prog.update(task, description="Exporting artifacts")
         exports = export_all(memo, ctx, "exports")
-        prog.update(task, description="Done", advance=1)
 
     # ── provenance ──
     b = ctx.benchmark
