@@ -256,10 +256,10 @@ def render_html(memo, ctx=None):
                 "srank":(rk if rk else (90 if cut else 99)),
                 "x":round(12+_pos(m["ann_vol"],volAx)*76,1),"y":round(12+_pos(m["ann_return"],retAx)*76,1),
                 "ret":m.get("ann_return"),"vol":m.get("ann_vol"),"sharpe":m.get("sharpe"),"sortino":m.get("sortino"),"calmar":m.get("calmar"),"maxdd":m.get("max_drawdown"),
-                "beta":m.get("beta"),"alpha":m.get("alpha"),"corr":m.get("correlation"),
+                "beta":m.get("beta"),"alpha":m.get("alpha"),"corr":m.get("correlation"),"peer_corr":m.get("peer_corr"),
                 "fee":(f.mgmt_fee_pct if f else None),"netret":netret,
                 "redf":(f.redemption_freq if f else None),"redd":(f.redemption_days if f else None),
-                "lockup":(f.lockup_months if f else None),"notice":(f.notice_days if f else None),
+                "lockup":(f.lockup_months if f else None),"notice":(f.notice_days if f else None),"notes":(f.notes if f else None),
                 "wealth":wealth,"reason":reason,"reasons":reasons,"components":comps,"comp":{x["k"]:x["c"] for x in comps},"score":round(sum(x["c"] for x in comps),3),
                 "detail":_detail_html(secs.get(fid),mbf.get(fid,{}),e)})
     # zoom positions (all mandate-eligible funds + benchmark, shared range so the

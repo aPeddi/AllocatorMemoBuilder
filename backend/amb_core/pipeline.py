@@ -83,6 +83,20 @@ def run(
         metrics_by_fund[f.fund_id] = vals
         metric_results[f.fund_id] = results
 
+    # peer correlation is universe-level — compute it once all funds are known, then
+    # inject into each fund's metrics AND its provenance-carrying MetricResult so the
+    # value is engine-authoritative and traceable like every other metric.
+    from .metrics import peer_correlations
+    usable_series = {fid: series[fid] for fid in metrics_by_fund if fid in series}
+    peer = peer_correlations(usable_series)
+    for fid, pc in peer.items():
+        if fid in metrics_by_fund:
+            metrics_by_fund[fid]["peer_corr"] = pc
+            metric_results[fid] = [
+                mr.model_copy(update={"value": pc}) if mr.metric == "peer_corr" else mr
+                for mr in metric_results[fid]
+            ]
+
     step("Screening & scoring")
     usable = [f for f in funds if f.fund_id in metrics_by_fund]
     shortlist = build_shortlist(usable, metrics_by_fund, mandate)

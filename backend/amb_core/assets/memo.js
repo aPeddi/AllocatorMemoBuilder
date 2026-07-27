@@ -74,7 +74,8 @@ var METRIC_INFO={
  downside_dev:{label:'Downside deviation',pct:true,def:'Volatility of only the losing months — the risk that actually hurts.'},
  beta:{label:'Beta vs benchmark',pct:false,def:'Sensitivity to the benchmark: 1.0 moves with it, below 1 dampens, above 1 amplifies.'},
  alpha:{label:'Alpha',pct:true,def:'Annual return beyond what benchmark exposure (beta) explains — the manager’s edge.'},
- correlation:{label:'Correlation',pct:false,def:'How closely the fund tracks the benchmark, from -1 to +1.'},
+ correlation:{label:'Correlation vs benchmark',pct:false,def:'How closely the fund tracks the benchmark, from -1 to +1.'},
+ peer_corr:{label:'Peer correlation',pct:false,def:'Average correlation to the other funds in the universe — lower means more diversifying.'},
  tracking_error:{label:'Tracking error',pct:true,def:'Volatility of the fund’s return difference vs the benchmark.'},
  hit_rate:{label:'Hit rate',pct:true,def:'Share of months that finished positive.'}
 };
@@ -918,8 +919,10 @@ function fundTerms(d){var cells=[];
   if(d.fee!=null)cells.push(["mgmt fee",d.fee+"%"]);
   if(d.netret!=null)cells.push(["net return",pct(d.netret)]);
   if(d.beta!=null)cells.push(["beta",num(d.beta)]);
-  if(!cells.length)return "";
-  return "<div class='fd-terms'>"+cells.map(function(c){return "<span><i>"+c[0]+"</i><b>"+esc(c[1])+"</b></span>"}).join('')+"</div>";}
+  if(d.peer_corr!=null)cells.push(["peer corr",num(d.peer_corr)]);
+  var termsHtml=cells.length?("<div class='fd-terms'>"+cells.map(function(c){return "<span><i>"+c[0]+"</i><b>"+esc(c[1])+"</b></span>"}).join('')+"</div>"):"";
+  if(d.notes)termsHtml+="<div class='fd-notes'><i>notes</i>"+esc(String(d.notes))+"</div>";
+  return termsHtml;}
 function fundDrawer(fid){var d=A.funds.filter(function(f){return f.id==fid})[0];if(!d)return;openDrawer("<div class='d-pre'>Fund brief · rank "+(d.rank?String(d.rank).padStart(2,'0'):'—')+"</div><div class='d-name'>"+esc(d.name)+"</div><div class='d-strat'>"+esc(d.strategy)+"</div>"+fundTerms(d)+d.detail)}
 
 function wire(){
@@ -1017,13 +1020,14 @@ function buildAudit(){
   var pool=shortlisted();if(!pool.length)pool=(A.funds||[]).filter(function(d){return d.eligible});if(!pool.length)pool=(A.funds||[]).slice(0,5);
   var rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02));
   var benchNm=(A.bench&&A.bench.name)||'benchmark';
-  var METRICS=[['ann_return','ret'],['ann_vol','vol'],['sharpe','sharpe'],['sortino','sortino'],['calmar','calmar'],['max_drawdown','maxdd'],['beta','beta'],['alpha','alpha']];
+  var METRICS=[['ann_return','ret'],['ann_vol','vol'],['sharpe','sharpe'],['sortino','sortino'],['calmar','calmar'],['max_drawdown','maxdd'],['beta','beta'],['alpha','alpha'],['correlation','corr'],['peer_corr','peer_corr']];
   var FIELDS=[
     {fk:'strategy',label:'Strategy',cands:['strategy','style','asset_class','category'],fmt:function(v){return String(v)}},
     {fk:'fee',label:'Management fee',cands:['mgmt_fee_pct','fee','management_fee','expense'],fmt:function(v){return num(v)+'%'}},
     {fk:'redf',label:'Redemption terms',cands:['redemption_freq','redemption','liquidity','liquidity_terms','dealing'],fmt:function(v){return String(v)}},
     {fk:'lockup',label:'Lock-up',cands:['lockup_months','lockup','lock_up','lock'],fmt:function(v){return v+' months'}},
-    {fk:'notice',label:'Notice period',cands:['notice_days','notice','notice_period'],fmt:function(v){return v+' days'}}
+    {fk:'notice',label:'Notice period',cands:['notice_days','notice','notice_period'],fmt:function(v){return v+' days'}},
+    {fk:'notes',label:'Notes',cands:['notes','note','comment','description'],fmt:function(v){return String(v)}}
   ];
   pool.forEach(function(d){
     var r=_reconstructReturns(d.wealth);var mm=r?fundMetrics(r):null;
@@ -1034,7 +1038,8 @@ function buildAudit(){
       var ok=recomputed?(Math.abs(rec-v)/den<=0.02):true;var mode=recomputed?'recomputed':'engine';
       var inp=[(r?r.length:'—')+' monthly returns'];
       if(mk==='sharpe'||mk==='sortino')inp.push('risk-free '+pct(rf));
-      if(mk==='beta'||mk==='alpha')inp.push('vs '+benchNm);
+      if(mk==='beta'||mk==='alpha'||mk==='correlation')inp.push('vs '+benchNm);
+      if(mk==='peer_corr')inp=['pairwise vs the other '+((A.funds||[]).length-1)+' funds'];
       claims.push({fund:d.name,id:d.id,kind:'metric',mk:mk,mode:mode,ok:ok,label:metricLabel(mk),value:fmtMetricVal(mk,v),
         def:(METRIC_INFO[mk]||{}).def||'',inputs:inp,src:retSrc});
     });
@@ -1301,6 +1306,26 @@ function _accFund(d,k){return d[metricField(k)]}                 // metric off a
 function _zStats(items,acc,keys){var st={};keys.forEach(function(k){var vals=[];items.forEach(function(it){var v=acc(it,k);if(v!=null&&isFinite(v))vals.push(v)});if(vals.length>=2)st[k]=[_pmean(vals),_ppstd(vals)]});return st}
 function _zComps(it,acc,weights,DIR,st){var cp=[];Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;cp.push({k:k,c:Math.round(weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)*1000)/1000})});return cp}
 function _zRaw(it,acc,weights,DIR,st){var s=0;Object.keys(weights).forEach(function(k){var v=acc(it,k);if(v==null||!st[k]||st[k][1]===0)return;s+=weights[k]*((v-st[k][0])/st[k][1])*(DIR[k]||0)});return s}
+// Pearson correlation of two equal-length series (null if degenerate) — matches np.corrcoef.
+function _pearson(a,b){var n=Math.min(a.length,b.length);if(n<3)return null;var ma=0,mb=0,i;
+  for(i=0;i<n;i++){ma+=a[i];mb+=b[i]}ma/=n;mb/=n;var cov=0,va=0,vb=0;
+  for(i=0;i<n;i++){var da=a[i]-ma,db=b[i]-mb;cov+=da*db;va+=da*da;vb+=db*db}
+  if(va<=0||vb<=0)return null;return cov/Math.sqrt(va*vb);}
+// benchmark beta / Jensen's-alpha / correlation for an uploaded fund vs the loaded index.
+// The client bench carries no per-point dates, so align on the most recent min(N) months.
+function _benchStats(r,br,fundAnnRet,benchAnnRet){var n=Math.min(r.length,br.length);if(n<3)return{beta:null,alpha:null,corr:null};
+  var rr=r.slice(r.length-n),bb=br.slice(br.length-n),mr=0,mb=0,i;
+  for(i=0;i<n;i++){mr+=rr[i];mb+=bb[i]}mr/=n;mb/=n;var cov=0,vb=0;
+  for(i=0;i<n;i++){cov+=(rr[i]-mr)*(bb[i]-mb);vb+=(bb[i]-mb)*(bb[i]-mb)}cov/=(n-1);vb/=(n-1);
+  var beta=vb>0?cov/vb:null,rf=(A.rfUsed!=null?A.rfUsed:0.02);
+  var alpha=(beta!=null&&fundAnnRet!=null&&benchAnnRet!=null)?(fundAnnRet-(rf+beta*(benchAnnRet-rf))):null;   // Jensen's alpha, annualized (matches metrics.py)
+  return {beta:beta,alpha:alpha,corr:_pearson(rr,bb)};}
+// each uploaded fund's average correlation to the OTHER funds, pairwise on common dates
+function _peerCorr(retMap,ids){var maps={};ids.forEach(function(id){var m={};retMap[id].forEach(function(x){m[x.d]=x.v});maps[id]=m});
+  var out={};ids.forEach(function(i){var cs=[];ids.forEach(function(j){if(i===j)return;var common=[];
+    for(var k in maps[i]){if(k in maps[j])common.push(k)}if(common.length<3)return;common.sort();
+    var c=_pearson(common.map(function(k){return maps[i][k]}),common.map(function(k){return maps[j][k]}));if(c!=null)cs.push(c)});
+    out[i]=cs.length?Math.round((cs.reduce(function(s,x){return s+x},0)/cs.length)*1e6)/1e6:null});return out;}
 function fundMetrics(r){var ppy=12,rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02)),n=r.length;if(n<2)return null;   // use the ACTUAL risk-free (same as synthAlphaOverBench + the audit label) so Sharpe/Sortino recompute matches the stored value — a mandate default 0.02 here silently mis-verified the audit under a live rf
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
@@ -1319,7 +1344,7 @@ function _findCol(hdr,cands){for(var i=0;i<cands.length;i++){var j=hdr.indexOf(c
 // the audit's 'from the source file' fields work for uploads exactly like the sample
 function _fmeta(r,m,id){var g=function(i){return (i!=null&&i>=0&&r[i]!=null)?String(r[i]).trim():''};
   var fee=parseFloat(g(m.fee)),lk=parseFloat(g(m.lockup)),nt=parseFloat(g(m.notice));
-  return {name:(g(m.name)||id),strategy:g(m.strategy),fee:(isFinite(fee)?fee:null),redf:(g(m.redf)||null),lockup:(isFinite(lk)?lk:null),notice:(isFinite(nt)?nt:null)};}
+  return {name:(g(m.name)||id),strategy:g(m.strategy),fee:(isFinite(fee)?fee:null),redf:(g(m.redf)||null),lockup:(isFinite(lk)?lk:null),notice:(isFinite(nt)?nt:null),notes:(g(m.notes)||null)};}
 function _normRet(raw){if(raw==null)return null;var s=String(raw).trim();if(!s||['na','n/a','nan','null','none','-'].indexOf(s.toLowerCase())>=0)return null;var pct=s.indexOf('%')>=0;s=s.replace(/%/g,'').replace(/,/g,'').replace(/\s/g,'');var v=parseFloat(s);if(isNaN(v)||!isFinite(v))return null;if(pct)return v/100;return Math.abs(v)>1.5?v/100:v}
 function _validDate(s){if(s==null)return false;s=String(s).trim();if(!s||s.toLowerCase()==='nan')return false;return !isNaN(Date.parse(s))}
 /* ══ schema detection + normalization ══════════════════════════════════════════
@@ -1366,7 +1391,7 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
   var iRet=_findCol(hdr,['monthly_return','return','ret','performance','perf','net']),iId=_findCol(hdr,['fund_id','fund','ticker','symbol','id']),iDt=_findCol(hdr,['date','period','month','asof','as_of','nav']),iNm=_findCol(hdr,['name']),iSt=_findCol(hdr,['strategy','style','asset_class','category']);
   // optional per-fund metadata columns — captured so an uploaded CSV that HAS them shows
   // the same traced 'from the source file' fields the sample does (returns-only files have none)
-  var iFee=_findCol(hdr,['mgmt_fee_pct','mgmt_fee','management_fee','fee','expense']),iRd=_findCol(hdr,['redemption_freq','redemption','liquidity_terms','liquidity','dealing']),iLk=_findCol(hdr,['lockup_months','lockup','lock_up']),iNt=_findCol(hdr,['notice_days','notice_period','notice']);
+  var iFee=_findCol(hdr,['mgmt_fee_pct','mgmt_fee','management_fee','fee','expense']),iRd=_findCol(hdr,['redemption_freq','redemption','liquidity_terms','liquidity','dealing']),iLk=_findCol(hdr,['lockup_months','lockup','lock_up']),iNt=_findCol(hdr,['notice_days','notice_period','notice']),iNo=_findCol(hdr,['notes','note','comment','description']);
   var out={cols:cols,warnings:[]};
   // a keyword can match the wrong column ('month' inside 'monthly_return'); only trust
   // the date/return keywords when that column is actually the right cell TYPE.
@@ -1388,14 +1413,14 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
     out.confident=false;   // wide always confirms (which columns are funds, what unit)
     return out;}
   if((iId>=0||textCols.length>=1)&&(iRet>=0||numCols.length>=1)&&dateCol>=0){   // ── LONG ──
-    out.shape='long';out.map={date:dateCol,id:(iId>=0?iId:(textCols[0]?textCols[0].idx:-1)),ret:(iRet>=0?iRet:(numCols.filter(function(c){return c.idx!==dateCol})[0]||{}).idx),name:(iNm>=0?iNm:-1),strategy:(iSt>=0?iSt:-1),fee:iFee,redf:iRd,lockup:iLk,notice:iNt};
+    out.shape='long';out.map={date:dateCol,id:(iId>=0?iId:(textCols[0]?textCols[0].idx:-1)),ret:(iRet>=0?iRet:(numCols.filter(function(c){return c.idx!==dateCol})[0]||{}).idx),name:(iNm>=0?iNm:-1),strategy:(iSt>=0?iSt:-1),fee:iFee,redf:iRd,lockup:iLk,notice:iNt,notes:iNo};
     var rc=cols.filter(function(c){return c.idx===out.map.ret})[0];var u2=_sniffUnit((rc&&rc.raw)||[]);out.unit=u2.unit;out.unitConfident=u2.confident;
     // confident (skip panel) only when the date & return keywords land on the right
     // column TYPES, the id is named, and unit/date are unambiguous.
     out.confident=(_dtOk&&_retOk&&iId>=0&&out.unitConfident&&!out.dateAmbiguous);
     return out;}
   if(iNm>=0&&iSt>=0&&(iId>=0||textCols.length)&&iRet<0&&numCols.length<=1){   // ── METADATA only ──
-    out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt,fee:iFee,redf:iRd,lockup:iLk,notice:iNt};out.confident=true;return out;}
+    out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt,fee:iFee,redf:iRd,lockup:iLk,notice:iNt,notes:iNo};out.confident=true;return out;}
   out.shape='unknown';out.confident=false;
   out.warnings.push('Could not find a date column and at least one return series.');
   return out;}
@@ -1560,7 +1585,10 @@ function recompute(funds,ret,order,quar){ try{
   // universe scatter range — robust so an outlier winner doesn't crush the cloud
   var vols=ids.map(function(id){return mbf[id].ann_vol}),rets=ids.map(function(id){return mbf[id].ann_return});
   var volAx=_axis(vols),retAx=_axis(rets);
+  var _peer=_peerCorr(ret,ids);   // each fund's avg correlation to the rest of the universe
+  var _br=(bench&&bench.wealth&&bench.wealth.length>1)?bench.wealth.map(function(w,i){return i?w/bench.wealth[i-1]-1:w-1}):null;   // benchmark returns for beta/alpha/corr
   var fd=ids.map(function(id){var m=mbf[id];var rk=rankOf[id]||null;var elig1=eligibleOf(id);var cut=(rk==null&&elig1);
+    var _bs=_br?_benchStats(ret[id].map(function(x){return x.v}),_br,m.ann_return,bench.ret):{beta:null,alpha:null,corr:null};
     var reasons=[];if(!elig1){
       if(ms.volCap!=null&&m.ann_vol>ms.volCap)reasons.push({text:'too volatile · '+Math.round(m.ann_vol*100)+'% > '+Math.round(ms.volCap*100)+'% cap',kind:'VOLATILITY'});
       if(ms.maxddFloor!=null&&m.max_drawdown!=null&&m.max_drawdown<ms.maxddFloor)reasons.push({text:'drawdown · '+Math.round(m.max_drawdown*100)+'% beyond '+Math.round(ms.maxddFloor*100)+'% floor',kind:'DRAWDOWN'});
@@ -1571,7 +1599,8 @@ function recompute(funds,ret,order,quar){ try{
     return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
       srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
       ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,
-      fee:(meta[id]&&meta[id].fee!=null?meta[id].fee:null),redf:(meta[id]&&meta[id].redf)||null,lockup:(meta[id]&&meta[id].lockup!=null?meta[id].lockup:null),notice:(meta[id]&&meta[id].notice!=null?meta[id].notice:null),
+      beta:_bs.beta,alpha:_bs.alpha,corr:_bs.corr,peer_corr:(_peer[id]!=null?_peer[id]:null),
+      fee:(meta[id]&&meta[id].fee!=null?meta[id].fee:null),redf:(meta[id]&&meta[id].redf)||null,lockup:(meta[id]&&meta[id].lockup!=null?meta[id].lockup:null),notice:(meta[id]&&meta[id].notice!=null?meta[id].notice:null),notes:(meta[id]&&meta[id].notes)||null,
       netret:(meta[id]&&meta[id].fee!=null?m.ann_return-meta[id].fee/100:null),detail:''};});
   // zoom coords over eligible + bench
   var surv=fd.filter(function(d){return d.eligible});var benchLine=null,gateX=null;
@@ -1583,7 +1612,10 @@ function recompute(funds,ret,order,quar){ try{
     if(ms.volCap!=null){var gx=12+_pos(ms.volCap,volAx)*76;if(gx>0&&gx<100)gateX=Math.round(gx*10)/10}}
   fd.forEach(function(d){if(d.xz==null){d.xz=d.x;d.yz=d.y}});
   // detail html for the drawer
-  fd.forEach(function(d){var cells=[['ann_return','ann return',pct(d.ret)],['ann_vol','ann vol',pct(d.vol)],['sharpe','sharpe',num(d.sharpe)],['sortino','sortino',num(d.sortino)],['calmar','calmar',num(d.calmar)],['max_drawdown','max drawdown',pct(d.maxdd)]].map(function(c){return "<div class='cell' data-mk='"+c[0]+"'><b>"+c[2]+"</b><i>"+c[1]+"</i></div>"}).join('');
+  fd.forEach(function(d){var cd=[['ann_return','ann return',pct(d.ret)],['ann_vol','ann vol',pct(d.vol)],['sharpe','sharpe',num(d.sharpe)],['sortino','sortino',num(d.sortino)],['calmar','calmar',num(d.calmar)],['max_drawdown','max drawdown',pct(d.maxdd)]];
+    if(d.beta!=null)cd.push(['beta','beta vs benchmark',num(d.beta)]);if(d.alpha!=null)cd.push(['alpha','alpha',pct(d.alpha)]);
+    if(d.corr!=null)cd.push(['correlation','corr vs benchmark',num(d.corr)]);if(d.peer_corr!=null)cd.push(['peer_corr','peer correlation',num(d.peer_corr)]);
+    var cells=cd.map(function(c){return "<div class='cell' data-mk='"+c[0]+"'><b>"+c[2]+"</b><i>"+c[1]+"</i></div>"}).join('');
     var lead=d.rank?("ranks #"+d.rank+" for this mandate"):(d.reason?("was excluded — "+esc(d.reason)):"was outscored below the shortlist");
     d.detail="<p class='d-p'>"+esc(d.name)+" "+lead+". It returned "+pct(d.ret)+" annualized against "+pct(d.vol)+" volatility, a Sharpe of "+num(d.sharpe)+" and a Sortino of "+num(d.sortino)+".</p><div class='mgrid'>"+cells+"</div><div class='src-lbl'>Recomputed from your uploaded returns</div>";});
   var win=fd.filter(function(d){return d.rank==1})[0];

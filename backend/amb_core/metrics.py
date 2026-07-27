@@ -36,6 +36,7 @@ METRIC_KEYS = [
     "beta",
     "alpha",
     "correlation",
+    "peer_corr",
     "tracking_error",
     "hit_rate",
 ]
@@ -195,6 +196,7 @@ def compute(
         "beta": None,
         "alpha": None,
         "correlation": None,
+        "peer_corr": None,   # universe-level — injected by the pipeline once all funds are known
         "tracking_error": None,
         "hit_rate": hit_rate(r),
     }
@@ -222,6 +224,31 @@ def _align(series: ReturnSeries, benchmark: Optional[Benchmark]) -> tuple[np.nda
         np.array([fund_map[p] for p in common]),
         np.array([bench_map[p] for p in common]),
     )
+
+
+def peer_correlations(series_by_fund: dict) -> dict[str, Optional[float]]:
+    """Each fund's AVERAGE correlation to the other funds in the universe, computed
+    pairwise on each pair's common periods (so ragged windows still work). Low = the
+    fund is diversifying versus its peers; high = it moves with the pack. This is the
+    'correlation to peer funds within the universe' the metrics spec requires."""
+    ids = list(series_by_fund)
+    maps = {fid: {p.period: p.value for p in series_by_fund[fid].points} for fid in ids}
+    out: dict[str, Optional[float]] = {}
+    for i in ids:
+        cs: list[float] = []
+        for j in ids:
+            if i == j:
+                continue
+            common = sorted(set(maps[i]) & set(maps[j]))
+            if len(common) < 3:
+                continue
+            a = np.array([maps[i][p] for p in common], dtype=float)
+            b = np.array([maps[j][p] for p in common], dtype=float)
+            c = correlation(a, b)
+            if c is not None:
+                cs.append(c)
+        out[i] = round(float(np.mean(cs)), 6) if cs else None
+    return out
 
 
 def compute_for_fund(

@@ -191,6 +191,18 @@ def test_client_has_one_metric_implementation():
     assert "peak=1,mdd" not in synth, "inline drawdown reintroduced in synth — must use fundMetrics"
 
 
+def test_peer_correlation_computed_and_surfaced():
+    """Metrics spec requires 'correlation to peer funds within the universe'. Every fund
+    with a series must get an average pairwise correlation to its peers, in [-1,1], and
+    it must reach the exported fund payload so the UI/audit can show it."""
+    memo, ctx = run("data/samples/dataset.csv", load_mandate("data/mandates/default.yaml"))
+    vals = [m.get("peer_corr") for m in ctx.metrics_by_fund.values() if m.get("peer_corr") is not None]
+    assert len(vals) >= 3, "peer correlation not computed for the universe"
+    assert all(-1.0 <= v <= 1.0 for v in vals), "peer correlation out of [-1,1]"
+    data = _extract_data(render_html(memo, ctx))
+    assert any(f.get("peer_corr") is not None for f in data["funds"]), "peer_corr not in fund payload"
+
+
 def test_reruns_snap_from_screening_not_full_replay():
     """A mandate change and a live-market refresh both change only downstream state
     (screening/scoring, or the benchmark) — not the data, ingest or universe — so they
