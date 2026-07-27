@@ -612,6 +612,13 @@ async function actZero(){
   var LIVE=(b.kind==='live');
   var _EPB=(A._keyed?"fred/series/observations?series_id=":"fredgraph.csv?id=");
   var ov=rd.overlap||{},bk=(b.kind==='live'?'LIVE':b.kind==='cache'?'CACHED':'SNAPSHOT');
+  // the market-data card must reflect the ACTUAL benchmark source in use (FRED or Yahoo,
+  // whatever the page fetched / the user chose) — never a hard-coded FRED.
+  var _isYah=/yahoo/i.test(b.srcName||'');
+  var _provName=_isYah?'Yahoo Finance':'FRED';
+  var _apiTitle=_isYah?'YAHOO FINANCE · MARKET-DATA API':'FRED · MARKET-DATA API';
+  var _host=_isYah?'query1.finance.yahoo.com':((A._keyed?'api':'fred')+'.stlouisfed.org');
+  var _eps=_isYah?["v8/finance/chart/<b>^GSPC</b>"]:[_EPB+"<b>SP500</b>",_EPB+"<b>TB3MS</b>"];
   // ── ONE ingest source of truth: the uploaded file (A.ingest) overrides the baked
   //    schema (readiness.ingest). Everything the animation shows — file name, extracted
   //    fields, quarantine reasons/counts — flows from this, so it always matches the
@@ -653,10 +660,9 @@ async function actZero(){
    +"<div class='az-beam a' id='beamA'></div>"
    +"<div class='az-hub' id='hub'><div class='az-hub-ring'></div><div class='az-hub-core'></div><div class='az-hub-l'>PARSER</div></div>"
    +"<div class='az-beam b' id='beamB'></div>"
-   +"<div class='az-src az-api' id='srcB'><div class='az-src-h'><span class='az-ic api'>◈</span>FRED · MARKET-DATA API<span class='az-badge "+(b.kind||'snapshot')+"'>"+bk+"</span></div>"
-     +"<div class='az-ep'>GET <span>"+_EPB+"<b>SP500</b></span></div>"
-     +"<div class='az-ep'>GET <span>"+_EPB+"<b>TB3MS</b></span></div>"
-     +"<div class='az-st' id='stB'>"+(LIVE?"resolving host · stlouisfed.org":"standby")+"</div></div>"
+   +"<div class='az-src az-api' id='srcB'><div class='az-src-h'><span class='az-ic api'>◈</span>"+_apiTitle+"<span class='az-badge "+(b.kind||'snapshot')+"'>"+bk+"</span></div>"
+     +_eps.map(function(e){return "<div class='az-ep'>GET <span>"+e+"</span></div>"}).join('')
+     +"<div class='az-st' id='stB'>"+(LIVE?("resolving host · "+_host):"standby")+"</div></div>"
    +"<div class='az-using' id='azusing'></div>"
    +"</div>";
   await wait(360);$('#srcA',az).classList.add('in');log('mounting local file · '+srcFile);await wait(520);if(aborted)return;
@@ -672,15 +678,15 @@ async function actZero(){
   $('#beamA',az).classList.add('on');await wait(500);if(aborted)return;
   $('#srcB',az).classList.add('in');
   if(LIVE){
-    log('opening https://'+(A._keyed?'api':'fred')+'.stlouisfed.org …');await wait(700);if(aborted)return;
+    log('opening https://'+_host+' …');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='ok'>●</span> 200 OK · live fetch · "+(b.n||36)+" monthly obs";
     $('#srcB',az).classList.add('active');$('#srcA',az).classList.add('standby');
-    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from FRED · "+esc(b.name||'S&P 500')+" · as-of "+esc(b.asOf||'—');
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark fetched LIVE from "+esc(_provName)+" · "+esc(b.name||'S&P 500')+" · as-of "+esc(b.asOf||'—');
   }else{
-    log('FRED endpoint available · this run uses the committed local snapshot');await wait(700);if(aborted)return;
+    log('live market-data API available · this run uses the committed local snapshot');await wait(700);if(aborted)return;
     $('#stB',az).innerHTML="<span class='muted'>○</span> "+(b.kind==='cache'?'served from cache':'not called · snapshot mode');
     $('#srcA',az).classList.add('active');$('#srcB',az).classList.add('standby');
-    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+esc(b.name||'S&P 500')+", as-of "+esc(b.asOf||'—')+") · FRED live available";
+    $('#azusing',az).innerHTML="<b>SOURCE IN USE</b> · benchmark from LOCAL "+(b.kind==='cache'?'cache':'snapshot')+" ("+esc(b.name||'S&P 500')+", as-of "+esc(b.asOf||'—')+") · live market data available";
   }
   $('#beamB',az).classList.add('on');
   await wait(1100);if(aborted)return;$('#hub',az).classList.add('live');await wait(800);if(aborted)return;

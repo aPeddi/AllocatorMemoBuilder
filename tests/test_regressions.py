@@ -423,6 +423,20 @@ def test_executive_summary_rendered_in_memo_and_pdf():
     assert 'heading="Executive Summary"' in Path("backend/amb_core/memo.py").read_text(), "the model section is renamed"
 
 
+def test_client_acquire_card_reflects_actual_benchmark_source():
+    """The Act 0 'acquire sources' card must show the benchmark source actually in use
+    (FRED or Yahoo), not a hard-coded FRED — the mismatch where the card said FRED while
+    the mandate panel said Yahoo. Pin that the card title, endpoints, host, and 'source
+    in use' line all derive from the live source (b.srcName)."""
+    js = Path("backend/amb_core/assets/memo.js").read_text()
+    az = js[js.index("async function actZero()"):js.index("function _colOf")]
+    assert "var _isYah=" in az and "_apiTitle" in az and "_host" in az and "_eps" in az, "the acquire card must derive its source from b.srcName"
+    assert '"+_apiTitle+"' in az, "the card title must be the provider-derived title, not hard-coded"
+    assert "_eps.map(function(e)" in az, "the endpoints must be provider-derived"
+    assert 'fetched LIVE from "+esc(_provName)' in az, "'source in use' must name the real provider"
+    assert "'opening https://'+_host" in az, "the log must open the real provider host"
+
+
 def test_client_offers_benchmark_source_choice():
     """With more than one live benchmark source available (FRED + Yahoo), the page must
     let the user choose which reference index to measure against, remember the choice for
