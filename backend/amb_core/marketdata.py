@@ -45,18 +45,32 @@ _FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}"
 
 _SNAP_NAMES = {"sp500": "S&P 500 Total Return", "agg": "US Aggregate Bond"}
 
+# ── Yahoo Finance (keyless public chart endpoint; what yfinance uses) ──────────
+# benchmark_id -> (Yahoo symbol, display name). Yahoo's monthly bars carry an
+# adjusted close (dividend-inclusive → total return), a truer benchmark than FRED's
+# price-only index series.
+_YF_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{sym}?range=15y&interval=1mo"
+_YF_INDEX = {
+    "SP500": ("^GSPC", "S&P 500 (Yahoo)"),
+    "NASDAQ": ("^IXIC", "NASDAQ Composite (Yahoo)"),
+    "DJIA": ("^DJI", "Dow Jones Industrial Average (Yahoo)"),
+    "WILSHIRE": ("^W5000", "Wilshire 5000 (Yahoo)"),
+}
+
 
 def _now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _http_get(url: str, timeout: float) -> str:
+def _http_get(url: str, timeout: float, extra_headers: Optional[dict] = None, label: str = "source") -> str:
     """GET text with a hard timeout, robust to macOS's missing SSL cert store.
 
     Tries requests (bundles CA certs) first, then urllib with a certifi context,
     then urllib's default context. Raises RuntimeError listing every failure so
     the caller can tell the user *why* a live fetch fell back."""
     headers = {"User-Agent": "AllocatorMemoBuilder/0.3"}
+    if extra_headers:
+        headers.update(extra_headers)
     errors = []
     try:
         import requests  # bundles its own CA bundle — fixes the common macOS SSL error
@@ -79,7 +93,7 @@ def _http_get(url: str, timeout: float) -> str:
             return resp.read().decode("utf-8", "replace")
     except Exception as e:  # noqa: BLE001
         errors.append(f"urllib: {e!r}")
-    raise RuntimeError("FRED unreachable — " + " | ".join(errors))
+    raise RuntimeError(f"{label} unreachable — " + " | ".join(errors))
 
 
 def _read_fred_api(series_id: str, api_key: str, timeout: float = 12.0) -> pd.DataFrame:
@@ -171,6 +185,71 @@ def fetch_benchmark(benchmark_id: str, timeout: float = 12.0, api_key: str = "")
     )
 
 
+def _read_yahoo(symbol: str, timeout: float = 12.0, api_key: str = "") -> pd.DataFrame:
+    """Fetch a Yahoo monthly chart as a tidy (date, value) frame of adjusted closes.
+
+    Uses the keyless public chart endpoint by default (the same one yfinance uses);
+    a key, if supplied, is sent as a gateway header for a gated Yahoo proxy. Raises
+    on failure so the caller can fall back."""
+    extra = {"X-API-KEY": api_key.strip(), "X-RapidAPI-Key": api_key.strip()} if (api_key or "").strip() else None
+    raw = _http_get(_YF_URL.format(sym=urllib.parse.quote(symbol)), timeout, extra, label="Yahoo Finance")
+    result = (json.loads(raw).get("chart", {}).get("result") or [None])[0]
+    if not result:
+        raise ValueError(f"Yahoo returned no result for {symbol}")
+    ts = result.get("timestamp") or []
+    ind = result.get("indicators", {})
+    adj = (ind.get("adjclose") or [{}])[0].get("adjclose")
+    close = (ind.get("quote") or [{}])[0].get("close")
+    vals = adj if adj else close  # prefer dividend-inclusive adjusted close (total return)
+    if not ts or not vals or len(ts) != len(vals):
+        raise ValueError(f"Yahoo series for {symbol} is empty or misaligned")
+    rows = [(datetime.fromtimestamp(int(t), tz=timezone.utc).date().replace(day=1), v)
+            for t, v in zip(ts, vals) if v is not None]
+    out = pd.DataFrame(rows, columns=["date", "value"])
+    out["date"] = pd.to_datetime(out["date"], errors="coerce")
+    out["value"] = pd.to_numeric(out["value"], errors="coerce")
+    out = out.dropna()
+    if out.empty:
+        raise ValueError(f"Yahoo series {symbol} returned no usable rows")
+    return out
+
+
+def fetch_benchmark_yahoo(benchmark_id: str, timeout: float = 12.0, api_key: str = "") -> Benchmark:
+    """Live benchmark from Yahoo Finance. Raises if the id is unknown or the fetch fails."""
+    key = benchmark_id.upper()
+    if key not in _YF_INDEX:
+        raise ValueError(f"no Yahoo mapping for benchmark '{benchmark_id}'")
+    sym, name = _YF_INDEX[key]
+    df = _read_yahoo(sym, timeout, api_key)
+    pts = _index_to_monthly_returns(df)
+    if len(pts) < 2:
+        raise ValueError(f"benchmark {benchmark_id} produced too few monthly returns from Yahoo")
+    return Benchmark(
+        benchmark_id=key, name=name, as_of=pts[-1].period,
+        frequency="monthly", periods_per_year=12, points=pts,
+        source=_YF_URL.format(sym=sym), source_kind="live", source_name="Yahoo Finance",
+        fetched_at=_now_utc(),
+    )
+
+
+# provider id -> (display, fetch fn taking (benchmark_id, timeout, api_key))
+_PROVIDERS = {
+    "fred": ("FRED", fetch_benchmark),
+    "yahoo": ("Yahoo Finance", fetch_benchmark_yahoo),
+}
+
+
+def _provider_order(provider: str) -> list[str]:
+    """Which live providers to try, in order. 'auto' tries both (FRED first for
+    continuity with older memos); a named provider pins exactly that one."""
+    p = (provider or "auto").strip().lower()
+    if p == "yahoo":
+        return ["yahoo"]
+    if p == "fred":
+        return ["fred"]
+    return ["fred", "yahoo"]
+
+
 def _write_cache(bench: Benchmark, cache_dir: Path) -> None:
     try:
         cache_dir.mkdir(parents=True, exist_ok=True)
@@ -230,32 +309,63 @@ def load_snapshot(benchmark_id: str, snapshot_dir: Path) -> Optional[Benchmark]:
 _load_snapshot = load_snapshot
 
 
+def _fetch_live(benchmark_id: str, provider: str, api_key: str, yahoo_api_key: str, timeout: float = 12.0) -> Benchmark:
+    """Fetch one provider's live benchmark. Raises on failure."""
+    _name, fn = _PROVIDERS[provider]
+    key = yahoo_api_key if provider == "yahoo" else api_key
+    return fn(benchmark_id, timeout=timeout, api_key=key)
+
+
 def resolve_benchmark(
     benchmark_id: str = "SP500",
     mode: str = "snapshot",
     data_dir: str | Path = "data",
     api_key: str = "",
+    provider: str = "auto",
+    yahoo_api_key: str = "",
 ) -> Optional[Benchmark]:
     """The single entry point pipeline uses. `mode` is one of:
       snapshot  — committed fixture only (deterministic; default for tests)
-      live/auto — try FRED, then cache, then snapshot (graceful degradation)
-    Returns None only if every source is missing. `api_key` (the FRED key) is
-    supplied by the caller — this module never reads global config.
+      live/auto — try the configured provider(s), then cache, then snapshot
+    `provider` is auto | fred | yahoo. Returns None only if every source is missing.
+    Keys (FRED / Yahoo) are supplied by the caller — this module never reads config.
     """
     data_dir = Path(data_dir)
     snap_dir = data_dir / "benchmarks"
     cache_dir = snap_dir / "cache"
 
     if mode in ("live", "auto"):
-        try:
-            bench = fetch_benchmark(benchmark_id, api_key=api_key)
-            _write_cache(bench, cache_dir)
-            print(f"✓ live benchmark: {bench.name} via FRED · {len(bench.points)} monthly obs · as-of {bench.as_of}", file=sys.stderr)
-            return bench
-        except Exception as e:  # noqa: BLE001
-            cached = _load_cache(benchmark_id, cache_dir)
-            if cached is not None:
-                print(f"! live FRED fetch failed ({e}); using cached benchmark ({cached.as_of})", file=sys.stderr)
-                return cached
-            print(f"! live FRED fetch failed ({e}); falling back to the committed snapshot", file=sys.stderr)
+        for prov in _provider_order(provider):
+            try:
+                bench = _fetch_live(benchmark_id, prov, api_key, yahoo_api_key)
+                _write_cache(bench, cache_dir)
+                print(f"✓ live benchmark: {bench.name} via {bench.source_name} · {len(bench.points)} monthly obs · as-of {bench.as_of}", file=sys.stderr)
+                return bench
+            except Exception as e:  # noqa: BLE001
+                print(f"! live {prov} fetch failed ({e})", file=sys.stderr)
+        cached = _load_cache(benchmark_id, cache_dir)
+        if cached is not None:
+            print(f"! all live providers failed; using cached benchmark ({cached.as_of})", file=sys.stderr)
+            return cached
+        print("! all live providers failed; falling back to the committed snapshot", file=sys.stderr)
     return _load_snapshot(benchmark_id, snap_dir)
+
+
+def resolve_providers(
+    benchmark_id: str = "SP500",
+    data_dir: str | Path = "data",
+    api_key: str = "",
+    yahoo_api_key: str = "",
+    timeout: float = 8.0,
+) -> dict:
+    """Probe EVERY live provider and report which returned data. The serve layer uses
+    this to let the page offer a source choice when more than one is available; each
+    entry is {ok, name, benchmark?} and never raises (a dead provider is ok=False)."""
+    out: dict = {}
+    for prov, (name, _fn) in _PROVIDERS.items():
+        try:
+            b = _fetch_live(benchmark_id, prov, api_key, yahoo_api_key, timeout=timeout)
+            out[prov] = {"ok": True, "name": b.name, "benchmark": b}
+        except Exception as e:  # noqa: BLE001
+            out[prov] = {"ok": False, "name": name, "error": str(e)[:120]}
+    return out

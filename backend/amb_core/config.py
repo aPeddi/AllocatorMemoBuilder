@@ -32,11 +32,18 @@ class Settings(BaseSettings):
 
     # Benchmarks / risk-free
     benchmark_mode: str = Field("snapshot", alias="AMB_BENCHMARK_MODE")
+    # Which live provider to prefer: "auto" tries every configured source and, when
+    # more than one returns data, the page lets the user choose; "fred"/"yahoo" pin one.
+    benchmark_provider: str = Field("auto", alias="AMB_BENCHMARK_PROVIDER")  # auto | fred | yahoo
     risk_free_annual: float = Field(0.02, alias="AMB_RISK_FREE_ANNUAL")
     # FRED market-data API key. Read server-side only; NEVER sent to the browser.
     # The `./amb serve` proxy uses it so a page can fetch live data without ever
     # exposing the secret client-side.
     fred_api_key: str = Field("", alias="FRED_API_KEY")
+    # Yahoo Finance is keyless by default (the public chart endpoint). A key is only
+    # needed for a gated Yahoo gateway (e.g. RapidAPI); when set it is sent as a header,
+    # server-side only, and — like the FRED key — NEVER shipped to the browser.
+    yahoo_api_key: str = Field("", alias="AMB_YAHOO_API_KEY")
 
     # Local API server (./amb serve)
     serve_host: str = Field("127.0.0.1", alias="AMB_SERVE_HOST")
@@ -55,6 +62,10 @@ class Settings(BaseSettings):
     @property
     def has_fred_key(self) -> bool:
         return bool(self.fred_api_key.strip())
+
+    @property
+    def has_yahoo_key(self) -> bool:
+        return bool(self.yahoo_api_key.strip())
 
 
 @lru_cache

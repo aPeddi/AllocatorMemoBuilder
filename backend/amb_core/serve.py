@@ -20,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from .config import get_settings
 from .ingest import load_dataset
-from .marketdata import fetch_risk_free_annual, resolve_benchmark
+from .marketdata import fetch_risk_free_annual, resolve_benchmark, resolve_providers
 from .metrics import annualize as _annualize  # shared engine helper (ret, vol, wealth)
 
 log = logging.getLogger("amb.serve")
@@ -44,43 +44,84 @@ async def _security_headers(request: Request, call_next):
     return resp
 
 
-def market_payload(data_dir: str = "data", mode: str = "live") -> dict:
-    """Live benchmark + risk-free, aligned to the sample fund window. The one place
-    the FRED key is used — server-side only."""
-    if mode not in _ALLOWED_MODES:  # defence-in-depth: never trust an unexpected mode
-        mode = "live"
-    s = get_settings()
-    bench = resolve_benchmark("SP500", mode=mode, data_dir=data_dir, api_key=s.fred_api_key)
-    if bench is None:
-        return {"ok": False, "error": "no benchmark source available"}
-    # align to the fund window so the live curve overlays the fund curves
+def _fund_window():
+    """(lo, hi) of the sample fund return window, so a benchmark curve overlays it."""
     try:
         _funds, series, _quar = load_dataset(SAMPLES / "dataset.csv")
         periods = {p.period for sr in series.values() for p in sr.points}
-        lo, hi = min(periods), max(periods)
-        win = [p for p in bench.points if lo <= p.period <= hi]
-    except Exception:
-        win = bench.points
-    vals = [p.value for p in win]
-    ret, vol, wealth = _annualize(vals)
-    rf = fetch_risk_free_annual(api_key=s.fred_api_key) if bench.source_kind == "live" else None
+        return min(periods), max(periods)
+    except Exception:  # noqa: BLE001
+        return None, None
+
+
+def _bench_summary(bench, lo, hi) -> dict:
+    """A benchmark aligned to the fund window + annualized on the shared engine."""
+    win = [p for p in bench.points if (lo is None or lo <= p.period <= hi)] or bench.points
+    ret, vol, wealth = _annualize([p.value for p in win])
+    return {
+        "name": bench.name, "ret": ret, "vol": vol, "wealth": wealth,
+        "kind": bench.source_kind, "srcName": bench.source_name,
+        "asOf": str(win[-1].period if win else bench.as_of), "n": len(win),
+    }
+
+
+def market_payload(data_dir: str = "data", mode: str = "live", provider: str = "") -> dict:
+    """Live benchmark + risk-free, aligned to the sample fund window. Probes EVERY live
+    provider (FRED, Yahoo) so the page can offer a source choice when more than one is
+    available; the keys are used server-side only and never leave this process."""
+    if mode not in _ALLOWED_MODES:  # defence-in-depth: never trust an unexpected mode
+        mode = "live"
+    s = get_settings()
+    lo, hi = _fund_window()
+
+    # probe both providers (live) so the client can choose when both return data
+    providers: dict = {}
+    live_any = None
+    if mode in ("live", "cache"):
+        # short per-provider timeout so one slow/unreachable source can't stall the endpoint
+        probe = resolve_providers("SP500", data_dir=data_dir, api_key=s.fred_api_key, yahoo_api_key=s.yahoo_api_key, timeout=5.0)
+        for pid, info in probe.items():
+            if info.get("ok"):
+                b = info["benchmark"]
+                providers[pid] = {"ok": True, "name": info["name"], "benchmark": _bench_summary(b, lo, hi)}
+                live_any = live_any or b
+            else:
+                providers[pid] = {"ok": False, "name": info.get("name", pid), "error": info.get("error", "")}
+
+    # choose the primary: the requested provider if live, else config order, else any
+    # live, else fall through to cache/snapshot via resolve_benchmark.
+    order = [p for p in [(provider or s.benchmark_provider), "fred", "yahoo"] if p]
+    chosen_id = next((p for p in order if providers.get(p, {}).get("ok")), None)
+    if chosen_id:
+        primary = providers[chosen_id]["benchmark"]
+    else:
+        bench = resolve_benchmark("SP500", mode=mode, data_dir=data_dir, api_key=s.fred_api_key,
+                                  provider=s.benchmark_provider, yahoo_api_key=s.yahoo_api_key)
+        if bench is None:
+            return {"ok": False, "error": "no benchmark source available"}
+        primary = _bench_summary(bench, lo, hi)
+        chosen_id = "fred" if bench.source_name.startswith("FRED") else ("yahoo" if "Yahoo" in bench.source_name else "snapshot")
+
+    is_live = primary["kind"] == "live"
+    # risk-free comes from FRED only — skip the call (and its timeout) when FRED is down
+    fred_ok = providers.get("fred", {}).get("ok", False)
+    rf = fetch_risk_free_annual(api_key=s.fred_api_key, timeout=5.0) if (is_live and fred_ok) else None
     return {
         "ok": True,
-        "live": bench.source_kind == "live",
-        "keyed": s.has_fred_key,  # boolean only — the key itself never leaves the server
-        "benchmark": {
-            "name": bench.name, "ret": ret, "vol": vol, "wealth": wealth,
-            "kind": bench.source_kind, "srcName": bench.source_name,
-            "asOf": str(win[-1].period if win else bench.as_of), "n": len(win),
-        },
+        "live": is_live,
+        "keyed": s.has_fred_key,          # boolean only — the key itself never leaves the server
+        "yahooKeyed": s.has_yahoo_key,
+        "provider": chosen_id,
+        "providers": providers,           # {fred:{ok,name,benchmark?}, yahoo:{ok,name,benchmark?}}
+        "benchmark": primary,             # the chosen source (back-compat with older clients)
         "riskFree": {"value": rf, "source": "FRED · 3M T-bill" if rf is not None else "mandate"},
     }
 
 
 @app.get("/api/market")
-def api_market():
+def api_market(provider: str = ""):
     try:
-        return JSONResponse(market_payload())
+        return JSONResponse(market_payload(provider=provider))
     except Exception as e:  # noqa: BLE001 — log detail server-side, return a generic message
         log.warning("market_payload failed: %s", e)
         return JSONResponse({"ok": False, "error": "market data temporarily unavailable"}, status_code=502)

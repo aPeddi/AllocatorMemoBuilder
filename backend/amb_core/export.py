@@ -308,7 +308,7 @@ def render_html(memo, ctx=None):
     # memo prose sections (Summary / Recommendation / Key Risks / Data Appendix)
     def _find_sec(h):
         return next((s for s in memo.sections if s.heading==h), None)
-    _smy=_find_sec("Summary");_rec=_find_sec("Recommendation");_kr=_find_sec("Key Risks");_apx=_find_sec("Data Appendix")
+    _smy=_find_sec("Executive Summary");_rec=_find_sec("Recommendation");_kr=_find_sec("Key Risks");_apx=_find_sec("Data Appendix")
     kr_claims=[{"fund":_fname(c.fund_id),"metric":(c.metric or "").replace("_"," "),"value":c.value,
                 "verified":bool(c.verified),"text":e(c.text)} for c in (_kr.claims if _kr else [])]
     memo_payload={"summary":e(_smy.body) if _smy else "","recommendation":e(_rec.body) if _rec else "",

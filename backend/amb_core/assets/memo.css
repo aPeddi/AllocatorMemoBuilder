@@ -733,6 +733,19 @@ body.scoring .stage::after{opacity:1}
 /* ── CSV mapping-review modal ── */
 #mapmodal{position:fixed;inset:0;z-index:90;display:none}
 #mapmodal.on{display:block}
+/* benchmark-source chooser — shares the modal shell (.mm-back/.mm-card) */
+#benchpick{position:fixed;inset:0;z-index:95;display:none}
+#benchpick.bpm.on{display:block}
+.bp-card{width:min(520px,92vw)}
+.bp-note{font-size:12.5px;line-height:1.6;color:var(--ink2);margin:12px 0 14px}
+.bp-opts{display:flex;flex-direction:column;gap:10px}
+.bp-opt{display:block;width:100%;text-align:left;cursor:pointer;background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:13px 15px;transition:.15s;color:var(--ink);font-family:inherit}
+.bp-opt:hover{border-color:var(--accent2);background:var(--accent-soft)}
+.bp-nm{font-size:13.5px;font-weight:600;color:var(--ink-hi)}
+.bp-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:5px;font-family:var(--mono);font-size:9px;letter-spacing:.04em;color:var(--dim2)}
+.bp-fine{font-size:10.5px;line-height:1.5;color:var(--dim2);margin:14px 0 0}
+.srcchip.switch{cursor:pointer}
+.src-sw{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent2);margin-left:5px}
 .mm-back{position:absolute;inset:0;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
 .mm-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(580px,92vw);max-height:86vh;overflow-y:auto;background:var(--panel);border:1px solid var(--border2);border-radius:14px;box-shadow:0 40px 90px var(--shadow);padding:22px 24px 20px;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
 .mm-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}

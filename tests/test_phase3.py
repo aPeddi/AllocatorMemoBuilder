@@ -30,7 +30,9 @@ def test_snapshot_mode_is_offline_and_stamped():
 def test_live_falls_back_when_source_unreachable(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("no network")
+    # every live provider down (FRED + Yahoo) -> cache/snapshot, never a hang/exception
     monkeypatch.setattr(marketdata, "_read_fred", boom)
+    monkeypatch.setattr(marketdata, "_read_yahoo", boom)
     b = resolve_benchmark("SP500", mode="live", data_dir="data")
     # no cache in a clean tree -> snapshot, never an exception, never a hang
     assert b is not None and b.source_kind in ("cache", "snapshot")
@@ -65,6 +67,78 @@ def test_unknown_benchmark_has_no_live_mapping(monkeypatch):
         fetch_benchmark("NOT_A_REAL_INDEX")
 
 
+# ── Yahoo Finance provider + multi-provider selection ────────────────────────
+def _yahoo_json(levels, start=(2024, 1)):
+    import datetime
+    import json as _json
+    ts, y, m = [], *start
+    for _ in levels:
+        ts.append(int(datetime.datetime(y, m, 1, tzinfo=datetime.timezone.utc).timestamp()))
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return _json.dumps({"chart": {"result": [{
+        "meta": {"symbol": "^GSPC", "currency": "USD"},
+        "timestamp": ts,
+        "indicators": {"adjclose": [{"adjclose": levels}], "quote": [{"close": levels}]},
+    }]}})
+
+
+def test_yahoo_provider_parses_monthly_adjclose(monkeypatch):
+    """The Yahoo chart endpoint returns monthly adjusted closes; the provider must turn
+    them into first-of-month monthly returns and stamp Yahoo provenance."""
+    levels = [100, 101, 103, 102, 105, 108, 107, 110, 112, 111, 115, 118, 120]
+    monkeypatch.setattr(marketdata, "_http_get", lambda *a, **k: _yahoo_json(levels))
+    b = marketdata.fetch_benchmark_yahoo("SP500")
+    assert b.source_kind == "live" and b.source_name == "Yahoo Finance"
+    assert b.benchmark_id == "SP500" and b.periods_per_year == 12
+    assert len(b.points) == len(levels) - 1  # pct_change drops the first month
+    assert b.points[0].value == pytest.approx(101 / 100 - 1, rel=1e-6)
+
+
+def test_provider_order_pins_or_tries_both():
+    assert marketdata._provider_order("yahoo") == ["yahoo"]
+    assert marketdata._provider_order("fred") == ["fred"]
+    assert marketdata._provider_order("auto") == ["fred", "yahoo"]  # FRED first for continuity
+
+
+def _month_frame(base):
+    import datetime
+    import pandas as pd
+    rows, y, m = [], 2023, 1
+    for i in range(14):
+        rows.append((datetime.date(y, m, 1), base + i))
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    df = pd.DataFrame(rows, columns=["date", "value"])
+    df["date"] = pd.to_datetime(df["date"])
+    return df
+
+
+def test_resolve_benchmark_honors_pinned_provider(monkeypatch):
+    """provider=yahoo|fred pins exactly that source; auto tries FRED first."""
+    monkeypatch.setattr(marketdata, "_read_fred", lambda *a, **k: _month_frame(100))
+    monkeypatch.setattr(marketdata, "_read_yahoo", lambda *a, **k: _month_frame(200))
+    assert resolve_benchmark("SP500", mode="live", provider="yahoo").source_name == "Yahoo Finance"
+    assert resolve_benchmark("SP500", mode="live", provider="fred").source_name == "FRED"
+    assert resolve_benchmark("SP500", mode="live", provider="auto").source_name == "FRED"
+
+
+def test_resolve_providers_reports_each_source(monkeypatch):
+    """The serve probe reports every provider's health so the page can offer a choice."""
+    monkeypatch.setattr(marketdata, "_read_fred", lambda *a, **k: _month_frame(100))
+
+    def boom(*a, **k):
+        raise RuntimeError("yahoo down")
+    monkeypatch.setattr(marketdata, "_read_yahoo", boom)
+    provs = marketdata.resolve_providers("SP500")
+    assert provs["fred"]["ok"] is True and provs["fred"]["benchmark"].source_name == "FRED"
+    assert provs["yahoo"]["ok"] is False and "error" in provs["yahoo"]
+
+
 # ── readiness report ────────────────────────────────────────────────────────
 def test_readiness_reconciles_and_reports(sample_run):
     _memo, ctx = sample_run
@@ -92,7 +166,7 @@ def test_illiquid_funds_carry_terms(sample_run):
 def test_memo_has_summary_risks_appendix(sample_run):
     memo, _ctx = sample_run
     headings = [s.heading for s in memo.sections]
-    assert headings[0] == "Summary"
+    assert headings[0] == "Executive Summary"
     assert "Recommendation" in headings
     assert "Key Risks" in headings
     assert headings[-1] == "Data Appendix"

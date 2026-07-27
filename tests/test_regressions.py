@@ -379,6 +379,22 @@ def test_client_mandate_enforces_all_four_hard_limits_uniformly():
     assert js.count("redd:_reddOf(id)") >= 2, "every rebuilt fund must carry its redemption-days for liquidity screening"
 
 
+def test_client_offers_benchmark_source_choice():
+    """With more than one live benchmark source available (FRED + Yahoo), the page must
+    let the user choose which reference index to measure against, remember the choice for
+    the session, and never silently pick one. Pin the chooser, the single benchmark-apply
+    path, and that the fetch honors a remembered provider."""
+    js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
+    assert js.count("functionchooseBenchSource(") == 1, "one benchmark-source chooser"
+    assert js.count("function_applyBench(") == 1, "one shared benchmark-apply path"
+    assert "d.providers" in js, "fetch must read the per-provider availability map"
+    assert "okIds.length>=2){chooseBenchSource(" in js, "two live sources → prompt the user"
+    assert "A._benchProvider" in js, "the chosen source must be remembered for the session"
+    # server side really probes multiple providers
+    serve = Path("backend/amb_core/serve.py").read_text()
+    assert "resolve_providers(" in serve and '"providers"' in serve, "serve must expose a provider-availability map"
+
+
 def test_client_summary_statistics_input_mode():
     """The spec's input format is 'multiple CSVs with monthly returns OR summary
     statistics'. A file of per-fund precomputed metrics (no date/return series) must be

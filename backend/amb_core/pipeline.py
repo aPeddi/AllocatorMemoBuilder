@@ -62,7 +62,10 @@ def run(
     step("Resolving benchmark")
     mode = benchmark_mode or settings.benchmark_mode
     fred_key = settings.fred_api_key
-    benchmark = resolve_benchmark(mandate.benchmark_id, mode=mode, data_dir=data_dir, api_key=fred_key)
+    benchmark = resolve_benchmark(
+        mandate.benchmark_id, mode=mode, data_dir=data_dir, api_key=fred_key,
+        provider=settings.benchmark_provider, yahoo_api_key=settings.yahoo_api_key,
+    )
 
     # risk-free: mandate default, overridden by a live pull only in live/auto mode
     rf_used = mandate.risk_free_annual

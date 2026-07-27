@@ -287,32 +287,70 @@ function servedLive(){return location.protocol==='http:'||location.protocol==='h
 function fetchLiveMarket(manual){
   var chip=$('#srcchip');if(chip){chip.classList.add('busy');chip.innerHTML="<i></i><b>market data</b> fetching live…";chip.style.display=''}
   var ctrl=('AbortController' in window)?new AbortController():null;
-  var tmo=setTimeout(function(){if(ctrl)ctrl.abort()},8000);
-  return fetch('/api/market',ctrl?{signal:ctrl.signal}:{}).then(function(r){return r.json()}).then(function(d){
+  var tmo=setTimeout(function(){if(ctrl)ctrl.abort()},16000);   // the server may probe two providers; allow for one slow/firewalled source
+  var url='/api/market'+(A._benchProvider?('?provider='+encodeURIComponent(A._benchProvider)):'');
+  return fetch(url,ctrl?{signal:ctrl.signal}:{}).then(function(r){return r.json()}).then(function(d){
     clearTimeout(tmo);
     if(!d||!d.ok||!d.benchmark)throw new Error((d&&d.error)||'no data');
-    var b=d.benchmark;
-    A.bench=Object.assign({},A.bench||{},{name:b.name,ret:b.ret,vol:b.vol,wealth:b.wealth,kind:b.kind,srcName:b.srcName,asOf:b.asOf,n:b.n});
-    if(d.riskFree&&d.riskFree.value!=null){A.rfUsed=d.riskFree.value;A.rfSource=d.riskFree.source}
-    A._keyed=!!d.keyed;A._served=true;
-    synthAlphaOverBench();screenAndScore();  // demo: managers earn alpha over the live reference, recomputed consistently
-    if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
-    relayoutScatter();  // keep the main risk/return graph consistent with the (live) benchmark
-    var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
-    if(document.body.classList.contains('settled')){rerender(_snapStory);}   // a live refresh changed only the benchmark, not the data/ingest — snap from screening, don't replay Act 0
-    if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data fetched from FRED · "+esc(b.name)+" · as-of "+esc(b.asOf));
-    else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+esc(b.name)+" ("+esc(b.kind)+")");
+    A._keyed=!!d.keyed;A._served=true;A._market=d;
+    var provs=d.providers||{};
+    var okIds=Object.keys(provs).filter(function(k){return provs[k].ok&&provs[k].benchmark});
+    var def=(d.provider&&provs[d.provider]&&provs[d.provider].ok)?d.provider:(okIds[0]||null);
+    function apply(id){var b=(id&&provs[id]&&provs[id].benchmark)?provs[id].benchmark:d.benchmark;
+      if(id)A._benchProvider=id;_applyBench(b,d);
+      if(b.kind==='live')toast("<span class='tk'>&#10003;</span>Live market data · "+esc(b.srcName||'')+" · "+esc(b.name)+" · as-of "+esc(b.asOf));
+      else if(manual)toast("<span class='tk'>&#10003;</span>Market data: "+esc(b.name)+" ("+esc(b.kind)+")");}
+    // remembered choice → honor it; two live sources & no choice yet → let the user pick;
+    // one source → use it; none live → the cache/snapshot primary.
+    if(A._benchProvider&&provs[A._benchProvider]&&provs[A._benchProvider].ok){apply(A._benchProvider);}
+    else if(okIds.length>=2){chooseBenchSource(provs,okIds,def,apply);}
+    else if(okIds.length===1){apply(okIds[0]);}
+    else{apply(null);}
   }).catch(function(e){
     clearTimeout(tmo);if(chip){chip.classList.remove('busy')}sourceChip();
     if(manual)toast("<span class='tk' style='color:var(--loss)'>!</span>Live fetch needs the server — run <b>./amb serve</b>");
   });
 }
+// apply one benchmark payload to the app + keep every dependent view consistent.
+function _applyBench(b,d){
+  A.bench=Object.assign({},A.bench||{},{name:b.name,ret:b.ret,vol:b.vol,wealth:b.wealth,kind:b.kind,srcName:b.srcName,asOf:b.asOf,n:b.n});
+  if(d&&d.riskFree&&d.riskFree.value!=null){A.rfUsed=d.riskFree.value;A.rfSource=d.riskFree.source}
+  synthAlphaOverBench();screenAndScore();   // demo: managers earn alpha over the live reference, recomputed consistently
+  var chip=$('#srcchip');if(chip)chip.classList.remove('busy');sourceChip();benchBadge();
+  relayoutScatter();
+  var bp=$('#ip-bench');if(bp&&A.bench){bp.innerHTML="<div class='ipb'><span class='bd'></span><div class='bt'><div class='bn'>"+esc(A.bench.name)+"</div><div class='bm'>ret <b>"+pct(A.bench.ret)+"</b> · vol <b>"+pct(A.bench.vol)+"</b></div></div><div class='btag'>reference</div></div>"}
+  if(document.body.classList.contains('settled')){rerender(_snapStory);}   // a live refresh changed only the benchmark, not the data/ingest — snap from screening
+}
+// when more than one live benchmark source is available, let the user choose which
+// reference index to measure against. Remembered for the session via A._benchProvider.
+function chooseBenchSource(provs,okIds,def,cb){
+  var old=$('#benchpick');if(old)old.remove();
+  var wrap=document.createElement('div');wrap.id='benchpick';wrap.className='bpm on';
+  function optRow(id){var p=provs[id],b=p.benchmark;
+    return "<button class='bp-opt' data-id='"+esc(id)+"'><div class='bp-nm'>"+esc(b.name)+"</div>"
+      +"<div class='bp-meta'><span>"+esc(p.name)+"</span><span>ret "+pct(b.ret)+"</span><span>vol "+pct(b.vol)+"</span><span>as-of "+esc(b.asOf)+"</span></div></button>";}
+  wrap.innerHTML="<div class='mm-back'></div><div class='mm-card bp-card'>"
+    +"<div class='mm-h'><div><div class='mm-pre'>Market data · source</div><div class='mm-t'>Choose your benchmark source</div></div><div class='mm-x' id='bpX'>&#10005;</div></div>"
+    +"<p class='bp-note'>More than one live source returned data. Pick the reference index to measure the funds against.</p>"
+    +"<div class='bp-opts'>"+okIds.map(optRow).join('')+"</div>"
+    +"<p class='bp-fine'>FRED serves price-return index levels; Yahoo serves dividend-adjusted (total-return) levels, so the two can differ by a few points a year. You can switch sources any time from the market-data chip.</p></div>";
+  document.body.appendChild(wrap);
+  function done(id){wrap.remove();cb(id)}
+  $$('.bp-opt',wrap).forEach(function(o){o.addEventListener('click',function(){done(o.dataset.id)})});
+  var x=$('#bpX',wrap);if(x)x.addEventListener('click',function(){done(def)});
+  var bk=$('.mm-back',wrap);if(bk)bk.addEventListener('click',function(){done(def)});
+}
+function _srcShort(b){var s=(b&&b.srcName)||'';return /yahoo/i.test(s)?'Yahoo':/fred/i.test(s)?'FRED':(s||'local')}
+// >=2 live sources returned this session → the chip becomes a switcher
+function _canSwitchSource(){var m=A._market;if(!m||!m.providers)return null;var ok=Object.keys(m.providers).filter(function(k){return m.providers[k].ok&&m.providers[k].benchmark});return ok.length>=2?ok:null}
 function sourceChip(){var c=$('#srcchip');if(!c)return;var b=A.bench;if(!b){c.style.display='none';return}
-  var kind=b.kind||'snapshot';var lbl=(kind==='live'?'LIVE · FRED':kind==='cache'?'CACHED · FRED':'SNAPSHOT · local');
-  c.className='srcchip '+kind;c.innerHTML="<i></i><b>market data</b> "+lbl;c.style.display='';
-  c.title="Fund data: your local CSV (dataset.csv). Benchmark / market data: "+(kind==='live'?'live FRED API':'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+".";}
+  var kind=b.kind||'snapshot';var src=_srcShort(b);var sw=_canSwitchSource();
+  var lbl=(kind==='live'?'LIVE · '+src:kind==='cache'?'CACHED · '+src:'SNAPSHOT · local');
+  c.className='srcchip '+kind+(sw?' switch':'');c.innerHTML="<i></i><b>market data</b> "+lbl+(sw?" <span class='src-sw'>switch ⇄</span>":"");c.style.display='';
+  c.title="Fund data: your local CSV (dataset.csv). Benchmark / market data: "+(kind==='live'?('live '+(b.srcName||src)+' API'):'committed local snapshot')+" — "+(b.name||'')+", as-of "+(b.asOf||'')+"."+(sw?" Click to switch source.":"");
+  c.onclick=(sw?function(){chooseBenchSource(A._market.providers,sw,(A._benchProvider||sw[0]),function(id){A._benchProvider=id;_applyBench(A._market.providers[id].benchmark,A._market);toast("<span class='tk'>&#10003;</span>Benchmark source · "+esc(A._market.providers[id].name))})}:null);}
 function benchBadge(){var el2=$('#benchsrc');if(!el2)return;var b=A.bench;if(!b){el2.style.display='none';return}
-  var kind=b.kind||'snapshot';var label=(kind==='live'?'LIVE · FRED':(kind==='cache'?'CACHED · FRED':'SNAPSHOT'));
+  var kind=b.kind||'snapshot';var src=_srcShort(b);var label=(kind==='live'?'LIVE · '+src:(kind==='cache'?'CACHED · '+src:'SNAPSHOT'));
   el2.className='srcbadge '+kind;el2.innerHTML="<i></i>"+label+(b.asOf?" · "+b.asOf:"");el2.style.display='';
   el2.title=(b.srcName||'')+' · '+(b.name||'')+' · '+(b.n||0)+' monthly points';}
 function paintSettledGraph(){var sl=shortlisted();var win=sl[0];

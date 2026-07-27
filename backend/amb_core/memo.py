@@ -197,7 +197,7 @@ def generate(ctx: AnalysisContext, claims_provider: ClaimsProvider) -> Memo:
 
     # 1 · Summary — a distinct 1-2 sentence orientation (not the recommendation)
     sections = [
-        MemoSection(heading="Summary", body=payload.get("summary") or _default_summary(ctx), claims=[]),
+        MemoSection(heading="Executive Summary", body=payload.get("summary") or _default_summary(ctx), claims=[]),
         MemoSection(
             heading="Recommendation",
             body=payload.get("recommendation") or _default_recommendation(ctx),
