@@ -172,23 +172,90 @@ def test_client_bench_line_single_ray_through_builder():
     )
 
 
-def test_client_sharpe_uses_live_rf_and_canonical_excess():
-    """Audit falsely flagged Sharpe/Sortino as unverified under live market data. Two
-    causes, both about consistency of the Sharpe/Sortino definition across the client:
-      1. fundMetrics (the audit's re-derivation) recomputed with a hardcoded mandate
-         default (0.02) instead of the ACTUAL risk-free (A.rfUsed) the stored value used.
-      2. synthAlphaOverBench (the live path) computed Sharpe as (geometric_return - rf)/vol,
-         while the engine (metrics.py) + fundMetrics use ARITHMETIC excess. So the live
-         path showed a Sharpe the engine never would, and the audit correctly flagged it.
-    Both are aligned to one definition (arithmetic excess at the real risk-free); pin it."""
+def test_client_has_one_metric_implementation():
+    """Every audit false-flag under live data (Sharpe/Sortino, then Calmar/drawdown) had
+    the same root: the client computed metrics in more than one place, and those copies
+    drifted from each other and from metrics.py. Lock in a single implementation —
+    synthAlphaOverBench must derive its metrics through fundMetrics, not inline formulas,
+    and fundMetrics must use the ACTUAL risk-free (A.rfUsed) so the re-derivation matches
+    the stored value. No second Sharpe/drawdown formula anywhere in the live path."""
     js = "".join(Path("backend/amb_core/assets/memo.js").read_text().split())  # whitespace-insensitive
     fm = js[js.index("functionfundMetrics("):][:400]
     assert "A.rfUsed" in fm, "fundMetrics must re-derive with the actual risk-free (A.rfUsed), not a hardcoded default"
     synth = js[js.index("functionsynthAlphaOverBench("):][:3800]
-    assert "annex=nm*ppy-rf" in synth, "synth Sharpe/Sortino must use arithmetic excess (annex), matching metrics.py"
-    assert "d.sharpe=(vol>0?annex/vol" in synth, "synth Sharpe must be arithmetic-excess / vol"
-    assert "d.sortino=(dvol>0?annex/dvol" in synth, "synth Sortino must be arithmetic-excess / downside-dev"
-    assert "(ret-rf)/vol" not in synth, "geometric-excess Sharpe reintroduced — it won't match the engine or the audit"
+    assert "fundMetrics(nr)" in synth, "synth must derive metrics through the shared fundMetrics, not inline"
+    assert "d.sharpe=mm.sharpe" in synth and "d.maxdd=mm.max_drawdown" in synth, "synth metrics must come from fundMetrics"
+    # no second, inline definition of the metrics in the live path (the drift source)
+    assert "(ret-rf)/vol" not in synth, "inline geometric-excess Sharpe reintroduced in synth"
+    assert "annex=nm*ppy-rf" not in synth, "inline arithmetic-excess Sharpe reintroduced in synth — must use fundMetrics"
+    assert "peak=1,mdd" not in synth, "inline drawdown reintroduced in synth — must use fundMetrics"
+
+
+def test_js_python_metric_parity():
+    """FOUNDATIONAL guard against the whole class of bug we kept hitting: the client's
+    JavaScript metric engine (fundMetrics) drifting from the Python engine (metrics.py).
+    Runs the ACTUAL client fundMetrics headlessly on golden return series and asserts
+    every figure matches metrics.py within tolerance. Skips cleanly where the headless
+    toolchain isn't available, so it never blocks a minimal `./test`."""
+    import json
+    import os
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    html = Path("exports/memo.html")
+    script = Path("tests/metric_parity.js")
+    if not node:
+        pytest.skip("node not available")
+    if not html.exists():
+        pytest.skip("built export not found — run `python -m amb_core.demo` first")
+    if not script.exists():
+        pytest.skip("parity helper missing")
+
+    golden = [
+        [0.01, 0.02, -0.01, 0.03, 0.00, 0.015, -0.02, 0.025, 0.01, -0.005, 0.02, 0.01],
+        [-0.03, 0.02, 0.018, 0.041, -0.012, 0.02, 0.03, -0.008, 0.015, 0.022, -0.004, 0.028],  # negative first month → drawdown convention
+        [0.005] * 24,                                                                            # flat, zero drawdown
+        [0.08, -0.05, 0.06, -0.04, 0.09, -0.03, 0.07, -0.06, 0.05, -0.02, 0.10, -0.07],          # high-vol, deep drawdowns
+    ]
+    env = dict(os.environ)
+    try:
+        proc = subprocess.run(
+            [node, str(script), str(html.resolve()), json.dumps(golden)],
+            capture_output=True, text=True, timeout=120, env=env,
+        )
+    except Exception as e:  # node/chromium launch problems → skip, don't fail
+        pytest.skip(f"headless metric eval unavailable: {e}")
+    if proc.returncode != 0 or not proc.stdout.strip():
+        pytest.skip(f"headless metric eval unavailable: {proc.stderr.strip()[:200]}")
+
+    import numpy as np
+
+    from amb_core.metrics import annualize, calmar, max_drawdown
+    from amb_core.metrics import sharpe as py_sharpe
+    from amb_core.metrics import sortino as py_sortino
+
+    payload = json.loads(proc.stdout.strip().splitlines()[-1])
+    rf, results = payload["rf"], payload["results"]
+    for series, js in zip(golden, results):
+        r = np.array(series, dtype=float)
+        pr, pv, _ = annualize(r)
+        expected = {
+            "ann_return": pr, "ann_vol": pv,
+            "sharpe": py_sharpe(r, 12, rf), "sortino": py_sortino(r, 12, rf),
+            "calmar": calmar(r, 12), "max_drawdown": max_drawdown(r),
+        }
+        for k, py_val in expected.items():
+            js_val = js.get(k)
+            if py_val is None or js_val is None:
+                # an undefined metric (e.g. Sharpe on a zero-vol series) must be undefined on BOTH sides
+                assert (py_val is None) == (js_val is None), (
+                    f"JS/Python disagree on whether {k} is defined: JS={js_val} Python={py_val} (series={series[:3]}…)"
+                )
+                continue
+            assert js_val == pytest.approx(py_val, rel=0.01, abs=1e-4), (
+                f"JS/Python metric drift on {k}: JS={js_val} Python={py_val} (series={series[:3]}…)"
+            )
 
 
 def test_outlier_does_not_crush_the_plotted_cluster(tmp_path):

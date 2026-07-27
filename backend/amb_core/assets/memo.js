@@ -80,6 +80,13 @@ var METRIC_INFO={
 };
 function metricLabel(k){return (METRIC_INFO[k]&&METRIC_INFO[k].label)||String(k).replace(/_/g,' ')}
 function fmtMetricVal(k,v){if(v==null)return '—';return (METRIC_INFO[k]&&METRIC_INFO[k].pct)?pct(v):num(v)}
+// the node's secondary stat tracks the highest-weighted ACTIVE scoring metric, so if you
+// drop Sharpe from the weighting the chart stops advertising SR and shows what's actually
+// driving the ranking instead (ret stays primary; ann_return is excluded so it can't dup it).
+var METRIC_STAT={sharpe:['SR',function(d){return num(d.sharpe)}],sortino:['Sor',function(d){return num(d.sortino)}],calmar:['Cal',function(d){return num(d.calmar)}],max_drawdown:['DD',function(d){return pct(d.maxdd)}],ann_vol:['vol',function(d){return pct(d.vol)}]};
+function _topStatMetric(){var act=(A.activeMetrics&&A.activeMetrics.length)?A.activeMetrics.slice():weightFactors();var w=A.weights||{};act.sort(function(a,b){return (w[b]||0)-(w[a]||0)});for(var i=0;i<act.length;i++){if(METRIC_STAT[act[i]])return act[i]}return 'sharpe'}
+function nodeStat(d){var m=METRIC_STAT[_topStatMetric()]||METRIC_STAT.sharpe;return "ret <b>"+pct(d.ret)+"</b> · "+m[0]+" <b>"+m[1](d)+"</b>"}
+function refreshNodeStats(){(A.funds||[]).forEach(function(d){var n=nodes[d.id];if(!n)return;var s=$('.stat',n);if(s)s.innerHTML=nodeStat(d)})}
 // turn provenance refs ("returns:<hash>|bench:SP500@2026-06") into a readable inputs list
 function fmtInputs(srcs){var out=[];(srcs||[]).forEach(function(s){String(s).split('|').forEach(function(t){t=t.trim();
   if(/^returns:/.test(t)){if(out.indexOf('monthly return series')<0)out.push('monthly return series')}
@@ -114,7 +121,7 @@ function buildField(){
     var rtag=el('div','rtag');
     var dot=el('div','dot');
     var card=el('div','card');
-    card.innerHTML="<div class='nm'><span class='nfull'>"+esc(d.name)+"</span><span class='nshort'>"+esc(first(d.name))+"</span></div><div class='sub'>"+esc(stratShort(d.strategy))+"</div><div class='stat'>ret <b>"+pct(d.ret)+"</b> · SR <b>"+num(d.sharpe)+"</b></div>";
+    card.innerHTML="<div class='nm'><span class='nfull'>"+esc(d.name)+"</span><span class='nshort'>"+esc(first(d.name))+"</span></div><div class='sub'>"+esc(stratShort(d.strategy))+"</div><div class='stat'>"+nodeStat(d)+"</div>";
     n.appendChild(glass);n.appendChild(halo);n.appendChild(lock);n.appendChild(stamp);n.appendChild(crown);n.appendChild(rtag);n.appendChild(dot);n.appendChild(card);
     n.style.left='50%';n.style.bottom='50%';f.appendChild(n);nodes[d.id]=n;
   });
@@ -328,7 +335,7 @@ function updateAdjNote(active){var full=weightFactors();var adj=active.length<fu
   if(adj){var dropped=full.filter(function(k){return active.indexOf(k)<0}).map(function(k){return k.replace(/_/g,' ')});
     t.innerHTML="Weights re-normalized · dropped <b>"+dropped.join(', ')+"</b><span class='weigh-reset' id='wreset'>reset</span>";}
   else t.innerHTML='Final · weighted risk-adjusted score';}
-function applyReweigh(active){if(active.length<1)return;reweigh(active);buildWeigh();renderFinal();layoutRows();paintSettledGraph();updateAdjNote(active);}
+function applyReweigh(active){if(active.length<1)return;reweigh(active);buildWeigh();renderFinal();layoutRows();paintSettledGraph();refreshNodeStats();updateAdjNote(active);}
 function resetWeights(){applyReweigh(weightFactors().slice())}
 /* ── in-app mandate: re-screen + re-score the loaded universe against edited constraints/weights ── */
 function rebuildGates(){var ms=A.mandateSpec||{};var g=[];
@@ -362,7 +369,7 @@ function screenAndScore(){var ms=A.mandateSpec||{};var DIR=A.dir||{};var W=A.wei
 function applyMandate(){screenAndScore();var d=$('#drawer');if(d)d.classList.remove('open');rerender(_snapStory);}
 var HOUSE=null;
 function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSpec,w:A.weights}));
-  var ms=A.mandateSpec||{};var str016=[];A.funds.forEach(function(d){if(str016.indexOf(d.strategy)<0)str016.push(d.strategy)});
+  var ms=A.mandateSpec||{};var str016=[];A.funds.forEach(function(d){var s=(d.strategy==null?'':String(d.strategy)).trim();if(s&&s!=='—'&&s.toLowerCase()!=='unclassified'&&str016.indexOf(s)<0)str016.push(s)});   // only REAL strategies — a returns-only upload has none, so the section is hidden rather than showing an empty/dash chip
   var liq=ms.liqCap==null?400:ms.liqCap, vol=ms.volCap==null?0.5:ms.volCap, mdd=ms.maxddFloor==null?-0.5:ms.maxddFloor;
   var fs=weightFactors();
   function sld(id,lbl,val,min,max,step,fmt){return "<div class='mf-row'><label>"+lbl+"<b id='"+id+"v'>"+fmt(val)+"</b></label><input type='range' id='"+id+"' min='"+min+"' max='"+max+"' step='"+step+"' value='"+val+"'></div>"}
@@ -374,7 +381,7 @@ function openMandate(){if(!HOUSE)HOUSE=JSON.parse(JSON.stringify({ms:A.mandateSp
    +sld('mf_liq','Liquidity · redeem within',liq,15,400,5,function(v){return Math.round(v)+' days'})
    +sld('mf_vol','Target vol ceiling',vol,0.05,0.6,0.01,function(v){return Math.round(v*100)+'%'})
    +sld('mf_mdd','Max drawdown tolerance',mdd,-0.6,-0.05,0.01,function(v){return Math.round(v*100)+'%'})
-   +"<div class='mf-h'>Strategy exclusions <span class='mf-hint'>tap to exclude</span></div><div class='mf-chips'>"+chips+"</div>"
+   +(str016.length?("<div class='mf-h'>Strategy exclusions <span class='mf-hint'>tap to exclude</span></div><div class='mf-chips'>"+chips+"</div>"):"")
    +"<div class='mf-h'>Scoring weights</div>"+wsl
    +"<div class='mf-act'><button class='mf-apply' id='mfApply'>Apply &amp; re-decide</button><button class='mf-reset' id='mfReset'>Reset to house view</button></div>";
   openDrawer(h);
@@ -421,21 +428,14 @@ function synthAlphaOverBench(){
     z=z.map(function(v){return (v-zm)/zsd});                                 // re-standardize so target vol holds
     var tMeanM=Math.pow(1+tRet,1/ppy)-1, tSdM=tVol/Math.sqrt(ppy);
     var nr=z.map(function(v){return tMeanM+v*tSdM});                         // hit target mean & vol, keep skew
-    var nw=[],c=1; for(j=0;j<m;j++){c*=(1+nr[j]); nw.push(Math.round(c*1e6)/1e6);}   // 6dp so the audit can re-derive returns (and drawdown) precisely
-    var nm=0; for(j=0;j<m;j++) nm+=nr[j]; nm/=m;
-    var nv=0; for(j=0;j<m;j++){var e3=nr[j]-nm; nv+=e3*e3;} var vol=Math.sqrt(nv/(m-1))*Math.sqrt(ppy);
-    var g2=1; for(j=0;j<m;j++) g2*=(1+nr[j]); var ret=(g2>0?Math.pow(g2,ppy/m)-1:0);
-    var mar=rf/ppy,ds=0; for(j=0;j<m;j++){var q=nr[j]-mar; if(q<0) ds+=q*q;} var dvol=Math.sqrt(ds/m)*Math.sqrt(ppy);
-    var peak=1,mdd=0; for(j=0;j<m;j++){if(nw[j]>peak)peak=nw[j]; var dq=nw[j]/peak-1; if(dq<mdd)mdd=dq;}
-    // Sharpe/Sortino use ARITHMETIC excess (mean(r-rf_p)*ppy), the SAME definition as
-    // metrics.py + fundMetrics — not geometric-return-minus-rf. Otherwise the live path
-    // shows a Sharpe the engine never would, and the audit correctly flags it as unverified.
-    var annex=nm*ppy-rf;
-    d.wealth=nw; d.ret=ret; d.vol=vol;
-    d.sharpe=(vol>0?annex/vol:0);
-    d.sortino=(dvol>0?annex/dvol:0);
-    d.maxdd=mdd; d.calmar=(mdd<0?ret/Math.abs(mdd):0);
-    if(d.fee!=null) d.netret=ret-d.fee/100;
+    // ONE metric implementation for the whole client: derive every figure through
+    // fundMetrics (same code the audit re-derives with, same code metrics.py mirrors).
+    // Computing them inline here is exactly how Sharpe/Sortino/Calmar/drawdown drifted
+    // from the engine and got falsely flagged in the audit — so we don't do that anymore.
+    var mm=fundMetrics(nr)||{};
+    d.wealth=mm.wealth||[]; d.ret=mm.ann_return; d.vol=mm.ann_vol;
+    d.sharpe=mm.sharpe; d.sortino=mm.sortino; d.maxdd=mm.max_drawdown; d.calmar=mm.calmar;
+    if(d.fee!=null) d.netret=(mm.ann_return!=null?mm.ann_return-d.fee/100:null);
     d._synth=true;
   });
   var pf=A.funds.filter(function(d){return d.ret!=null&&d.vol!=null});
@@ -1292,15 +1292,22 @@ function _zRaw(it,acc,weights,DIR,st){var s=0;Object.keys(weights).forEach(funct
 function fundMetrics(r){var ppy=12,rf=(A.rfUsed!=null?A.rfUsed:((A.mandateSpec&&A.mandateSpec.rf)||0.02)),n=r.length;if(n<2)return null;   // use the ACTUAL risk-free (same as synthAlphaOverBench + the audit label) so Sharpe/Sortino recompute matches the stored value — a mandate default 0.02 here silently mis-verified the audit under a live rf
   var g=1;r.forEach(function(x){g*=(1+x)});var annret=g>0?Math.pow(g,ppy/n)-1:g-1;
   var vol=_psstd(r)*Math.sqrt(ppy);var rfp=rf/ppy;var annex=_pmean(r.map(function(x){return x-rfp}))*ppy;
-  var sh=vol?annex/vol:null;var dn=r.map(function(x){return Math.min(x-rfp,0)});var dd=Math.sqrt(_pmean(dn.map(function(x){return x*x})))*Math.sqrt(ppy);
+  // guard a NEAR-zero denominator as zero (a flat series has vol≈1e-16 from float error, not 0):
+  // return null like metrics.py does, instead of annex/tiny = a garbage 1e15 Sharpe.
+  var sh=(vol>1e-9)?annex/vol:null;var dn=r.map(function(x){return Math.min(x-rfp,0)});var dd=Math.sqrt(_pmean(dn.map(function(x){return x*x})))*Math.sqrt(ppy);
   // drawdown on the OBSERVED wealth path — peak seeded at the first point (matches the
   // Python engine's np.maximum.accumulate), so a negative first month isn't counted as a
   // drop from a phantom 1.0 start. Keeps client metrics convention-identical to the engine.
-  var so=dd?annex/dd:null;var w=1,peak=null,mdd=0,wl=[];r.forEach(function(x){w*=(1+x);wl.push(Math.round(w*1e6)/1e6);peak=(peak==null?w:Math.max(peak,w));mdd=Math.min(mdd,w/peak-1)});
-  var cal=(mdd!==0)?annret/Math.abs(mdd):null;
+  var so=(dd>1e-9)?annex/dd:null;var w=1,peak=null,mdd=0,wl=[];r.forEach(function(x){w*=(1+x);wl.push(Math.round(w*1e6)/1e6);peak=(peak==null?w:Math.max(peak,w));mdd=Math.min(mdd,w/peak-1)});
+  var cal=(mdd<-1e-9)?annret/Math.abs(mdd):null;
   return {ann_return:annret,ann_vol:vol,sharpe:sh,sortino:so,calmar:cal,max_drawdown:mdd,wealth:wl};}
 function parseCSV(t){var out=[];t.replace(/\r/g,'').split('\n').forEach(function(ln){if(!ln.trim())return;var row=[],cur='',q=false;for(var i=0;i<ln.length;i++){var c=ln[i];if(c==='"'){q=!q}else if(c===','&&!q){row.push(cur);cur=''}else cur+=c}row.push(cur);out.push(row.map(function(s){return s.trim()}))});return out}
 function _findCol(hdr,cands){for(var i=0;i<cands.length;i++){var j=hdr.indexOf(cands[i]);if(j>=0)return j}for(var k=0;k<hdr.length;k++){for(var c=0;c<cands.length;c++){if(hdr[k].indexOf(cands[c])>=0)return k}}return -1}
+// pull a fund's per-row metadata off an uploaded row using the detected column map, so
+// the audit's 'from the source file' fields work for uploads exactly like the sample
+function _fmeta(r,m,id){var g=function(i){return (i!=null&&i>=0&&r[i]!=null)?String(r[i]).trim():''};
+  var fee=parseFloat(g(m.fee)),lk=parseFloat(g(m.lockup)),nt=parseFloat(g(m.notice));
+  return {name:(g(m.name)||id),strategy:g(m.strategy),fee:(isFinite(fee)?fee:null),redf:(g(m.redf)||null),lockup:(isFinite(lk)?lk:null),notice:(isFinite(nt)?nt:null)};}
 function _normRet(raw){if(raw==null)return null;var s=String(raw).trim();if(!s||['na','n/a','nan','null','none','-'].indexOf(s.toLowerCase())>=0)return null;var pct=s.indexOf('%')>=0;s=s.replace(/%/g,'').replace(/,/g,'').replace(/\s/g,'');var v=parseFloat(s);if(isNaN(v)||!isFinite(v))return null;if(pct)return v/100;return Math.abs(v)>1.5?v/100:v}
 function _validDate(s){if(s==null)return false;s=String(s).trim();if(!s||s.toLowerCase()==='nan')return false;return !isNaN(Date.parse(s))}
 /* ══ schema detection + normalization ══════════════════════════════════════════
@@ -1345,6 +1352,9 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
   var dateCols=cols.filter(function(c){return c.kind==='date'}),numCols=cols.filter(function(c){return c.kind==='num'}),textCols=cols.filter(function(c){return c.kind==='text'});
   // header-keyword hints (long)
   var iRet=_findCol(hdr,['monthly_return','return','ret','performance','perf','net']),iId=_findCol(hdr,['fund_id','fund','ticker','symbol','id']),iDt=_findCol(hdr,['date','period','month','asof','as_of','nav']),iNm=_findCol(hdr,['name']),iSt=_findCol(hdr,['strategy','style','asset_class','category']);
+  // optional per-fund metadata columns — captured so an uploaded CSV that HAS them shows
+  // the same traced 'from the source file' fields the sample does (returns-only files have none)
+  var iFee=_findCol(hdr,['mgmt_fee_pct','mgmt_fee','management_fee','fee','expense']),iRd=_findCol(hdr,['redemption_freq','redemption','liquidity_terms','liquidity','dealing']),iLk=_findCol(hdr,['lockup_months','lockup','lock_up']),iNt=_findCol(hdr,['notice_days','notice_period','notice']);
   var out={cols:cols,warnings:[]};
   // a keyword can match the wrong column ('month' inside 'monthly_return'); only trust
   // the date/return keywords when that column is actually the right cell TYPE.
@@ -1366,14 +1376,14 @@ function detectSchema(rows){var cols=_colStats(rows),hdr=rows[0].map(function(h)
     out.confident=false;   // wide always confirms (which columns are funds, what unit)
     return out;}
   if((iId>=0||textCols.length>=1)&&(iRet>=0||numCols.length>=1)&&dateCol>=0){   // ── LONG ──
-    out.shape='long';out.map={date:dateCol,id:(iId>=0?iId:(textCols[0]?textCols[0].idx:-1)),ret:(iRet>=0?iRet:(numCols.filter(function(c){return c.idx!==dateCol})[0]||{}).idx),name:(iNm>=0?iNm:-1),strategy:(iSt>=0?iSt:-1)};
+    out.shape='long';out.map={date:dateCol,id:(iId>=0?iId:(textCols[0]?textCols[0].idx:-1)),ret:(iRet>=0?iRet:(numCols.filter(function(c){return c.idx!==dateCol})[0]||{}).idx),name:(iNm>=0?iNm:-1),strategy:(iSt>=0?iSt:-1),fee:iFee,redf:iRd,lockup:iLk,notice:iNt};
     var rc=cols.filter(function(c){return c.idx===out.map.ret})[0];var u2=_sniffUnit((rc&&rc.raw)||[]);out.unit=u2.unit;out.unitConfident=u2.confident;
     // confident (skip panel) only when the date & return keywords land on the right
     // column TYPES, the id is named, and unit/date are unambiguous.
     out.confident=(_dtOk&&_retOk&&iId>=0&&out.unitConfident&&!out.dateAmbiguous);
     return out;}
   if(iNm>=0&&iSt>=0&&(iId>=0||textCols.length)&&iRet<0&&numCols.length<=1){   // ── METADATA only ──
-    out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt};out.confident=true;return out;}
+    out.shape='meta';out.map={id:(iId>=0?iId:textCols[0].idx),name:iNm,strategy:iSt,fee:iFee,redf:iRd,lockup:iLk,notice:iNt};out.confident=true;return out;}
   out.shape='unknown';out.confident=false;
   out.warnings.push('Could not find a date column and at least one return series.');
   return out;}
@@ -1399,7 +1409,7 @@ function _applyMapping(rows,det,acc){var body=rows.slice(1),quar=0,order=acc.ord
     body.forEach(function(r){var dstr=r[det.dateCol];use.forEach(function(s){push(String(s.name).trim(),dstr,r[s.idx])})});
   }else if(det.shape==='long'){var m=det.map;
     body.forEach(function(r){push(String(r[m.id]||'').trim(),r[m.date],r[m.ret])});
-    if(m.name>=0||m.strategy>=0)body.forEach(function(r){var id=String(r[m.id]||'').trim();if(id&&!acc.funds[id])acc.funds[id]={name:(m.name>=0?String(r[m.name]||id).trim():id),strategy:(m.strategy>=0?String(r[m.strategy]||'').trim():'')}});}
+    body.forEach(function(r){var id=String(r[m.id]||'').trim();if(id&&!acc.funds[id])acc.funds[id]=_fmeta(r,m,id)});}
   // remember this file's real column mapping so the ingest animation reflects IT
   // (not the canonical baked schema) when the story replays after the upload.
   function _cn(idx){var c=(det.cols||[]).filter(function(x){return x.idx===idx})[0];return c?c.name:''}
@@ -1421,7 +1431,7 @@ function ingestFiles(list){var files=[].slice.call(list||[]);if(!files.length)re
     var acc={funds:{},ret:{},order:[],quar:0,srcFiles:[],_failed:[]};var ambiguous=[];
     all.forEach(function(txt,fi){var rows=parseCSV(txt);if(rows.length<2){acc._failed.push({shape:'unknown',cols:[],_file:files[fi].name,warnings:['File has no data rows.']});return}
       var det=detectSchema(rows);det._file=files[fi].name;det._rows=rows;det._src=srcMeta[fi];
-      if(det.shape==='meta'){rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.funds[id]={name:String(r[det.map.name]||id).trim(),strategy:String(r[det.map.strategy]||'').trim()}});acc.srcFiles.push(srcMeta[fi]);}
+      if(det.shape==='meta'){rows.slice(1).forEach(function(r){var id=String(r[det.map.id]||'').trim();if(id)acc.funds[id]=_fmeta(r,det.map,id)});acc.srcFiles.push(srcMeta[fi]);}
       else if(det.shape==='long'&&det.confident){acc.quar+=_applyMapping(rows,det,acc);acc.srcFiles.push(srcMeta[fi]);}   // clean file → straight through, no panel
       else if(det.shape==='wide'||det.shape==='long'){ambiguous.push(det);}                                              // needs the mapping-review flow
       else{acc._failed.push(det);}                                                                                       // 'unknown' → explained in the failure modal
@@ -1520,7 +1530,7 @@ function recompute(funds,ret,order,quar){ try{
   var priorBench=A.bench;   // the FRED/snapshot S&P already loaded — reused if the upload has no benchmark column
   var benchId=null;['SP500','SPX','BENCH','BENCHMARK'].forEach(function(b){Object.keys(ret).forEach(function(id){if(id.toUpperCase()===b)benchId=id})});
   var ids=order.filter(function(id){return id!==benchId&&ret[id].length>=2});
-  var mbf={},names={},strat={};ids.forEach(function(id){var series=ret[id].map(function(x){return x.v});var mm=fundMetrics(series);if(!mm)return;mbf[id]=mm;var fdef=funds[id]||{};names[id]=fdef.name||id;strat[id]=fdef.strategy||'—'});
+  var mbf={},names={},strat={},meta={};ids.forEach(function(id){var series=ret[id].map(function(x){return x.v});var mm=fundMetrics(series);if(!mm)return;mbf[id]=mm;var fdef=funds[id]||{};names[id]=fdef.name||id;strat[id]=fdef.strategy||'—';meta[id]=fdef});
   ids=ids.filter(function(id){return mbf[id]});if(ids.length<2){toast("<span class='tk' style='color:var(--loss)'>!</span>Need at least 2 funds with 2+ periods");return}
   var bench=null;if(benchId&&ret[benchId]&&ret[benchId].length>=2){var bs=ret[benchId].map(function(x){return x.v});var bm=fundMetrics(bs);if(bm)bench={name:names[benchId]||funds[benchId]&&funds[benchId].name||'Benchmark',vol:bm.ann_vol,ret:bm.ann_return,wealth:bm.wealth}}
   if(!bench&&priorBench&&priorBench.vol!=null&&priorBench.ret!=null){   // no benchmark column → fall back to the loaded market benchmark so the reference line still shows
@@ -1548,7 +1558,9 @@ function recompute(funds,ret,order,quar){ try{
     var cp=elig1?comps(id):[];var cm={};cp.forEach(function(x){cm[x.k]=x.c});var sc=Math.round(cp.reduce(function(s,x){return s+x.c},0)*1000)/1000;
     return {id:id,name:names[id],strategy:strat[id],rank:rk,excluded:rk==null,eligible:elig1,cut:cut,rkind:(reasons.length?reasons[0].kind:null),reasons:reasons,
       srank:(rk||(cut?90:99)),x:Math.round((12+_pos(m.ann_vol,volAx)*76)*10)/10,y:Math.round((12+_pos(m.ann_return,retAx)*76)*10)/10,
-      ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,detail:''};});
+      ret:m.ann_return,vol:m.ann_vol,sharpe:m.sharpe,sortino:m.sortino,calmar:m.calmar,maxdd:m.max_drawdown,wealth:m.wealth,reason:reason,components:cp,comp:cm,score:sc,
+      fee:(meta[id]&&meta[id].fee!=null?meta[id].fee:null),redf:(meta[id]&&meta[id].redf)||null,lockup:(meta[id]&&meta[id].lockup!=null?meta[id].lockup:null),notice:(meta[id]&&meta[id].notice!=null?meta[id].notice:null),
+      netret:(meta[id]&&meta[id].fee!=null?m.ann_return-meta[id].fee/100:null),detail:''};});
   // zoom coords over eligible + bench
   var surv=fd.filter(function(d){return d.eligible});var benchLine=null,gateX=null;
   if(surv.length){var zv=surv.map(function(d){return d.vol}),zr=surv.map(function(d){return d.ret});if(bench){zv=zv.concat([bench.vol]);zr=zr.concat([bench.ret])}
