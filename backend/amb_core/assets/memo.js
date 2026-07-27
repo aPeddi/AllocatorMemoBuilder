@@ -694,8 +694,11 @@ async function actZero(){
   log('standardized · '+coreN+' → metrics · '+useN+' → screen/fees · '+refN+' carried for reference');
   await wait(1200);if(aborted)return;
 
-  // ══ 3 · NORMALIZE — transform the messy values into one clean shape; quarantine the rest ══
-  // Real before → after on real tokens (not a checklist), beside the actual rows.
+  // ══ 3 · NORMALIZE — apply the SAME cleanup to ALL rows, grouped by fund ══
+  // Not a 6-row sample: the whole population (every fund × every month) as a tile field,
+  // with the normalization sweeping across every tile, the unparseable rows flagged red
+  // in their fund's lane, and a live valid/quarantined tally. The side keeps the concrete
+  // before → after on real values as the key to what "normalize" means.
   phase(3,'NORMALIZE');
   var okDate=(sample[0]&&sample[0].d)||_mdate(0);
   var okDec=_firstRet(okFunds[0]);var okDecStr=(okDec!=null&&isFinite(okDec))?okDec.toFixed(4):'0.0190';
@@ -705,39 +708,56 @@ async function actZero(){
   else tf.push({a:okDecStr,r:'recognized · decimal',b:okDecStr,k:'ok'});
   tf.push({a:okDate,r:'parsed · ISO-8601',b:okDate,k:'ok'});
   if(badRows.length){var b0=badRows[0];var btok=(b0.d&&b0.d!=='—')?b0.d:((b0.v&&b0.v!=='—')?b0.v:'(blank)');tf.push({a:btok,r:b0.reason||'unparseable',b:'null · quarantined',k:'bad'});}
-  var nmMonths=((rd.coverage&&rd.coverage[0]&&rd.coverage[0].n)||36);
+  var flanes=(A.funds||[]).slice(0,12),laneN=flanes.length||1;
+  // Tiles are DERIVED from the real totals so the field always sums to rowsN: spread
+  // the valid rows evenly across the fund lanes (an aligned window ⇒ ~equal per fund),
+  // and place each quarantined row as a red tile in its fund's lane (unmatched → round
+  // robin). A per-lane cap keeps very long series from overflowing; the caption carries
+  // the true totals either way.
+  var TCAP=48;
+  var green=flanes.map(function(_,i){return Math.floor(validN/laneN)+((i<validN%laneN)?1:0)});
+  var red=flanes.map(function(){return 0});
+  function _laneIdx(id){for(var i=0;i<flanes.length;i++){if(flanes[i].id===id)return i}return -1}
+  var placed=0;(quarSrc.samples||[]).forEach(function(s){var idx=_laneIdx(s.id);if(idx<0)idx=(laneN?placed%laneN:0);red[idx]++;placed++});
+  for(var e=placed;e<qN&&laneN;e++){red[e%laneN]++}
+  var mpf=Math.max(1,Math.round(validN/laneN));
+  function _laneTiles(li){var g=Math.min(green[li],TCAP),r=red[li],html='',c;
+    for(c=0;c<g;c++){html+="<i class='az-tile' style='transition-delay:"+(c*13+li*8)+"ms'></i>";}
+    for(c=0;c<r;c++){html+="<i class='az-tile q' style='transition-delay:"+((g+c)*13+li*8)+"ms'></i>";}
+    return html;}
   stage.innerHTML=
-   "<div class='az-parse'>"
-   +"<div class='az-matrix'>"
-     +"<div class='az-mcap'>sample of <b>"+rowsN+"</b> rows &nbsp;·&nbsp; <b>"+fundsN+"</b> funds × "+nmMonths+" months</div>"
-     +"<div class='az-mh'><span>"+esc(dcol)+"</span><span>"+esc(icol)+"</span><span>"+esc(vcol)+"</span><span>status</span></div>"
-     +"<div class='az-mb' id='mtx'></div>"
+   "<div class='az-parse az-parse-n'>"
+   +"<div class='az-field'>"
+     +"<div class='az-mcap'>normalizing all <b>"+rowsN+"</b> rows &nbsp;·&nbsp; <b>"+fundsN+"</b> funds × "+mpf+" months</div>"
+     +"<div class='az-field-lanes' id='flanes'>"
+     + flanes.map(function(f,li){return "<div class='az-fl'><span class='az-fl-id'>"+esc(f.id)+"</span><div class='az-fl-tiles'>"+_laneTiles(li)+"</div></div>"}).join('')
+     + (fundsN>flanes.length?"<div class='az-fl az-fl-more'><span class='az-fl-id'>+"+(fundsN-flanes.length)+"</span><div class='az-fl-tiles'><i class='az-tile'></i><i class='az-tile'></i><i class='az-tile'></i></div></div>":"")
+     +"</div>"
+     +"<div class='az-field-tally'><span class='ok'><b id='tvalid'>0</b> valid</span> &nbsp;·&nbsp; <span class='bad'><b id='tquar'>0</b> quarantined</span> &nbsp;·&nbsp; <span class='dimt'>row-level · no fund dropped</span></div>"
    +"</div>"
    +"<div class='az-side'>"
      +"<div class='az-sh'>VALUE NORMALIZATION</div><div class='az-tf' id='tf'></div>"
      +"<div class='az-sh'>SHARED WINDOW</div><div class='az-win2'>every fund aligned to <b>"+esc(ov.start||'')+" → "+esc(ov.end||'')+"</b></div>"
    +"</div></div>";
-  var mtx=$('#mtx',az);log('normalizing values · row by row · sample of '+rowsN+' across '+fundsN+' funds');
-  for(var r2=0;r2<rowsSample.length;r2++){if(aborted)return;var sr=rowsSample[r2];var row=el('div','az-mrow');
-    var stat=sr.bad?"<span class='mstat'></span>":"<span class='mstat'><span class='okc'>✓</span></span>";
-    row.dataset.reason=sr.reason||'';
-    row.innerHTML=(sr.bad?"<span class='badc'>":"<span>")+esc(sr.d)+"</span><span>"+esc(String(sr.id))+"</span><span>"+esc(String(sr.v))+"</span>"+stat;
-    mtx.appendChild(row);schedule(function(rr){rr.classList.add('in')}.bind(null,row),20);await wait(230)}
-  var moreN=rowsN-rowsSample.length;
-  if(moreN>0){var mrow=el('div','az-mrow az-more');mrow.innerHTML="<span>⋯</span><span></span><span></span><span class='mstat'>"+moreN+" more rows · "+fundsN+" funds</span>";mtx.appendChild(mrow);schedule(function(){mrow.classList.add('in')},20);}
-  await wait(280);if(aborted)return;
+  log('normalizing all '+rowsN+' rows · '+fundsN+' funds × '+mpf+' months');
+  // reveal fund lanes, top-to-bottom
+  var fls=$$('.az-fl',az);for(var fi=0;fi<fls.length;fi++){schedule(function(x){x.classList.add('in')}.bind(null,fls[fi]),fi*55);}
+  await wait(fls.length*55+260);if(aborted)return;
+  // the sweep: one class toggle, CSS runs the wave via each tile's transition-delay
+  var fieldEl=$('.az-field-lanes',az);if(fieldEl)fieldEl.classList.add('norm');
+  // tally counts up in lock-step with the sweep
+  var sweepMs=mpf*13+laneN*8+400,vEl=$('#tvalid',az),qEl=$('#tquar',az),steps=26;
+  for(var st=1;st<=steps;st++){if(aborted)return;var t=st/steps;if(vEl)vEl.textContent=Math.round(t*validN);if(qEl)qEl.textContent=Math.round(t*qN);await wait(sweepMs/steps)}
+  if(vEl)vEl.textContent=validN;if(qEl)qEl.textContent=qN;
+  // the concrete transforms — what "normalize" actually did to a real value
   var tfh=$('#tf',az);
-  for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t=tf[ti];var tr=el('div','az-tfr'+(t.k==='bad'?' bad':''));
-    tr.innerHTML="<span class='az-tfa'>"+esc(String(t.a||'—'))+"</span><span class='az-tfrule'>"+esc(t.r)+"</span><span class='az-tfb'>"+esc(String(t.b))+"</span>";
-    tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(380)}
-  await wait(400);if(aborted)return;
-  // quarantine: strike the bad rows with their real reason
-  var qrows=$$('.az-mrow',az).filter(function(rw){return $('.badc',rw)});
-  for(var vi=0;vi<qrows.length;vi++){if(aborted)return;qrows[vi].classList.add('quarr');var qms=$('.mstat',qrows[vi]);if(qms)qms.innerHTML="⊘ "+esc(qrows[vi].dataset.reason||'quarantined')}
+  for(var ti=0;ti<tf.length;ti++){if(aborted)return;var t2=tf[ti];var tr=el('div','az-tfr'+(t2.k==='bad'?' bad':''));
+    tr.innerHTML="<span class='az-tfa'>"+esc(String(t2.a||'—'))+"</span><span class='az-tfrule'>"+esc(t2.r)+"</span><span class='az-tfb'>"+esc(String(t2.b))+"</span>";
+    tfh.appendChild(tr);schedule(function(x){x.classList.add('in')}.bind(null,tr),20);await wait(360)}
   var qsummary=Object.keys(qr).map(function(k){return qr[k]+' '+k}).join(' · ')||'none';
   if(qN>0)log('normalized '+rowsN+' rows · '+(rowsN-qN)+' valid · '+qN+' quarantined ('+qsummary+') · row-level, no fund dropped');
   else log('normalized '+rowsN+' rows · all parsed cleanly · none quarantined');
-  await wait(1600);if(aborted)return;
+  await wait(1500);if(aborted)return;
 
   // ══ 4 · ASSEMBLE — group the validated rows into one aligned per-fund series each ══
   // The payoff: the flat table becomes the universe. Each fund gets a lane with a

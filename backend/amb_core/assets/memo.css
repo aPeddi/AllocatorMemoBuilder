@@ -376,6 +376,22 @@ body.screening .node.cand.gone{opacity:0}
 .az-matrix{flex:1.2;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--panel2)}
 .az-mcap{padding:8px 12px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim2);background:var(--panel);border-bottom:1px solid var(--border)}
 .az-mcap b{color:var(--accent2);font-weight:600}
+/* scene 3 · NORMALIZE — the whole row population as a tile field, swept clean */
+.az-parse-n{align-items:stretch}
+.az-field{flex:1.4;display:flex;flex-direction:column;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--panel2)}
+.az-field-lanes{padding:11px 13px;display:flex;flex-direction:column;gap:5px}
+.az-fl{display:flex;align-items:center;gap:9px;opacity:0;transform:translateX(-6px);transition:opacity .3s,transform .3s}
+.az-fl.in{opacity:1;transform:none}
+.az-fl-id{width:50px;flex:none;font-size:9px;color:var(--ink2);letter-spacing:.01em;text-align:right}
+.az-fl-more .az-fl-id{color:var(--dim2)}
+.az-fl-tiles{display:flex;gap:2px;flex-wrap:nowrap}
+.az-tile{width:8px;height:8px;border-radius:2px;background:var(--border2);opacity:.45;transition:background .45s ease,opacity .45s ease}
+.az-field-lanes.norm .az-tile{background:var(--accent);opacity:.85}
+.az-field-lanes.norm .az-tile.q{background:var(--loss);opacity:1;box-shadow:0 0 0 1px var(--loss-soft)}
+.az-field-tally{margin-top:auto;padding:9px 13px;border-top:1px solid var(--border);font-size:10px;letter-spacing:.03em;color:var(--dim2);background:var(--panel)}
+.az-field-tally .ok b{color:var(--accent2);font-weight:600}
+.az-field-tally .bad b{color:var(--loss);font-weight:600}
+.az-field-tally .dimt{color:var(--dim2)}
 .az-mh,.az-mrow{display:grid;grid-template-columns:1fr .7fr .9fr 1.05fr;font-size:11px;align-items:center}
 .az-mrow.az-more{opacity:0}.az-mrow.az-more.in{opacity:.7}
 .az-mrow.az-more>span{color:var(--dim2)}
