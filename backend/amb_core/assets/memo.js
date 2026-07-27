@@ -565,7 +565,7 @@ async function actZero(){
    +"<div class='hud-stage' id='hudstage'></div>"
    +"<div class='hud-bot'><div class='hud-phase'><span class='hp-n'>00</span><span class='hp-l' id='hudphase'>DATA ACQUISITION</span></div><div class='hud-prog' id='hudprog'></div><div class='hud-log' id='hudlog'></div></div>";
   var prog=$('#hudprog',az),stage=$('#hudstage',az);
-  ['acquire','extract','normalize','assemble','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
+  ['acquire','map','normalize','assemble','ready'].forEach(function(s,i){var seg=el('div','hpseg');seg.dataset.i=i;seg.innerHTML="<i></i><span>"+s+"</span>";prog.appendChild(seg)});
   function phase(n,label){var pe=$('#hudphase',az);if(pe)pe.textContent=label;var pn=$('.hp-n',az);if(pn)pn.textContent='0'+n;
     $$('.hpseg',az).forEach(function(s){var i=+s.dataset.i;s.classList.toggle('done',i<n-1);s.classList.toggle('act',i===n-1)})}
   function log(t){var L=$('#hudlog',az);if(L)L.innerHTML="<span class='hl-cur'>▸</span> "+t}
@@ -632,34 +632,66 @@ async function actZero(){
   else{Object.keys(qr).forEach(function(reason){var c=qr[reason]||0;for(var k=0;k<c&&badRows.length<3;k++){badRows.push({d:'—',id:'—',v:'—',bad:true,reason:reason})}});}
   var rowsSample=sample.concat(badRows);
 
-  // ══ 2 · EXTRACT — pull each raw column out of the file and give it a role ══
-  // Shows the raw header, then classifies each column live into DATE / FUND / RETURN
-  // (the spine) or METADATA — so a first-time viewer SEES the fields being brought out.
-  phase(2,'EXTRACT FIELDS');
+  // ══ 2 · MAP — translate THIS file's columns into our standardized schema ══
+  // The heart of ingest: YOUR columns (left) map to OUR canonical fields (right) via
+  // kinetic connectors, colored by HOW each is used — green drives the metrics engine,
+  // amber feeds the mandate screen / fee model, grey is carried but not scored. So it's
+  // obvious every run: what came in, what we standardized it to, and what each does.
+  phase(2,'MAP → STANDARDIZE');
   var rawCols=srcCols.map(function(c){return {name:c.name,role:(c.role==='ret'?'return':c.role)}})
     .concat((srcOpt||[]).map(function(o){return {name:o,role:'meta'}}));
-  function _rlab(r){return r==='date'?'DATE':r==='id'?'FUND':r==='return'?'RETURN':'META'}
+  function _tkey(c){var r=c.role,n=(c.name||'').toLowerCase();
+    if(r==='date')return 'date';if(r==='id')return 'fund_id';if(r==='return')return 'monthly_return';
+    if(/strateg|style|asset|categ/.test(n))return 'strategy';
+    if(/fee|mgmt|expense/.test(n))return 'mgmt_fee';
+    if(/redemp|lock|notice|liquid|deal/.test(n))return 'liquidity';
+    return 'reference';}
+  var TGT=[
+    {k:'date',label:'date',use:'metrics engine',cat:'core'},
+    {k:'fund_id',label:'fund_id',use:'identity',cat:'core'},
+    {k:'monthly_return',label:'monthly_return',use:'metrics engine',cat:'core'},
+    {k:'strategy',label:'strategy',use:'mandate screen',cat:'use'},
+    {k:'liquidity',label:'liquidity terms',use:'liquidity screen',cat:'use'},
+    {k:'mgmt_fee',label:'mgmt_fee',use:'net-of-fee return',cat:'use'},
+    {k:'reference',label:'reference fields',use:'carried · not scored',cat:'ref'}
+  ];
+  var mapKeys=rawCols.map(_tkey),usedK={};mapKeys.forEach(function(k){usedK[k]=(usedK[k]||0)+1});
+  var tgts=TGT.filter(function(t){return t.cat==='core'||usedK[t.k]});
   stage.innerHTML=
-   "<div class='az-ex'>"
-   +"<div class='az-ex-h'><span class='az-ex-tag'>RAW</span>"+esc(srcFile)+" · <b>"+rawCols.length+"</b> columns · <b>"+rowsN+"</b> rows</div>"
-   +"<div class='az-ex-cols' id='excols'>"+rawCols.map(function(c,i){return "<span class='az-exc' data-i='"+i+"'><b>"+esc(c.name)+"</b><i class='az-exc-r'></i></span>"}).join('')+"</div>"
-   +"<div class='az-ex-mid'><span class='az-ex-arrow'>↓</span> classify each column</div>"
-   +"<div class='az-ex-schema'>"
-     +"<div class='az-slot' data-r='date'><span class='az-slot-l'>DATE</span><b class='az-slot-v'>—</b></div>"
-     +"<div class='az-slot' data-r='id'><span class='az-slot-l'>FUND ID</span><b class='az-slot-v'>—</b></div>"
-     +"<div class='az-slot' data-r='return'><span class='az-slot-l'>RETURN</span><b class='az-slot-v'>—</b></div>"
-     +"<div class='az-slot meta'><span class='az-slot-l'>METADATA</span><b class='az-slot-v' id='metaslot'>0 fields</b></div>"
-   +"</div></div>";
-  log('reading header · classifying '+rawCols.length+' columns');
-  await wait(480);if(aborted)return;
-  var exchips=$$('.az-exc',az),metaN=0;
-  for(var xi=0;xi<rawCols.length;xi++){if(aborted)return;var xc=rawCols[xi],chip=exchips[xi];if(!chip)continue;
-    chip.classList.add('lit');var rl=$('.az-exc-r',chip);if(rl)rl.textContent=_rlab(xc.role);
-    if(xc.role==='meta'){chip.classList.add('meta');metaN++;var msl=$('#metaslot',az);if(msl)msl.textContent=metaN+' field'+(metaN>1?'s':'');}
-    else{chip.classList.add('core');var slot=$(".az-slot[data-r='"+xc.role+"']",az);if(slot){slot.classList.add('filled');var sv=$('.az-slot-v',slot);if(sv)sv.textContent=xc.name}}
-    await wait(rawCols.length>8?170:240);}
-  log('spine locked · date + fund + return · '+metaN+' metadata field'+(metaN===1?'':'s'));
-  await wait(950);if(aborted)return;
+   "<div class='az-map2'>"
+   +"<svg class='az-map2-svg'></svg>"
+   +"<div class='az-map2-col az-map2-l'><div class='az-map2-h'>YOUR FILE · "+esc(srcFile)+" · "+rawCols.length+" cols</div>"
+     + rawCols.map(function(c,i){return "<div class='az-m2c' data-i='"+i+"'>"+esc(c.name)+"</div>"}).join('')
+   +"</div>"
+   +"<div class='az-map2-col az-map2-r'><div class='az-map2-h'>OUR STANDARDIZED SCHEMA</div>"
+     + tgts.map(function(t){return "<div class='az-m2t "+t.cat+"' data-k='"+t.k+"'><b>"+esc(t.label)+"</b><i>"+esc(t.use)+"</i><span class='az-m2n'></span></div>"}).join('')
+   +"</div>"
+   +"<div class='az-map2-lg'><span class='lg core'>drives metrics</span><span class='lg use'>mandate &amp; fees</span><span class='lg ref'>carried · not scored</span></div>"
+   +"</div>";
+  log('mapping '+rawCols.length+' columns → standardized schema');
+  await wait(520);if(aborted)return;
+  var boardEl=$('.az-map2',az),svg=$('.az-map2-svg',az);if(!boardEl||!svg){await wait(200);}
+  var box=boardEl.getBoundingClientRect();svg.setAttribute('width',box.width);svg.setAttribute('height',box.height);svg.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+  function _aR(e){var r=e.getBoundingClientRect();return [r.right-box.left,r.top-box.top+r.height/2]}
+  function _aL(e){var r=e.getBoundingClientRect();return [r.left-box.left,r.top-box.top+r.height/2]}
+  var ns2='http://www.w3.org/2000/svg',counts={};
+  for(var mi=0;mi<rawCols.length;mi++){if(aborted)return;
+    var srcEl=$(".az-m2c[data-i='"+mi+"']",az),tk=mapKeys[mi],tEl=$(".az-m2t[data-k='"+tk+"']",az);
+    if(!srcEl||!tEl)continue;
+    var cat=(String(tEl.className).match(/\b(core|use|ref)\b/)||['','ref'])[1];
+    srcEl.classList.add('lit',cat);
+    var p1=_aR(srcEl),p2=_aL(tEl),mx=(p1[0]+p2[0])/2;
+    var path=document.createElementNS(ns2,'path');
+    path.setAttribute('d','M'+p1[0]+','+p1[1]+' C'+mx+','+p1[1]+' '+mx+','+p2[1]+' '+p2[0]+','+p2[1]);
+    path.setAttribute('class','az-m2p '+cat);svg.appendChild(path);
+    var len=(path.getTotalLength&&path.getTotalLength())||120;path.style.strokeDasharray=len;path.style.strokeDashoffset=len;
+    path.getBoundingClientRect();path.style.transition='stroke-dashoffset .5s ease';path.style.strokeDashoffset='0';
+    tEl.classList.add('hit');counts[tk]=(counts[tk]||0)+1;var nEl=$('.az-m2n',tEl);if(nEl&&counts[tk]>1)nEl.textContent='×'+counts[tk];
+    await wait(rawCols.length>9?185:235);}
+  var coreN=(usedK.date||0)+(usedK.fund_id||0)+(usedK.monthly_return||0);
+  var useN=(usedK.strategy||0)+(usedK.liquidity||0)+(usedK.mgmt_fee||0);var refN=usedK.reference||0;
+  log('standardized · '+coreN+' → metrics · '+useN+' → screen/fees · '+refN+' carried for reference');
+  await wait(1200);if(aborted)return;
 
   // ══ 3 · NORMALIZE — transform the messy values into one clean shape; quarantine the rest ══
   // Real before → after on real tokens (not a checklist), beside the actual rows.
